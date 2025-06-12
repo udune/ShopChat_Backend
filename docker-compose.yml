@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: shopchat
+      MYSQL_USER: cmall
+      MYSQL_PASSWORD: pass
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - springboot-network
+    restart: always
+volumes:
+  mysql_data:
+
+networks:
+  springboot-network:
