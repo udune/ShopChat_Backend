@@ -10,6 +10,7 @@ Thumbs.db             # Windows system files
 # Additions for sensitive configuration files
 .env
 application.properties
+application.yml
 
 # Gradle
 .gradle/
