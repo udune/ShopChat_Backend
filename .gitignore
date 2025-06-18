@@ -44,5 +44,3 @@ out/
 # VS Code
 .vscode/
 
-# Keystore files
-keystore.p12
