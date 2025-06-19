@@ -7,6 +7,11 @@ Thumbs.db             # Windows system files
 *.zip                 # Archive files (e.g., generated distributions)
 *.tar.gz              # Archive files
 
+# Additions for sensitive configuration files
+.env
+application.properties
+application.yml
+
 # Gradle
 .gradle/
 build/
@@ -38,3 +43,7 @@ out/
 
 # VS Code
 .vscode/
+
+
+# Keystore files
+keystore.p12
