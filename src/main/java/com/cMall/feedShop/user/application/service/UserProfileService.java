@@ -1,23 +1,41 @@
 package com.cMall.feedShop.user.application.service;
 
+import com.cMall.feedShop.user.application.dto.response.UserProfileResponse;
+import com.cMall.feedShop.user.domain.model.User;
+import com.cMall.feedShop.user.domain.model.UserProfile;
+import com.cMall.feedShop.user.domain.repository.UserProfileRepository;
+import com.cMall.feedShop.user.domain.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class UserProfileService {
 
+    private final UserRepository userRepository; // UserRepository 주입
+    private final UserProfileRepository userProfileRepository; // UserProfileRepository 주입
+
     private static final Logger log = LoggerFactory.getLogger(UserProfileService.class);
 
-    public String getUserProfile(Long userId) {
-        // 실제 비즈니스 로직
-        // 간단한 테스트를 위해 딜레이를 줍니다.
-        try {
-            Thread.sleep(500); // 0.5초 대기
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-        return "User profile data for ID: " + userId;
+    public UserProfileService(UserRepository userRepository, UserProfileRepository userProfileRepository) {
+        this.userRepository = userRepository;
+        this.userProfileRepository = userProfileRepository;
+    }
+
+    public UserProfileResponse getUserProfile(Long userId) {
+        // 1. User 정보 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId)); // 사용자가 없으면 예외 발생
+
+        // 2. UserProfile 정보 조회 (UserProfile은 없을 수도 있으므로 Optional로 처리)
+        // UserProfileRepository에 findByUser(User user) 메서드가 있다고 가정
+        Optional<UserProfile> userProfileOptional = userProfileRepository.findByUser(user);
+
+        // 3. User 엔티티와 UserProfile 엔티티를 UserProfileResponse DTO로 변환하여 반환
+        // UserProfileResponse의 from 메서드를 활용
+        return UserProfileResponse.from(user, userProfileOptional.orElse(null));
     }
 
     public void updateUserProfile(Long userId, String newProfile) {
