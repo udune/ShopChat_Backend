@@ -14,8 +14,8 @@ import java.util.Optional;
 @Service
 public class UserProfileService {
 
-    private final UserRepository userRepository; // UserRepository 주입
-    private final UserProfileRepository userProfileRepository; // UserProfileRepository 주입
+    private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
 
     private static final Logger log = LoggerFactory.getLogger(UserProfileService.class);
 
@@ -25,12 +25,9 @@ public class UserProfileService {
     }
 
     public UserProfileResponse getUserProfile(Long userId) {
-        // 1. User 정보 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId)); // 사용자가 없으면 예외 발생
 
-        // 2. UserProfile 정보 조회 (UserProfile은 없을 수도 있으므로 Optional로 처리)
-        // UserProfileRepository에 findByUser(User user) 메서드가 있다고 가정
         Optional<UserProfile> userProfileOptional = userProfileRepository.findByUser(user);
 
         // 3. User 엔티티와 UserProfile 엔티티를 UserProfileResponse DTO로 변환하여 반환
@@ -39,7 +36,6 @@ public class UserProfileService {
     }
 
     public void updateUserProfile(Long userId, String newProfile) {
-        // 사용자 프로필 업데이트 로직
         log.info("Updating profile for user {} to {}", userId, newProfile); // 플레이스홀더 사용 권장 (성능 및 가독성)
         // ...
         // 만약 여기서 예외를 던지면 @AfterThrowing 또는 @Around의 catch 블록이 동작하는지 확인할 수 있습니다.
