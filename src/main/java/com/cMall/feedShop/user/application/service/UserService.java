@@ -25,7 +25,7 @@ public class UserService {
 
     public UserResponse signUp(UserSignUpRequest request) {
         // 1. 중복 체크
-        if (userRepository.existsByUsername(request.getUsername())) {
+        if (userRepository.existsByLoginId(request.getLoginId())) {
             throw new RuntimeException("이미 존재하는 사용자입니다.");
         }
 
@@ -33,7 +33,7 @@ public class UserService {
 
         // 3. 사용자 생성 및 저장
         User user = new User(
-                request.getUsername(),
+                request.getLoginId(),
                 encodedPasswordFromRequest, // 이미 암호화된 비밀번호 사용
                 request.getEmail(),
                 request.getPhone(),
