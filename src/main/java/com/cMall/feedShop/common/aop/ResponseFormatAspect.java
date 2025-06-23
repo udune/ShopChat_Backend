@@ -29,7 +29,8 @@ public class ResponseFormatAspect {
             return ApiResponse.success(message, result);
 
         } catch (Exception e) {
-            log.error("API 실행 중 오류 발생: {}", e.getMessage(), e);
+            log.error("API 실행 중 오류 발생 - Method: {}, Error: {}",
+                    joinPoint.getSignature().getName(), e.getMessage());
             throw e; // 예외는 GlobalExceptionHandler에서 처리
         }
     }
