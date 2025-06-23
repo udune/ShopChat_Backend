@@ -27,7 +27,7 @@ public class User implements UserDetails {
     private Long id;
 
     @Column(name = "login_id", unique = true, nullable = false, length = 100)
-    private String username;
+    private String loginId;
 
     @Column(nullable = false, length = 255)
     private String password;
@@ -56,8 +56,8 @@ public class User implements UserDetails {
     private String phone;
 
     //(회원가입 시 사용)
-    public User(String username, String password, String email, String phone, UserRole role) {
-        this.username = username;
+    public User(String loginId, String password, String email, String phone, UserRole role) {
+        this.loginId = loginId;
         this.password = password;
         this.email = email;
         this.phone = phone;
@@ -71,6 +71,11 @@ public class User implements UserDetails {
     // 비즈니스 메서드
     public void changePassword(String newPassword) {
         // 도메인 규칙 검증
+    }
+
+    @Override
+    public String getUsername() {
+        return loginId;
     }
 
     public boolean canLogin() {

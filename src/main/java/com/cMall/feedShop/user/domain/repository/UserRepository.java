@@ -7,8 +7,7 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    boolean existsByUsername(String username);
+    boolean existsByLoginId(String loginId);
 
-    // 사용자 이름으로 User 엔티티를 찾는 메서드 (UserService에서 사용)
-    Optional<User> findByUsername(String username);
+    Optional<User> findByLoginId(String loginId);
 }
