@@ -11,6 +11,8 @@ Thumbs.db             # Windows system files
 .env
 application.properties
 application.yml
+logs/
+src/main/resources/keystore.p12
 
 # Gradle
 .gradle/
