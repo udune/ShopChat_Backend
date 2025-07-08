@@ -1,13 +1,28 @@
 package com.cMall.feedShop.product.domain.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import com.cMall.feedShop.product.domain.enums.CategoryType;
+import jakarta.persistence.*;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
+@Table(name = "categories")
+@Getter
 @NoArgsConstructor
 public class Category {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "category_id")
     private Long categoryId;
-    private String type;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name="type", nullable = false)
+    private CategoryType type;
+
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
+    private List<Product> products = new ArrayList<>();
+
 }
