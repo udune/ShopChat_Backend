@@ -10,6 +10,9 @@ import com.cMall.feedShop.product.domain.repository.CategoryRepository;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import com.cMall.feedShop.store.domain.model.Store;
 import com.cMall.feedShop.store.domain.repository.StoreRepository;
+import com.cMall.feedShop.user.domain.enums.UserRole;
+import com.cMall.feedShop.user.domain.model.User;
+import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +24,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final StoreRepository storeRepository;
     private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
 
     public ProductCreateResponse createProduct(ProductCreateRequest request)
     {
@@ -68,5 +72,11 @@ public class ProductService {
     private void validateSellerPermission(Long userId) {
         // 사용자가 ROLE_SELLER 권한을 가지고 있는지 확인
         // UserRepository 에서 사용자 조회 후 role 확인
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getRole() != UserRole.ROLE_SELLER) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
     }
 }

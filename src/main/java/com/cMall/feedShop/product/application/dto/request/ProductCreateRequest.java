@@ -1,10 +1,7 @@
 package com.cMall.feedShop.product.application.dto.request;
 
 import com.cMall.feedShop.product.domain.enums.DiscountType;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -29,4 +26,12 @@ public class ProductCreateRequest {
     private BigDecimal discountValue;
 
     private String description;
+
+    @AssertTrue(message = "할인 타입이 설정된 경우 할인 값이 필요합니다.")
+    public boolean isDiscountValid() {
+        if (discountType == DiscountType.NONE) {
+            return discountValue == null || discountValue.equals(BigDecimal.ZERO);
+        }
+        return discountValue != null && discountValue.compareTo(BigDecimal.ZERO) > 0;
+    }
 }
