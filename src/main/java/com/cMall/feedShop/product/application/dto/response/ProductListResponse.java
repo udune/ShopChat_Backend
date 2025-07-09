@@ -15,8 +15,18 @@ public class ProductListResponse {
     private Long storeId;
     private String storeName;
     private Integer wishNumber;
+    private String mainImageUrl;
+    private boolean hasOptions;
 
-    public static ProductListResponse of(Long productId, String name, BigDecimal price, BigDecimal discountPrice, Long storeId, String storeName, Integer wishNumber) {
+    public static ProductListResponse of(
+            Long productId,
+            String name,
+            BigDecimal price,
+            BigDecimal discountPrice,
+            Long storeId,
+            String storeName,
+            Integer wishNumber,
+            String mainImageUrl) {
         return ProductListResponse.builder()
                 .productId(productId)
                 .name(name)
@@ -25,6 +35,7 @@ public class ProductListResponse {
                 .storeId(storeId)
                 .storeName(storeName)
                 .wishNumber(wishNumber != null ? wishNumber : 0)
+                .mainImageUrl(mainImageUrl)
                 .build();
     }
 }

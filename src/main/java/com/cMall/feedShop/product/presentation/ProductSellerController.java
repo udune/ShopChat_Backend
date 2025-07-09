@@ -3,7 +3,7 @@ package com.cMall.feedShop.product.presentation;
 import com.cMall.feedShop.common.aop.ApiResponseFormat;
 import com.cMall.feedShop.product.application.dto.request.ProductCreateRequest;
 import com.cMall.feedShop.product.application.dto.response.ProductCreateResponse;
-import com.cMall.feedShop.product.application.service.ProductService;
+import com.cMall.feedShop.product.application.service.ProductCreateService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,27 +17,52 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/seller")
 @RequiredArgsConstructor
 public class ProductSellerController {
-    private final ProductService productService;
-
+    private final ProductCreateService productCreateService;
 
     /**
-     * 상품 등록 API
-     * /api/seller/products
+     * 상품 등록 API (이미지와 옵션 포함)
+     * POST /api/seller/products
+     *
      * @param request
      * {
-     *      String name;
-     *      BigDecimal price;
-     *      Long categoryId;
-     *      DiscountType discountType;
-     *      BigDecimal discountValue;
-     *      String description;
+     *   "name": "상품명",
+     *   "price": 50000,
+     *   "categoryId": 1,
+     *   "discountType": "RATE_DISCOUNT",
+     *   "discountValue": 10,
+     *   "description": "상품 설명",
+     *   "images": [
+     *     {
+     *       "url": "https://example.com/main.jpg",
+     *       "type": "MAIN"
+     *     },
+     *     {
+     *       "url": "https://example.com/detail1.jpg",
+     *       "type": "DETAIL"
+     *     }
+     *   ],
+     *   "options": [
+     *     {
+     *       "gender": "UNISEX",
+     *       "size": "SIZE_250",
+     *       "color": "BLACK",
+     *       "stock": 100
+     *     },
+     *     {
+     *       "gender": "UNISEX",
+     *       "size": "SIZE_255",
+     *       "color": "BLACK",
+     *       "stock": 50
+     *     }
+     *   ]
      * }
+     *
      * @return 상품 등록 응답
      */
     @PostMapping("/products")
     @PreAuthorize("hasRole('SELLER')")
     @ApiResponseFormat(message = "상품 등록 완료")
     public ResponseEntity<ProductCreateResponse> createProduct(@Valid @RequestBody ProductCreateRequest request) {
-        return ResponseEntity.ok(productService.createProduct(request));
+        return ResponseEntity.ok(productCreateService.createProduct(request));
     }
 }
