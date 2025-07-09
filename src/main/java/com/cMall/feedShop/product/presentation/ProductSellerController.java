@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductSellerController {
     private final ProductService productService;
 
+
     /**
      * 상품 등록 API
      * /api/seller/products
