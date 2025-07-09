@@ -1,6 +1,5 @@
 package com.cMall.feedShop.product.domain.model;
 
-import com.cMall.feedShop.common.BaseTimeEntity;
 import com.cMall.feedShop.product.domain.enums.Color;
 import com.cMall.feedShop.product.domain.enums.Gender;
 import com.cMall.feedShop.product.domain.enums.Size;
@@ -12,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "product_options")
 @Getter
 @NoArgsConstructor
-public class ProductOption extends BaseTimeEntity {
+public class ProductOption {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "product_option_id")
