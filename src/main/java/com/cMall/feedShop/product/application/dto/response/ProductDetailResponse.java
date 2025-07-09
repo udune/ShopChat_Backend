@@ -1,5 +1,7 @@
 package com.cMall.feedShop.product.application.dto.response;
 
+import com.cMall.feedShop.product.application.dto.ProductImageInfo;
+import com.cMall.feedShop.product.application.dto.ProductOptionInfo;
 import com.cMall.feedShop.product.domain.enums.CategoryType;
 import com.cMall.feedShop.product.domain.enums.DiscountType;
 import lombok.Builder;
@@ -24,8 +26,8 @@ public class ProductDetailResponse {
     private String storeName;
     private CategoryType categoryType;
     private String categoryName;
-    private List<ProductImageDto> images;
-    private List<ProductOptionDto> options;
+    private List<ProductImageInfo> images;
+    private List<ProductOptionInfo> options;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -42,8 +44,8 @@ public class ProductDetailResponse {
             String storeName,
             CategoryType categoryType,
             String categoryName,
-            List<ProductImageDto> images,
-            List<ProductOptionDto> options,
+            List<ProductImageInfo> images,
+            List<ProductOptionInfo> options,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {

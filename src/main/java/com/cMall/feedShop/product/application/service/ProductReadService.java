@@ -2,6 +2,8 @@ package com.cMall.feedShop.product.application.service;
 
 import com.cMall.feedShop.common.exception.BusinessException;
 import com.cMall.feedShop.common.exception.ErrorCode;
+import com.cMall.feedShop.product.application.dto.ProductImageInfo;
+import com.cMall.feedShop.product.application.dto.ProductOptionInfo;
 import com.cMall.feedShop.product.application.dto.response.*;
 import com.cMall.feedShop.product.application.util.DiscountCalculator;
 import com.cMall.feedShop.product.domain.model.Product;
@@ -83,10 +85,10 @@ public class ProductReadService {
         BigDecimal discountPrice = product.getDiscountPrice(discountCalculator);
 
         // 이미지를 List<ProductImageDto>로 변환
-        List<ProductImageDto> images = ProductImageDto.fromList(product.getProductImages());
+        List<ProductImageInfo> images = ProductImageInfo.fromList(product.getProductImages());
 
         // 이미지를 List<ProductOptionDto>로 변환
-        List<ProductOptionDto> options = ProductOptionDto.fromList(product.getProductOptions());
+        List<ProductOptionInfo> options = ProductOptionInfo.fromList(product.getProductOptions());
 
         return ProductDetailResponse.of(
                 product.getProductId(),

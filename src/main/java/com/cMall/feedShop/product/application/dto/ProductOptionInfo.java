@@ -1,9 +1,8 @@
-package com.cMall.feedShop.product.application.dto.response;
+package com.cMall.feedShop.product.application.dto;
 
 import com.cMall.feedShop.product.domain.enums.Color;
 import com.cMall.feedShop.product.domain.enums.Gender;
 import com.cMall.feedShop.product.domain.enums.Size;
-import com.cMall.feedShop.product.domain.model.ProductImage;
 import com.cMall.feedShop.product.domain.model.ProductOption;
 import lombok.Builder;
 import lombok.Getter;
@@ -12,15 +11,15 @@ import java.util.List;
 
 @Getter
 @Builder
-public class ProductOptionDto {
+public class ProductOptionInfo {
     private Long optionId;
     private Gender gender;
     private Size size;
     private Color color;
     private Integer stock;
 
-    public static ProductOptionDto from(ProductOption option) {
-        return ProductOptionDto.builder()
+    public static ProductOptionInfo from(ProductOption option) {
+        return ProductOptionInfo.builder()
                 .optionId(option.getOptionId())
                 .gender(option.getGender())
                 .size(option.getSize())
@@ -29,10 +28,10 @@ public class ProductOptionDto {
                 .build();
     }
 
-    public static List<ProductOptionDto> fromList(List<ProductOption> options)
+    public static List<ProductOptionInfo> fromList(List<ProductOption> options)
     {
         return options.stream()
-                .map(ProductOptionDto::from)
+                .map(ProductOptionInfo::from)
                 .toList();
     }
 }

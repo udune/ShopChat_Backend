@@ -1,4 +1,4 @@
-package com.cMall.feedShop.product.application.dto.response;
+package com.cMall.feedShop.product.application.dto;
 
 import com.cMall.feedShop.product.domain.enums.ImageType;
 import com.cMall.feedShop.product.domain.model.ProductImage;
@@ -9,23 +9,23 @@ import java.util.List;
 
 @Getter
 @Builder
-public class ProductImageDto {
+public class ProductImageInfo {
     private Long imageId;
     private String url;
     private ImageType type;
 
-    public static ProductImageDto from(ProductImage image) {
-        return ProductImageDto.builder()
+    public static ProductImageInfo from(ProductImage image) {
+        return ProductImageInfo.builder()
                 .imageId(image.getImageId())
                 .url(image.getUrl())
                 .type(image.getType())
                 .build();
     }
 
-    public static List<ProductImageDto> fromList(List<ProductImage> images)
+    public static List<ProductImageInfo> fromList(List<ProductImage> images)
     {
         return images.stream()
-                .map(ProductImageDto::from)
+                .map(ProductImageInfo::from)
                 .toList();
     }
 }
