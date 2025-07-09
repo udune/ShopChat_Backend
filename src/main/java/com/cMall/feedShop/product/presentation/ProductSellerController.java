@@ -18,6 +18,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductSellerController {
     private final ProductService productService;
 
+    /**
+     * 상품 등록 API
+     * /api/seller/products
+     * @param request
+     * {
+     *      String name;
+     *      BigDecimal price;
+     *      Long categoryId;
+     *      DiscountType discountType;
+     *      BigDecimal discountValue;
+     *      String description;
+     * }
+     * @return 상품 등록 응답
+     */
     @PostMapping("/products")
     @PreAuthorize("hasRole('SELLER')")
     public ResponseEntity<ProductCreateResponse> createProduct(@Valid @RequestBody ProductCreateRequest request) {
