@@ -16,7 +16,6 @@ public class ProductListResponse {
     private String storeName;
     private Integer wishNumber;
     private String mainImageUrl;
-    private boolean hasOptions;
 
     public static ProductListResponse of(
             Long productId,
