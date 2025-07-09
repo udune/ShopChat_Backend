@@ -25,6 +25,7 @@ public class ProductDetailResponse {
     private CategoryType categoryType;
     private String categoryName;
     private List<ProductImageDto> images;
+    private List<ProductOptionDto> options;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -42,6 +43,7 @@ public class ProductDetailResponse {
             CategoryType categoryType,
             String categoryName,
             List<ProductImageDto> images,
+            List<ProductOptionDto> options,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
@@ -59,6 +61,7 @@ public class ProductDetailResponse {
                 .categoryType(categoryType)
                 .categoryName(categoryName)
                 .images(images != null ? images : List.of())
+                .options(options != null ? options : List.of())
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
                 .build();
