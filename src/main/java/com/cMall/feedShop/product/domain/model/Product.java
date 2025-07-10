@@ -33,14 +33,14 @@ public class Product extends BaseTimeEntity {
     @Column(name = "price", nullable = false)
     private BigDecimal price;
 
-    @Column(name = "description", columnDefinition = "TEXT")
+    @Column(name = "description")
     private String description;
 
-    @Column(name = "wish_number")
-    private Integer wishNumber;
+    @Column(name = "wish_number", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private Integer wishNumber = 0;
 
     @Enumerated(EnumType.STRING)
-    @Column(name="discount_type", nullable = false)
+    @Column(name="discount_type", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'NONE'")
     private DiscountType discountType = DiscountType.NONE;
 
     @Column(name="discount_value")
@@ -70,9 +70,10 @@ public class Product extends BaseTimeEntity {
         this.price = price;
         this.store = store;
         this.category = category;
-        this.discountType = discountType;
+        this.discountType = discountType != null ? discountType : DiscountType.NONE;
         this.discountValue = discountValue;
         this.description = description;
+        this.wishNumber = 0;
     }
 
     // 대표 이미지 조회 (목록에서 필요)

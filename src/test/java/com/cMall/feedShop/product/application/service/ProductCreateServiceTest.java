@@ -109,9 +109,9 @@ public class ProductCreateServiceTest {
             mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
             given(securityContext.getAuthentication()).willReturn(authentication);
             given(authentication.isAuthenticated()).willReturn(true);
-            given(authentication.getName()).willReturn("seller@test.com");
+            given(authentication.getName()).willReturn("test2");
 
-            given(userRepository.findByEmail("seller@test.com")).willReturn(Optional.of(seller));
+            given(userRepository.findByLoginId("test2")).willReturn(Optional.of(seller));
             given(userRepository.findById(2L)).willReturn(Optional.of(seller));
             given(storeRepository.findBySellerId(2L)).willReturn(Optional.of(store));
             given(categoryRepository.findById(1L)).willReturn(Optional.of(category));

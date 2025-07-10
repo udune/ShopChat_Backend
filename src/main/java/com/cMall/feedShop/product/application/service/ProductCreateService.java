@@ -120,9 +120,9 @@ public class ProductCreateService {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
-        String email = authentication.getName();
+        String login_id = authentication.getName();
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByLoginId(login_id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         return user.getId();
