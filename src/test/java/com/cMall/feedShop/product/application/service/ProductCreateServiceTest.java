@@ -134,10 +134,19 @@ public class ProductCreateServiceTest {
         normalUser.setId(2L);
         given(userRepository.findById(2L)).willReturn(Optional.of(normalUser));
 
-        // When & Then
-        BusinessException thrown = assertThrows(BusinessException.class, () ->
-            productCreateService.createProduct(request));
+        try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
+            mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
+            given(securityContext.getAuthentication()).willReturn(authentication);
+            given(authentication.isAuthenticated()).willReturn(true);
+            given(authentication.getName()).willReturn("test2");
 
-        assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
+            given(userRepository.findByLoginId("test2")).willReturn(Optional.of(normalUser));
+
+            // When & Then
+            BusinessException thrown = assertThrows(BusinessException.class, () ->
+                    productCreateService.createProduct(request));
+
+            assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
+        }
     }
 }
