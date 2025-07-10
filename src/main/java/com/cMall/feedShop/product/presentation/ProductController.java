@@ -1,6 +1,5 @@
 package com.cMall.feedShop.product.presentation;
 
-import com.cMall.feedShop.common.aop.ApiResponseFormat;
 import com.cMall.feedShop.product.application.dto.response.CategoryResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductDetailResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductPageResponse;
