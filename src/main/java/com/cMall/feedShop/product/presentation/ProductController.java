@@ -27,7 +27,6 @@ public class ProductController {
      * @return 상품 목록 응답
      */
     @GetMapping
-    @ApiResponseFormat(message = "상품 목록 조회 완료")
     public ResponseEntity<ProductPageResponse> getProductList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
@@ -42,7 +41,6 @@ public class ProductController {
      * @return 상품 상세 조회 응답
      */
     @GetMapping("/{productId}")
-    @ApiResponseFormat(message = "상품 상세 조회 완료")
     public ResponseEntity<ProductDetailResponse> getProductList(@PathVariable Long productId) {
         return ResponseEntity.ok(productReadService.getProductDetail(productId));
     }
@@ -53,7 +51,6 @@ public class ProductController {
      * @return 카테고리 목록 응답
      */
     @GetMapping("/categories")
-    @ApiResponseFormat(message = "카테고리 목록 조회 완료")
     public ResponseEntity<List<CategoryResponse>> getAllCategories() {
         return ResponseEntity.ok(categoryService.getAllCategories());
     }

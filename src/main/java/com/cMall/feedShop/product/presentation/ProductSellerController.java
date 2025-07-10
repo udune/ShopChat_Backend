@@ -61,7 +61,6 @@ public class ProductSellerController {
      */
     @PostMapping("/products")
     @PreAuthorize("hasRole('SELLER')")
-    @ApiResponseFormat(message = "상품 등록 완료")
     public ResponseEntity<ProductCreateResponse> createProduct(@Valid @RequestBody ProductCreateRequest request) {
         return ResponseEntity.ok(productCreateService.createProduct(request));
     }
