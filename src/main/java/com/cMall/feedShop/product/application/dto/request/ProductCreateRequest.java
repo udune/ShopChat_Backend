@@ -1,7 +1,6 @@
 package com.cMall.feedShop.product.application.dto.request;
 
 import com.cMall.feedShop.product.domain.enums.DiscountType;
-import com.cMall.feedShop.product.domain.enums.ImageType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
