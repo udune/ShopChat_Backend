@@ -93,22 +93,4 @@ public class Product extends BaseTimeEntity {
                 this.discountValue
         );
     }
-
-    // 대표 이미지 조회 (목록에서 필요)
-    public String getMainImageUrl() {
-        return productImages.stream()
-                .filter(image -> ImageType.MAIN.equals(image.getType()))
-                .findFirst()
-                .map(ProductImage::getUrl)
-                .orElse(null);
-    }
-
-    // 할인가 계산
-    public BigDecimal getDiscountPrice(DiscountCalculator discountCalculator) {
-        return discountCalculator.calculateDiscountPrice(
-                this.price,
-                this.discountType,
-                this.discountValue
-        );
-    }
 }
