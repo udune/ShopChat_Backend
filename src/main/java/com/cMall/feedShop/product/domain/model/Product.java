@@ -40,7 +40,7 @@ public class Product extends BaseTimeEntity {
     private Integer wishNumber = 0;
 
     @Enumerated(EnumType.STRING)
-    @Column(name="discount_type", nullable = false)
+    @Column(name="discount_type", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'NONE'")
     private DiscountType discountType = DiscountType.NONE;
 
     @Column(name="discount_value")
