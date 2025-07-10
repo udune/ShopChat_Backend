@@ -1,10 +1,9 @@
 package com.cMall.feedShop.product.application.service;
 
-import com.cMall.feedShop.common.exception.BusinessException;
-import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.product.application.dto.ProductImageInfo;
 import com.cMall.feedShop.product.application.dto.ProductOptionInfo;
 import com.cMall.feedShop.product.application.dto.response.*;
+import com.cMall.feedShop.product.application.exception.ProductException;
 import com.cMall.feedShop.product.application.util.DiscountCalculator;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
@@ -51,7 +50,7 @@ public class ProductReadService {
     // 상품 상세 조회
     public ProductDetailResponse getProductDetail(Long productId) {
         Product product = productRepository.findByProductIdAndDeletedAtIsNull(productId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+                .orElseThrow(() -> new ProductException.ProductNotFoundException());
 
         // 상품(Product 엔티티)을 ProductDetailResponse(응답값)로 변환한다.
         return convertToProductDetailResponse(product);

@@ -6,18 +6,22 @@ import com.cMall.feedShop.product.application.dto.request.ProductCreateRequest;
 import com.cMall.feedShop.product.application.dto.request.ProductImageRequest;
 import com.cMall.feedShop.product.application.dto.request.ProductOptionRequest;
 import com.cMall.feedShop.product.application.dto.response.ProductCreateResponse;
+import com.cMall.feedShop.product.application.exception.ProductException;
 import com.cMall.feedShop.product.domain.model.Category;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.model.ProductImage;
 import com.cMall.feedShop.product.domain.model.ProductOption;
 import com.cMall.feedShop.product.domain.repository.CategoryRepository;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
+import com.cMall.feedShop.store.application.exception.StoreException;
 import com.cMall.feedShop.store.domain.model.Store;
 import com.cMall.feedShop.store.domain.repository.StoreRepository;
 import com.cMall.feedShop.user.domain.enums.UserRole;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,16 +46,16 @@ public class ProductCreateService {
 
         // 3. 사용자 스토어 찾기
         Store userStore = storeRepository.findBySellerId(currentUserId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.STORE_NOT_FOUND));
+                .orElseThrow(() -> new StoreException.StoreNotFoundException());
 
         // 4. 스토어 관리 권한 확인
         if (!userStore.isManagedBy(currentUserId)) {
-            throw new BusinessException(ErrorCode.STORE_FORBIDDEN);
+            throw new StoreException.StoreForbiddenException();
         }
 
         // 5. 카테고리 존재 확인
         Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+                .orElseThrow(() -> new ProductException.CategoryNotFoundException());
 
         // 6. 상품 생성
         Product product = Product.builder()
@@ -111,8 +115,17 @@ public class ProductCreateService {
 
     // JWT 에서 현재 사용자 ID 추출 (추후 구현)
     private Long getCurrentUserId() {
-        // JWT 토큰에서 사용자 ID 추출
-        return 2L; // 임시. 현재 DB에 SELLER 권한 임시 유저의 id가 2임.
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() ) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+
+        String login_id = authentication.getName();
+
+        User user = userRepository.findByLoginId(login_id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        return user.getId();
     }
 
     // 판매자 권한 검증

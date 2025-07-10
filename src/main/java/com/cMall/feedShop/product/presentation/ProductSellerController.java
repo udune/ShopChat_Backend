@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductSellerController {
     private final ProductCreateService productCreateService;
 
-
     /**
      * 상품 등록 API (이미지와 옵션 포함)
      * POST /api/seller/products
@@ -62,7 +61,6 @@ public class ProductSellerController {
      */
     @PostMapping("/products")
     @PreAuthorize("hasRole('SELLER')")
-    @ApiResponseFormat(message = "상품 등록 완료")
     public ResponseEntity<ProductCreateResponse> createProduct(@Valid @RequestBody ProductCreateRequest request) {
         return ResponseEntity.ok(productCreateService.createProduct(request));
     }
