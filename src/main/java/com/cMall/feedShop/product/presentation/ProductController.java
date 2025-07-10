@@ -1,20 +1,23 @@
 package com.cMall.feedShop.product.presentation;
 
 import com.cMall.feedShop.common.aop.ApiResponseFormat;
+import com.cMall.feedShop.product.application.dto.response.CategoryResponse;
+import com.cMall.feedShop.product.application.dto.response.ProductDetailResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductPageResponse;
-import com.cMall.feedShop.product.application.service.ProductService;
+import com.cMall.feedShop.product.application.service.CategoryService;
+import com.cMall.feedShop.product.application.service.ProductReadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
 public class ProductController {
-    private final ProductService productService;
+    private final ProductReadService productReadService;
+    private final CategoryService categoryService;
 
     /**
      * 상품 목록 조회 API
@@ -29,6 +32,29 @@ public class ProductController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(productService.getProductList(page, size));
+        return ResponseEntity.ok(productReadService.getProductList(page, size));
+    }
+
+    /**
+     * 상품 상세 조회 API
+     * /api/products/{productId}
+     * @param productId 상품 아이디
+     * @return 상품 상세 조회 응답
+     */
+    @GetMapping("/{productId}")
+    @ApiResponseFormat(message = "상품 상세 조회 완료")
+    public ResponseEntity<ProductDetailResponse> getProductList(@PathVariable Long productId) {
+        return ResponseEntity.ok(productReadService.getProductDetail(productId));
+    }
+
+    /**
+     * 카테고리 목록 조회 API
+     * /api/products/categories
+     * @return 카테고리 목록 응답
+     */
+    @GetMapping("/categories")
+    @ApiResponseFormat(message = "카테고리 목록 조회 완료")
+    public ResponseEntity<List<CategoryResponse>> getAllCategories() {
+        return ResponseEntity.ok(categoryService.getAllCategories());
     }
 }
