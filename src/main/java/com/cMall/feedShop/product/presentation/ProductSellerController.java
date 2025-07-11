@@ -1,11 +1,12 @@
 package com.cMall.feedShop.product.presentation;
 
+import com.cMall.feedShop.common.aop.ApiResponseFormat;
+import com.cMall.feedShop.common.dto.ApiResponse;
 import com.cMall.feedShop.product.application.dto.request.ProductCreateRequest;
 import com.cMall.feedShop.product.application.dto.response.ProductCreateResponse;
 import com.cMall.feedShop.product.application.service.ProductCreateService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -60,7 +61,9 @@ public class ProductSellerController {
      */
     @PostMapping("/products")
     @PreAuthorize("hasRole('SELLER')")
-    public ResponseEntity<ProductCreateResponse> createProduct(@Valid @RequestBody ProductCreateRequest request) {
-        return ResponseEntity.ok(productCreateService.createProduct(request));
+    @ApiResponseFormat(message = "상품이 성공적으로 등록되었습니다.")
+    public ApiResponse<ProductCreateResponse> createProduct(@Valid @RequestBody ProductCreateRequest request) {
+        ProductCreateResponse data = productCreateService.createProduct(request);
+        return ApiResponse.success(data);
     }
 }

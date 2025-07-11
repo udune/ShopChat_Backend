@@ -1,12 +1,13 @@
 package com.cMall.feedShop.product.presentation;
 
+import com.cMall.feedShop.common.aop.ApiResponseFormat;
+import com.cMall.feedShop.common.dto.ApiResponse;
 import com.cMall.feedShop.product.application.dto.response.CategoryResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductDetailResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductPageResponse;
 import com.cMall.feedShop.product.application.service.CategoryService;
 import com.cMall.feedShop.product.application.service.ProductReadService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,11 +27,13 @@ public class ProductController {
      * @return 상품 목록 응답
      */
     @GetMapping
-    public ResponseEntity<ProductPageResponse> getProductList(
+    @ApiResponseFormat(message = "상품 목록을 성공적으로 조회했습니다.")
+    public ApiResponse<ProductPageResponse> getProductList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(productReadService.getProductList(page, size));
+        ProductPageResponse data = productReadService.getProductList(page, size);
+        return ApiResponse.success(data);
     }
 
     /**
@@ -40,8 +43,10 @@ public class ProductController {
      * @return 상품 상세 조회 응답
      */
     @GetMapping("/{productId}")
-    public ResponseEntity<ProductDetailResponse> getProductList(@PathVariable Long productId) {
-        return ResponseEntity.ok(productReadService.getProductDetail(productId));
+    @ApiResponseFormat(message = "상품 상세 정보를 성공적으로 조회했습니다.")
+    public ApiResponse<ProductDetailResponse> getProductDetail(@PathVariable Long productId) {
+        ProductDetailResponse data = productReadService.getProductDetail(productId);
+        return ApiResponse.success(data);
     }
 
     /**
@@ -50,7 +55,9 @@ public class ProductController {
      * @return 카테고리 목록 응답
      */
     @GetMapping("/categories")
-    public ResponseEntity<List<CategoryResponse>> getAllCategories() {
-        return ResponseEntity.ok(categoryService.getAllCategories());
+    @ApiResponseFormat(message = "카테고리 목록을 성공적으로 조회했습니다.")
+    public ApiResponse<List<CategoryResponse>> getAllCategories() {
+        List<CategoryResponse> data = categoryService.getAllCategories();
+        return ApiResponse.success(data);
     }
 }
