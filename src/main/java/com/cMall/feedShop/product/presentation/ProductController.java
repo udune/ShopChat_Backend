@@ -1,5 +1,7 @@
 package com.cMall.feedShop.product.presentation;
 
+import com.cMall.feedShop.common.aop.ApiResponseFormat;
+import com.cMall.feedShop.common.dto.ApiResponse;
 import com.cMall.feedShop.product.application.dto.response.CategoryResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductDetailResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductPageResponse;
@@ -26,11 +28,12 @@ public class ProductController {
      * @return 상품 목록 응답
      */
     @GetMapping
-    public ResponseEntity<ProductPageResponse> getProductList(
+    public ResponseEntity<ApiResponse<ProductPageResponse>> getProductList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(productReadService.getProductList(page, size));
+        ProductPageResponse data = productReadService.getProductList(page, size);
+        return ResponseEntity.ok(ApiResponse.success("상품 목록을 성공적으로 조회했습니다.", data));
     }
 
     /**
@@ -40,8 +43,9 @@ public class ProductController {
      * @return 상품 상세 조회 응답
      */
     @GetMapping("/{productId}")
-    public ResponseEntity<ProductDetailResponse> getProductList(@PathVariable Long productId) {
-        return ResponseEntity.ok(productReadService.getProductDetail(productId));
+    public ResponseEntity<ApiResponse<ProductDetailResponse>> getProductDetail(@PathVariable Long productId) {
+        ProductDetailResponse data = productReadService.getProductDetail(productId);
+        return ResponseEntity.ok(ApiResponse.success("상품 상세 정보를 성공적으로 조회했습니다.", data));
     }
 
     /**
@@ -50,7 +54,8 @@ public class ProductController {
      * @return 카테고리 목록 응답
      */
     @GetMapping("/categories")
-    public ResponseEntity<List<CategoryResponse>> getAllCategories() {
-        return ResponseEntity.ok(categoryService.getAllCategories());
+    public ResponseEntity<ApiResponse<List<CategoryResponse>>> getAllCategories() {
+        List<CategoryResponse> data = categoryService.getAllCategories();
+        return ResponseEntity.ok(ApiResponse.success("카테고리 목록을 성공적으로 조회했습니다.", data));
     }
 }
