@@ -10,12 +10,14 @@ import com.cMall.feedShop.product.domain.model.Category;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import com.cMall.feedShop.store.domain.model.Store;
+import org.hibernate.Hibernate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -31,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mockStatic;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("상품 조회 서비스 테스트")
@@ -67,6 +70,7 @@ public class ProductReadServiceTest {
         ReflectionTestUtils.setField(product, "createdAt", LocalDateTime.now());
         ReflectionTestUtils.setField(product, "updatedAt", LocalDateTime.now());
         ReflectionTestUtils.setField(product, "productImages", List.of());
+        ReflectionTestUtils.setField(product, "productOptions", List.of());
     }
 
     @Test
@@ -97,14 +101,20 @@ public class ProductReadServiceTest {
         given(discountCalculator.calculateDiscountPrice(any(), any(), any()))
                 .willReturn(new BigDecimal("45000"));
 
-        // When
-        ProductDetailResponse response = productReadService.getProductDetail(1L);
+        try (MockedStatic<Hibernate> hibernateMock = mockStatic(Hibernate.class)) {
+            hibernateMock.when(() -> Hibernate.initialize(any())).then(invocation -> null);
 
-        // Then
-        assertThat(response.getProductId()).isEqualTo(1L);
-        assertThat(response.getName()).isEqualTo("테스트 상품");
-        assertThat(response.getStoreName()).isEqualTo("테스트 스토어");
-        assertThat(response.getCategoryName()).isEqualTo("운동화");
+            // When
+            ProductDetailResponse response = productReadService.getProductDetail(1L);
+
+            // Then
+            assertThat(response.getProductId()).isEqualTo(1L);
+            assertThat(response.getName()).isEqualTo("테스트 상품");
+            assertThat(response.getStoreName()).isEqualTo("테스트 스토어");
+            assertThat(response.getCategoryName()).isEqualTo("운동화");
+
+            hibernateMock.verify(() -> Hibernate.initialize(product.getProductOptions()));
+        }
     }
 
     @Test

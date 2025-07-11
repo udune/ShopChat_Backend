@@ -15,6 +15,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Page<Product> findByDeletedAtIsNullOrderByCreatedAtDesc(Pageable pageable);
 
     // 상품 상세 조회 (모든 연관 포함)
-    @EntityGraph(attributePaths = {"store", "category", "productImages", "productOptions"})
+    @EntityGraph(attributePaths = {"store", "category", "productImages"})
     Optional<Product> findByProductIdAndDeletedAtIsNull(Long productId);
 }

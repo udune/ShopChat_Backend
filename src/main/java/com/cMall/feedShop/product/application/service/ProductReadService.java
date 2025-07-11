@@ -8,6 +8,7 @@ import com.cMall.feedShop.product.application.util.DiscountCalculator;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -51,6 +52,9 @@ public class ProductReadService {
     public ProductDetailResponse getProductDetail(Long productId) {
         Product product = productRepository.findByProductIdAndDeletedAtIsNull(productId)
                 .orElseThrow(() -> new ProductException.ProductNotFoundException());
+
+        // productOptions 지연 로딩 강제 초기화
+        Hibernate.initialize(product.getProductOptions());
 
         // 상품(Product 엔티티)을 ProductDetailResponse(응답값)로 변환한다.
         return convertToProductDetailResponse(product);
