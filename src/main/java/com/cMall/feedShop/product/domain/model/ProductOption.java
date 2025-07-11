@@ -17,12 +17,15 @@ public class ProductOption {
     @Column(name = "product_option_id")
     private Long optionId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "gender")
     private Gender gender;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "size")
     private Size size;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "color")
     private Color color;
 
