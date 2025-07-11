@@ -1,5 +1,8 @@
 package com.cMall.feedShop.product.domain.enums;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum Size {
     SIZE_230("230"),
     SIZE_235("235"),
@@ -23,11 +26,12 @@ public enum Size {
         this.value = value;
     }
 
+    @JsonValue
     public String getValue() {
         return value;
     }
 
-    // 문자로 찾기
+    @JsonCreator
     public static Size fromValue(String value) {
         for (Size size : Size.values()) {
             if (size.getValue().equals(value)) {

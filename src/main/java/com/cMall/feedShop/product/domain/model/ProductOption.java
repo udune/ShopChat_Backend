@@ -1,5 +1,6 @@
 package com.cMall.feedShop.product.domain.model;
 
+import com.cMall.feedShop.product.domain.converter.SizeConverter;
 import com.cMall.feedShop.product.domain.enums.Color;
 import com.cMall.feedShop.product.domain.enums.Gender;
 import com.cMall.feedShop.product.domain.enums.Size;
@@ -21,7 +22,7 @@ public class ProductOption {
     @Column(name = "gender")
     private Gender gender;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = SizeConverter.class)
     @Column(name = "size")
     private Size size;
 
