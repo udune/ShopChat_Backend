@@ -6,11 +6,13 @@ import com.cMall.feedShop.product.application.dto.request.ProductCreateRequest;
 import com.cMall.feedShop.product.application.dto.request.ProductImageRequest;
 import com.cMall.feedShop.product.application.dto.request.ProductOptionRequest;
 import com.cMall.feedShop.product.application.dto.response.ProductCreateResponse;
+import com.cMall.feedShop.product.application.exception.ProductException;
 import com.cMall.feedShop.product.domain.enums.*;
+import com.cMall.feedShop.product.domain.model.Category;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.repository.CategoryRepository;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
-import com.cMall.feedShop.product.domain.model.Category;
+import com.cMall.feedShop.store.application.exception.StoreException;
 import com.cMall.feedShop.store.domain.model.Store;
 import com.cMall.feedShop.store.domain.repository.StoreRepository;
 import com.cMall.feedShop.user.domain.enums.UserRole;
@@ -40,8 +42,9 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("상품 등록 서비스 테스트")
-public class ProductCreateServiceTest {
+@DisplayName("ProductCreateService 테스트")
+class ProductCreateServiceTest {
+
     @Mock private ProductRepository productRepository;
     @Mock private StoreRepository storeRepository;
     @Mock private CategoryRepository categoryRepository;
@@ -58,33 +61,30 @@ public class ProductCreateServiceTest {
     private Category category;
 
     @BeforeEach
-    public void setUp() {
-        // 판매자 생성
+    void setUp() {
         seller = new User("seller123", "password", "seller@test.com", UserRole.SELLER);
         seller.setId(2L);
 
-        // 스토어 생성
-        store = Store.builder().storeName("테스트 스토어").sellerId(2L).build();
+        store = Store.builder()
+                .storeName("테스트 스토어")
+                .sellerId(2L)
+                .build();
         ReflectionTestUtils.setField(store, "storeId", 1L);
 
-        // 카테고리 생성
         category = new Category(CategoryType.SNEAKERS, "운동화");
         ReflectionTestUtils.setField(category, "categoryId", 1L);
 
-        // 요청 데이터 생성
         request = new ProductCreateRequest();
         ReflectionTestUtils.setField(request, "name", "테스트 상품");
         ReflectionTestUtils.setField(request, "price", new BigDecimal("50000"));
         ReflectionTestUtils.setField(request, "categoryId", 1L);
         ReflectionTestUtils.setField(request, "description", "테스트 상품입니다.");
 
-        // 이미지 생성
         ProductImageRequest imageRequest = new ProductImageRequest();
         ReflectionTestUtils.setField(imageRequest, "url", "https://test.jpg");
         ReflectionTestUtils.setField(imageRequest, "type", ImageType.MAIN);
         ReflectionTestUtils.setField(request, "images", List.of(imageRequest));
 
-        // 옵션 생성
         ProductOptionRequest optionRequest = new ProductOptionRequest();
         ReflectionTestUtils.setField(optionRequest, "gender", Gender.UNISEX);
         ReflectionTestUtils.setField(optionRequest, "size", Size.SIZE_250);
@@ -94,9 +94,9 @@ public class ProductCreateServiceTest {
     }
 
     @Test
-    @DisplayName("상품 등록 성공")
-    void createProduct_Success() {
-        // Given
+    @DisplayName("유효한 판매자와 요청이 주어졌을때_createProduct 호출하면_상품이 성공적으로 생성된다")
+    void givenValidSellerAndRequest_whenCreateProduct_thenProductCreatedSuccessfully() {
+        // given
         Product savedProduct = Product.builder()
                 .name("테스트 상품")
                 .price(new BigDecimal("50000"))
@@ -117,22 +117,21 @@ public class ProductCreateServiceTest {
             given(categoryRepository.findById(1L)).willReturn(Optional.of(category));
             given(productRepository.save(any(Product.class))).willReturn(savedProduct);
 
-            // When
-            ProductCreateResponse response = productCreateService.createProduct(request);
+            // when
+            ProductCreateResponse result = productCreateService.createProduct(request);
 
-            // Then
-            assertThat(response.getProductId()).isEqualTo(1L);
+            // then
+            assertThat(result.getProductId()).isEqualTo(1L);
             verify(productRepository, times(1)).save(any(Product.class));
         }
     }
 
     @Test
-    @DisplayName("상품 등록 실패 - 판매자가 아닌 사용자")
-    void createProduct_Fail_NotSeller() {
-        // Given
+    @DisplayName("일반 사용자가 주어졌을때_createProduct 호출하면_권한 없음 예외가 발생한다")
+    void givenRegularUser_whenCreateProduct_thenThrowsForbiddenException() {
+        // given
         User normalUser = new User("user123", "password", "user@test.com", UserRole.USER);
         normalUser.setId(2L);
-        given(userRepository.findById(2L)).willReturn(Optional.of(normalUser));
 
         try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
             mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
@@ -142,11 +141,103 @@ public class ProductCreateServiceTest {
 
             given(userRepository.findByLoginId("test2")).willReturn(Optional.of(normalUser));
 
-            // When & Then
+            // when & then
             BusinessException thrown = assertThrows(BusinessException.class, () ->
                     productCreateService.createProduct(request));
 
             assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
+        }
+    }
+
+    @Test
+    @DisplayName("존재하지않는 카테고리ID가 주어졌을때_createProduct 호출하면_카테고리 없음 예외가 발생한다")
+    void givenNonExistentCategoryId_whenCreateProduct_thenThrowsCategoryNotFoundException() {
+        // given
+        try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
+            mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
+            given(securityContext.getAuthentication()).willReturn(authentication);
+            given(authentication.isAuthenticated()).willReturn(true);
+            given(authentication.getName()).willReturn("test2");
+
+            given(userRepository.findByLoginId("test2")).willReturn(Optional.of(seller));
+            given(userRepository.findById(2L)).willReturn(Optional.of(seller));
+            given(storeRepository.findBySellerId(2L)).willReturn(Optional.of(store));
+            given(categoryRepository.findById(1L)).willReturn(Optional.empty());
+
+            // when & then
+            ProductException.CategoryNotFoundException thrown = assertThrows(
+                    ProductException.CategoryNotFoundException.class, () ->
+                            productCreateService.createProduct(request));
+
+            assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.CATEGORY_NOT_FOUND);
+        }
+    }
+
+    @Test
+    @DisplayName("스토어가 존재하지않는 판매자가 주어졌을때_createProduct 호출하면_스토어 없음 예외가 발생한다")
+    void givenSellerWithoutStore_whenCreateProduct_thenThrowsStoreNotFoundException() {
+        // given
+        try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
+            mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
+            given(securityContext.getAuthentication()).willReturn(authentication);
+            given(authentication.isAuthenticated()).willReturn(true);
+            given(authentication.getName()).willReturn("test2");
+
+            given(userRepository.findByLoginId("test2")).willReturn(Optional.of(seller));
+            given(userRepository.findById(2L)).willReturn(Optional.of(seller));
+            given(storeRepository.findBySellerId(2L)).willReturn(Optional.empty());
+
+            // when & then
+            StoreException.StoreNotFoundException thrown = assertThrows(
+                    StoreException.StoreNotFoundException.class, () ->
+                            productCreateService.createProduct(request));
+
+            assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.STORE_NOT_FOUND);
+        }
+    }
+
+    @Test
+    @DisplayName("인증되지않은 사용자가 주어졌을때_createProduct 호출하면_인증 없음 예외가 발생한다")
+    void givenUnauthenticatedUser_whenCreateProduct_thenThrowsUnauthorizedException() {
+        // given
+        try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
+            mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
+            given(securityContext.getAuthentication()).willReturn(null);
+
+            // when & then
+            BusinessException thrown = assertThrows(BusinessException.class, () ->
+                    productCreateService.createProduct(request));
+
+            assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
+        }
+    }
+
+    @Test
+    @DisplayName("다른 판매자의 스토어에 상품을 등록하려할때_createProduct 호출하면_권한 없음 예외가 발생한다")
+    void givenSellerTryingToUseOtherStore_whenCreateProduct_thenThrowsStoreForbiddenException() {
+        // given
+        Store otherSellerStore = Store.builder()
+                .storeName("다른 판매자 스토어")
+                .sellerId(999L) // 다른 판매자 ID
+                .build();
+        ReflectionTestUtils.setField(otherSellerStore, "storeId", 1L);
+
+        try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
+            mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
+            given(securityContext.getAuthentication()).willReturn(authentication);
+            given(authentication.isAuthenticated()).willReturn(true);
+            given(authentication.getName()).willReturn("test2");
+
+            given(userRepository.findByLoginId("test2")).willReturn(Optional.of(seller));
+            given(userRepository.findById(2L)).willReturn(Optional.of(seller));
+            given(storeRepository.findBySellerId(2L)).willReturn(Optional.of(otherSellerStore));
+
+            // when & then
+            StoreException.StoreForbiddenException thrown = assertThrows(
+                    StoreException.StoreForbiddenException.class, () ->
+                            productCreateService.createProduct(request));
+
+            assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.STORE_FORBIDDEN);
         }
     }
 }
