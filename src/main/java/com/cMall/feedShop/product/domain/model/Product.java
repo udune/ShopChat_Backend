@@ -93,4 +93,31 @@ public class Product extends BaseTimeEntity {
                 this.discountValue
         );
     }
+
+    public void updateInfo(String name, BigDecimal price, String description) {
+        if (name != null && !name.trim().isEmpty()) {
+            this.name = name.trim();
+        }
+        if (price != null) {
+            this.price = price;
+        }
+        if (description != null) {
+            this.description = description;
+        }
+    }
+
+    public void updateDiscount(DiscountType discountType, BigDecimal discountValue) {
+        if (discountType != null) {
+            this.discountType = discountType;
+        }
+        if (discountValue != null) {
+            this.discountValue = discountValue;
+        }
+    }
+
+    public void updateCategory(Category category) {
+        if (category != null) {
+            this.category = category;
+        }
+    }
 }
