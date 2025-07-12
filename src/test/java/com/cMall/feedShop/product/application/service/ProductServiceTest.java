@@ -43,7 +43,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ProductCreateService 테스트")
-class ProductCreateServiceTest {
+class ProductServiceTest {
 
     @Mock private ProductRepository productRepository;
     @Mock private StoreRepository storeRepository;
@@ -53,7 +53,7 @@ class ProductCreateServiceTest {
     @Mock private Authentication authentication;
 
     @InjectMocks
-    private ProductCreateService productCreateService;
+    private ProductService productService;
 
     private ProductCreateRequest request;
     private User seller;
@@ -118,7 +118,7 @@ class ProductCreateServiceTest {
             given(productRepository.save(any(Product.class))).willReturn(savedProduct);
 
             // when
-            ProductCreateResponse result = productCreateService.createProduct(request);
+            ProductCreateResponse result = productService.createProduct(request);
 
             // then
             assertThat(result.getProductId()).isEqualTo(1L);
@@ -143,7 +143,7 @@ class ProductCreateServiceTest {
 
             // when & then
             BusinessException thrown = assertThrows(BusinessException.class, () ->
-                    productCreateService.createProduct(request));
+                    productService.createProduct(request));
 
             assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
         }
@@ -167,7 +167,7 @@ class ProductCreateServiceTest {
             // when & then
             ProductException.CategoryNotFoundException thrown = assertThrows(
                     ProductException.CategoryNotFoundException.class, () ->
-                            productCreateService.createProduct(request));
+                            productService.createProduct(request));
 
             assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.CATEGORY_NOT_FOUND);
         }
@@ -190,7 +190,7 @@ class ProductCreateServiceTest {
             // when & then
             StoreException.StoreNotFoundException thrown = assertThrows(
                     StoreException.StoreNotFoundException.class, () ->
-                            productCreateService.createProduct(request));
+                            productService.createProduct(request));
 
             assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.STORE_NOT_FOUND);
         }
@@ -206,7 +206,7 @@ class ProductCreateServiceTest {
 
             // when & then
             BusinessException thrown = assertThrows(BusinessException.class, () ->
-                    productCreateService.createProduct(request));
+                    productService.createProduct(request));
 
             assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
         }
@@ -235,7 +235,7 @@ class ProductCreateServiceTest {
             // when & then
             StoreException.StoreForbiddenException thrown = assertThrows(
                     StoreException.StoreForbiddenException.class, () ->
-                            productCreateService.createProduct(request));
+                            productService.createProduct(request));
 
             assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.STORE_FORBIDDEN);
         }
