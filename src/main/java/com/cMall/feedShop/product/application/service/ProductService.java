@@ -13,6 +13,8 @@ import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.model.ProductImage;
 import com.cMall.feedShop.product.domain.model.ProductOption;
 import com.cMall.feedShop.product.domain.repository.CategoryRepository;
+import com.cMall.feedShop.product.domain.repository.ProductImageRepository;
+import com.cMall.feedShop.product.domain.repository.ProductOptionRepository;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import com.cMall.feedShop.store.application.exception.StoreException;
 import com.cMall.feedShop.store.domain.model.Store;
@@ -36,6 +38,8 @@ public class ProductService {
     private final StoreRepository storeRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final ProductImageRepository productImageRepository;
+    private final ProductOptionRepository productOptionRepository;
 
     // 상품 등록
     public ProductCreateResponse createProduct(ProductCreateRequest request) {
@@ -213,29 +217,45 @@ public class ProductService {
         product.updateCategory(category);
     }
 
-    private void updateField(Product product, String fieldName, Object value) {
-        try {
-            var field = Product.class.getDeclaredField(fieldName);
-            field.setAccessible(true);
-            field.set(product, value);
-        } catch (Exception e) {
-            throw new RuntimeException(fieldName + " 업데이트 중 오류가 발생했습니다.", e);
-        }
-    }
-
     private void updateProductImages(Product product, List<ProductImageRequest> requests) {
         // 기존 이미지 삭제
-        product.getProductImages().clear();
+        List<ProductImage> existingImages = product.getProductImages();
+        if (!existingImages.isEmpty())
+        {
+            productImageRepository.deleteAll(existingImages);
+            existingImages.clear();
+        }
 
         // 새로운 이미지 추가
-        createProductImages(product, requests);
+        List<ProductImage> newImages = requests.stream()
+                .map(request -> new ProductImage(
+                        request.getUrl(),
+                        request.getType(),
+                        product
+                ))
+                .toList();
+        product.getProductImages().addAll(newImages);
     }
 
     private void updateProductOptions(Product product, List<ProductOptionRequest> requests) {
         // 기존 옵션 삭제
-        product.getProductOptions().clear();
+        List<ProductOption> existingOptions = product.getProductOptions();
+        if (!existingOptions.isEmpty())
+        {
+            productOptionRepository.deleteAll(existingOptions);
+            existingOptions.clear();
+        }
 
         // 새로운 옵션 추가
-        createProductOptions(product, requests);
+        List<ProductOption> newOptions = requests.stream()
+                .map(request -> new ProductOption(
+                        request.getGender(),
+                        request.getSize(),
+                        request.getColor(),
+                        request.getStock(),
+                        product
+                ))
+                .toList();
+        product.getProductOptions().addAll(newOptions);
     }
 }
