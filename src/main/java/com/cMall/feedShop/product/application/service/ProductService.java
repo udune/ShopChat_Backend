@@ -84,29 +84,32 @@ public class ProductService {
         // 1. 현재 사용자 ID 가져오기
         Long currentUserId = getCurrentUserId();
 
-        // 2. 상품 조회 (소유권 검증 포함)
+        // 2. 판매자 권한 검증
+        validateSellerPermission(currentUserId);
+
+        // 3. 상품 조회 (소유권 검증 포함)
         Product product = getProductOwnership(productId, currentUserId);
 
-        // 3. 카테고리 존재 확인
+        // 4. 카테고리 존재 확인
         Category category = null;
         if (request.getCategoryId() != null) {
             category = getCategory(request.getCategoryId());
         }
 
-        // 4. 상품 필드 업데이트
+        // 5. 상품 필드 업데이트
         updateProductFields(product, request, category);
 
-        // 5. 이미지 업데이트
+        // 6. 이미지 업데이트
         if (request.getImages() != null) {
             updateProductImages(product, request.getImages());
         }
 
-        // 6. 옵션 업데이트
+        // 7. 옵션 업데이트
         if (request.getOptions() != null) {
             updateProductOptions(product, request.getOptions());
         }
 
-        // 7. DB 저장
+        // 8. DB 저장
         productRepository.save(product);
     }
 
