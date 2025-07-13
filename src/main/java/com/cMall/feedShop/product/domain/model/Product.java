@@ -1,6 +1,7 @@
 package com.cMall.feedShop.product.domain.model;
 
 import com.cMall.feedShop.common.BaseTimeEntity;
+import com.cMall.feedShop.product.application.exception.ProductException;
 import com.cMall.feedShop.product.application.util.DiscountCalculator;
 import com.cMall.feedShop.product.domain.enums.DiscountType;
 import com.cMall.feedShop.product.domain.enums.ImageType;
@@ -36,18 +37,15 @@ public class Product extends BaseTimeEntity {
     @Column(name = "description")
     private String description;
 
-    @Column(name = "wish_number", nullable = false, columnDefinition = "INT DEFAULT 0")
-    private Integer wishNumber = 0;
+    @Column(name = "wish_number", nullable = false, columnDefinition = "int default 0")
+    private Integer wishNumber;
 
     @Enumerated(EnumType.STRING)
-    @Column(name="discount_type", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'NONE'")
-    private DiscountType discountType = DiscountType.NONE;
+    @Column(name="discount_type", nullable = false, columnDefinition = "varchar(20) default 'NONE'")
+    private DiscountType discountType;
 
     @Column(name="discount_value")
     private BigDecimal discountValue;
-
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "store_id")
@@ -92,5 +90,41 @@ public class Product extends BaseTimeEntity {
                 this.discountType,
                 this.discountValue
         );
+    }
+
+    // 상품 정보 업데이트
+    public void updateInfo(String name, BigDecimal price, String description) {
+        if (name != null && !name.trim().isEmpty()) {
+            this.name = name.trim();
+        }
+        if (price != null) {
+            this.price = price;
+        }
+        if (description != null) {
+            this.description = description;
+        }
+    }
+
+    // 할인 정보 업데이트
+    public void updateDiscount(DiscountType discountType, BigDecimal discountValue) {
+        if (discountType != null) {
+            this.discountType = discountType;
+        }
+        if (discountValue != null) {
+            this.discountValue = discountValue;
+        }
+    }
+
+    // 카테고리 업데이트
+    public void updateCategory(Category category) {
+        if (category != null) {
+            this.category = category;
+        }
+    }
+
+    // 판매 가능한 상태인지 확인
+    public boolean isAvailableForSale() {
+        return productOptions.stream()
+                .anyMatch(ProductOption::isInStock);
     }
 }

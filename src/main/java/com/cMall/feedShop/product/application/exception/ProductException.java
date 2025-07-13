@@ -29,4 +29,8 @@ public class ProductException extends BusinessException {
             super(ErrorCode.OUT_OF_STOCK);
         }
     }
+
+    public static class ProductInOrderException extends ProductException {
+        public ProductInOrderException() { super(ErrorCode.PRODUCT_IN_ORDER); }
+    }
 }
