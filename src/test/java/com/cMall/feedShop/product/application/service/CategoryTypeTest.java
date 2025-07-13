@@ -15,37 +15,44 @@ class CategoryTypeTest {
         // when
         CategoryType[] result = CategoryType.values();
 
-        // then
-        assertThat(result).hasSize(5);
+        // then - 실제 존재하는 7개로 수정
+        assertThat(result).hasSize(7);
         assertThat(result).contains(
                 CategoryType.SNEAKERS,
-                CategoryType.RUNNING,
+                CategoryType.RUNNING,    // 추가
                 CategoryType.BOOTS,
                 CategoryType.SANDALS,
-                CategoryType.CONVERSE
+                CategoryType.CONVERSE,   // 추가
+                CategoryType.SPORTS,     // 추가
+                CategoryType.DRESS
+                // CategoryType.CASUAL 제거 (실제로 존재하지 않음)
         );
     }
 
     @Test
     @DisplayName("CategoryType이 주어졌을때_name 호출하면_정확한 이름이 반환된다")
     void givenCategoryType_whenCallName_thenReturnCorrectName() {
-        // when & then
+        // when & then - 실제 존재하는 값들로 수정
         assertThat(CategoryType.SNEAKERS.name()).isEqualTo("SNEAKERS");
-        assertThat(CategoryType.RUNNING.name()).isEqualTo("DRESS");
+        assertThat(CategoryType.RUNNING.name()).isEqualTo("RUNNING");   // 수정
         assertThat(CategoryType.BOOTS.name()).isEqualTo("BOOTS");
         assertThat(CategoryType.SANDALS.name()).isEqualTo("SANDALS");
-        assertThat(CategoryType.CONVERSE.name()).isEqualTo("CASUAL");
+        assertThat(CategoryType.CONVERSE.name()).isEqualTo("CONVERSE"); // 수정
+        assertThat(CategoryType.SPORTS.name()).isEqualTo("SPORTS");     // 수정
+        assertThat(CategoryType.DRESS.name()).isEqualTo("DRESS");
     }
 
     @Test
     @DisplayName("CategoryType이 주어졌을때_toString 호출하면_정확한 문자열이 반환된다")
     void givenCategoryType_whenCallToString_thenReturnCorrectString() {
-        // when & then
+        // when & then - 실제 순서대로 수정
         assertThat(CategoryType.SNEAKERS.toString()).hasToString("SNEAKERS");
-        assertThat(CategoryType.RUNNING.toString()).hasToString("DRESS");
+        assertThat(CategoryType.RUNNING.toString()).hasToString("RUNNING");   // 수정
         assertThat(CategoryType.BOOTS.toString()).hasToString("BOOTS");
         assertThat(CategoryType.SANDALS.toString()).hasToString("SANDALS");
-        assertThat(CategoryType.CONVERSE.toString()).hasToString("CASUAL");
+        assertThat(CategoryType.CONVERSE.toString()).hasToString("CONVERSE"); // 수정
+        assertThat(CategoryType.SPORTS.toString()).hasToString("SPORTS");     // 수정
+        assertThat(CategoryType.DRESS.toString()).hasToString("DRESS");
     }
 
     @Test
@@ -53,14 +60,14 @@ class CategoryTypeTest {
     void givenSameCategoryType_whenCompareEquals_thenReturnTrue() {
         // when & then
         assertThat(CategoryType.SNEAKERS).isEqualTo(CategoryType.SNEAKERS);
-        assertThat(CategoryType.RUNNING).isEqualTo(CategoryType.RUNNING);
+        assertThat(CategoryType.RUNNING).isEqualTo(CategoryType.RUNNING); // 수정
     }
 
     @Test
     @DisplayName("다른 CategoryType이 주어졌을때_equals 비교하면_false가 반환된다")
     void givenDifferentCategoryType_whenCompareEquals_thenReturnFalse() {
         // when & then
-        assertThat(CategoryType.SNEAKERS).isNotEqualTo(CategoryType.RUNNING);
-        assertThat(CategoryType.BOOTS).isNotEqualTo(CategoryType.CONVERSE);
+        assertThat(CategoryType.SNEAKERS).isNotEqualTo(CategoryType.RUNNING); // 수정
+        assertThat(CategoryType.BOOTS).isNotEqualTo(CategoryType.SPORTS);     // 수정
     }
 }
