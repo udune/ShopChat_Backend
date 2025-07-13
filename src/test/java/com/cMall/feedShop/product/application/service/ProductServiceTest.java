@@ -225,6 +225,7 @@ class ProductServiceTest {
                     productService.createProduct(createRequest));
 
             // ErrorCode로 검증
+          
             assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.CATEGORY_NOT_FOUND);
             verify(productRepository, never()).save(any(Product.class));
         }
@@ -244,6 +245,7 @@ class ProductServiceTest {
                     productService.createProduct(createRequest));
 
             // ErrorCode로 검증
+          
             assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.STORE_NOT_FOUND);
             verify(productRepository, never()).save(any(Product.class));
         }
@@ -417,6 +419,7 @@ class ProductServiceTest {
 
             // when & then - BusinessException으로 변경
             BusinessException thrown = assertThrows(BusinessException.class,
+
                     () -> productService.updateProduct(1L, updateRequest)
             );
 
@@ -478,6 +481,7 @@ class ProductServiceTest {
 
             // when & then - BusinessException으로 변경
             BusinessException thrown = assertThrows(BusinessException.class,
+
                     () -> productService.updateProduct(1L, updateRequest)
             );
 
@@ -496,6 +500,7 @@ class ProductServiceTest {
 
             // when & then
             BusinessException thrown = assertThrows(BusinessException.class,
+
                     () -> productService.updateProduct(1L, updateRequest)
             );
 
@@ -515,6 +520,7 @@ class ProductServiceTest {
 
             // when & then
             BusinessException thrown = assertThrows(BusinessException.class,
+
                     () -> productService.updateProduct(1L, updateRequest)
             );
 
@@ -536,6 +542,7 @@ class ProductServiceTest {
 
             // when & then
             BusinessException thrown = assertThrows(BusinessException.class,
+
                     () -> productService.updateProduct(1L, updateRequest)
             );
 
