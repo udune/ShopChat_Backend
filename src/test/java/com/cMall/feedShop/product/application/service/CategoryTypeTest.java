@@ -19,10 +19,10 @@ class CategoryTypeTest {
         assertThat(result).hasSize(5);
         assertThat(result).contains(
                 CategoryType.SNEAKERS,
-                CategoryType.DRESS,
+                CategoryType.RUNNING,
                 CategoryType.BOOTS,
                 CategoryType.SANDALS,
-                CategoryType.CASUAL
+                CategoryType.CONVERSE
         );
     }
 
@@ -31,10 +31,10 @@ class CategoryTypeTest {
     void givenCategoryTypes_whenCreateObjects_thenNotNull() {
         // when & then
         assertThat(CategoryType.SNEAKERS).isNotNull();
-        assertThat(CategoryType.DRESS).isNotNull();
+        assertThat(CategoryType.RUNNING).isNotNull();
         assertThat(CategoryType.BOOTS).isNotNull();
         assertThat(CategoryType.SANDALS).isNotNull();
-        assertThat(CategoryType.CASUAL).isNotNull();
+        assertThat(CategoryType.CONVERSE).isNotNull();
     }
 
     @Test
@@ -42,10 +42,10 @@ class CategoryTypeTest {
     void givenCategoryType_whenCallName_thenReturnCorrectName() {
         // when & then
         assertThat(CategoryType.SNEAKERS.name()).isEqualTo("SNEAKERS");
-        assertThat(CategoryType.DRESS.name()).isEqualTo("DRESS");
+        assertThat(CategoryType.RUNNING.name()).isEqualTo("DRESS");
         assertThat(CategoryType.BOOTS.name()).isEqualTo("BOOTS");
         assertThat(CategoryType.SANDALS.name()).isEqualTo("SANDALS");
-        assertThat(CategoryType.CASUAL.name()).isEqualTo("CASUAL");
+        assertThat(CategoryType.CONVERSE.name()).isEqualTo("CASUAL");
     }
 
     @Test
@@ -53,10 +53,10 @@ class CategoryTypeTest {
     void givenCategoryType_whenCallToString_thenReturnCorrectString() {
         // when & then
         assertThat(CategoryType.SNEAKERS.toString()).hasToString("SNEAKERS");
-        assertThat(CategoryType.DRESS.toString()).hasToString("DRESS");
+        assertThat(CategoryType.RUNNING.toString()).hasToString("DRESS");
         assertThat(CategoryType.BOOTS.toString()).hasToString("BOOTS");
         assertThat(CategoryType.SANDALS.toString()).hasToString("SANDALS");
-        assertThat(CategoryType.CASUAL.toString()).hasToString("CASUAL");
+        assertThat(CategoryType.CONVERSE.toString()).hasToString("CASUAL");
     }
 
     @Test
@@ -64,14 +64,14 @@ class CategoryTypeTest {
     void givenSameCategoryType_whenCompareEquals_thenReturnTrue() {
         // when & then
         assertThat(CategoryType.SNEAKERS).isEqualTo(CategoryType.SNEAKERS);
-        assertThat(CategoryType.DRESS).isEqualTo(CategoryType.DRESS);
+        assertThat(CategoryType.RUNNING).isEqualTo(CategoryType.RUNNING);
     }
 
     @Test
     @DisplayName("다른 CategoryType이 주어졌을때_equals 비교하면_false가 반환된다")
     void givenDifferentCategoryType_whenCompareEquals_thenReturnFalse() {
         // when & then
-        assertThat(CategoryType.SNEAKERS).isNotEqualTo(CategoryType.DRESS);
-        assertThat(CategoryType.BOOTS).isNotEqualTo(CategoryType.CASUAL);
+        assertThat(CategoryType.SNEAKERS).isNotEqualTo(CategoryType.RUNNING);
+        assertThat(CategoryType.BOOTS).isNotEqualTo(CategoryType.CONVERSE);
     }
 }

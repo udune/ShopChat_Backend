@@ -21,7 +21,6 @@ import java.util.List;
 @Table(name = "products")
 @Getter
 @NoArgsConstructor
-@EntityListeners(AuditingEntityListener.class)
 public class Product extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

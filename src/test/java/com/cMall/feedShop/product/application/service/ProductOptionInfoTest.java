@@ -28,7 +28,7 @@ class ProductOptionInfoTest {
         given(productOption.getOptionId()).willReturn(1L);
         given(productOption.getGender()).willReturn(Gender.UNISEX);
         given(productOption.getSize()).willReturn(Size.SIZE_250);
-        given(productOption.getColor()).willReturn(Color.BLACK);
+        given(productOption.getColor()).willReturn(Color.WHITE);
         given(productOption.getStock()).willReturn(100);
 
         // when
@@ -38,7 +38,7 @@ class ProductOptionInfoTest {
         assertThat(result.getOptionId()).isEqualTo(1L);
         assertThat(result.getGender()).isEqualTo(Gender.UNISEX);
         assertThat(result.getSize()).isEqualTo(Size.SIZE_250);
-        assertThat(result.getColor()).isEqualTo(Color.BLACK);
+        assertThat(result.getColor()).isEqualTo(Color.WHITE);
         assertThat(result.getStock()).isEqualTo(100);
     }
 
@@ -50,7 +50,7 @@ class ProductOptionInfoTest {
         given(productOption.getOptionId()).willReturn(1L);
         given(productOption.getGender()).willReturn(Gender.UNISEX);
         given(productOption.getSize()).willReturn(Size.SIZE_250);
-        given(productOption.getColor()).willReturn(Color.BLACK);
+        given(productOption.getColor()).willReturn(Color.WHITE);
         given(productOption.getStock()).willReturn(100);
 
         // when
@@ -61,7 +61,7 @@ class ProductOptionInfoTest {
         assertThat(result.get(0).getOptionId()).isEqualTo(1L);
         assertThat(result.get(0).getGender()).isEqualTo(Gender.UNISEX);
         assertThat(result.get(0).getSize()).isEqualTo(Size.SIZE_250);
-        assertThat(result.get(0).getColor()).isEqualTo(Color.BLACK);
+        assertThat(result.get(0).getColor()).isEqualTo(Color.WHITE);
         assertThat(result.get(0).getStock()).isEqualTo(100);
     }
 
@@ -72,7 +72,7 @@ class ProductOptionInfoTest {
         given(productOption.getOptionId()).willReturn(1L);
         given(productOption.getGender()).willReturn(Gender.UNISEX);
         given(productOption.getSize()).willReturn(Size.SIZE_250);
-        given(productOption.getColor()).willReturn(Color.BLACK);
+        given(productOption.getColor()).willReturn(Color.WHITE);
         given(productOption.getStock()).willReturn(0);
 
         // when
