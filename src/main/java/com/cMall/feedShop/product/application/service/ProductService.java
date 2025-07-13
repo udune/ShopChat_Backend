@@ -43,79 +43,71 @@ public class ProductService {
 
     // 상품 등록
     public ProductCreateResponse createProduct(ProductCreateRequest request) {
-        try {
-            // 1. 현재 사용자 ID 가져오기
-            Long currentUserId = getCurrentUserId();
+        // 1. 현재 사용자 ID 가져오기
+        Long currentUserId = getCurrentUserId();
 
-            // 2. 판매자 권한 검증
-            validateSellerPermission(currentUserId);
+        // 2. 판매자 권한 검증
+        validateSellerPermission(currentUserId);
 
-            // 3. 사용자 스토어 찾기
-            Store userStore = getUserStore(currentUserId);
+        // 3. 사용자 스토어 찾기
+        Store userStore = getUserStore(currentUserId);
 
-            // 4. 카테고리 존재 확인
-            Category category = getCategory(request.getCategoryId());
+        // 4. 카테고리 존재 확인
+        Category category = getCategory(request.getCategoryId());
 
-            // 5. 상품 생성
-            Product product = Product.builder()
-                    .name(request.getName())
-                    .price(request.getPrice())
-                    .description(request.getDescription())
-                    .discountType(request.getDiscountType())
-                    .discountValue(request.getDiscountValue())
-                    .store(userStore)
-                    .category(category)
-                    .build();
+        // 5. 상품 생성
+        Product product = Product.builder()
+                .name(request.getName())
+                .price(request.getPrice())
+                .description(request.getDescription())
+                .discountType(request.getDiscountType())
+                .discountValue(request.getDiscountValue())
+                .store(userStore)
+                .category(category)
+                .build();
 
-            // 7. 상품 이미지 생성 및 저장 (메모리상에서만)
-            createProductImages(product, request.getImages());
+        // 7. 상품 이미지 생성 및 저장 (메모리상에서만)
+        createProductImages(product, request.getImages());
 
-            // 8. 상품에 옵션 추가 (메모리상에서만)
-            createProductOptions(product, request.getOptions());
+        // 8. 상품에 옵션 추가 (메모리상에서만)
+        createProductOptions(product, request.getOptions());
 
-            // 9. DB 저장
-            Product savedProduct = productRepository.save(product);
+        // 9. DB 저장
+        Product savedProduct = productRepository.save(product);
 
-            // 10. 응답값 리턴
-            return ProductCreateResponse.of(savedProduct.getProductId());
-        } catch (Exception e) {
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, e.getMessage());
-        }
+        // 10. 응답값 리턴
+        return ProductCreateResponse.of(savedProduct.getProductId());
     }
 
     // 상품 수정
     public void updateProduct(Long productId, ProductUpdateRequest request) {
-        try {
-            // 1. 현재 사용자 ID 가져오기
-            Long currentUserId = getCurrentUserId();
+        // 1. 현재 사용자 ID 가져오기
+        Long currentUserId = getCurrentUserId();
 
-            // 2. 상품 조회 (소유권 검증 포함)
-            Product product = getProductOwnership(productId, currentUserId);
+        // 2. 상품 조회 (소유권 검증 포함)
+        Product product = getProductOwnership(productId, currentUserId);
 
-            // 3. 카테고리 존재 확인
-            Category category = null;
-            if (request.getCategoryId() != null) {
-                category = getCategory(request.getCategoryId());
-            }
-
-            // 4. 상품 필드 업데이트
-            updateProductFields(product, request, category);
-
-            // 5. 이미지 업데이트
-            if (request.getImages() != null) {
-                updateProductImages(product, request.getImages());
-            }
-
-            // 6. 옵션 업데이트
-            if (request.getOptions() != null) {
-                updateProductOptions(product, request.getOptions());
-            }
-
-            // 7. DB 저장
-            productRepository.save(product);
-        } catch (Exception e) {
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, e.getMessage());
+        // 3. 카테고리 존재 확인
+        Category category = null;
+        if (request.getCategoryId() != null) {
+            category = getCategory(request.getCategoryId());
         }
+
+        // 4. 상품 필드 업데이트
+        updateProductFields(product, request, category);
+
+        // 5. 이미지 업데이트
+        if (request.getImages() != null) {
+            updateProductImages(product, request.getImages());
+        }
+
+        // 6. 옵션 업데이트
+        if (request.getOptions() != null) {
+            updateProductOptions(product, request.getOptions());
+        }
+
+        // 7. DB 저장
+        productRepository.save(product);
     }
 
     // JWT 에서 현재 사용자 ID 추출
