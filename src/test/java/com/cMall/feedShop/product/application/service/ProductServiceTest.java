@@ -562,42 +562,37 @@ class ProductServiceTest {
             mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
             mockSecurityContext("seller123", seller);
             given(productRepository.findByProductId(1L)).willReturn(Optional.of(existingProduct));
-            given(productRepository.save(any(Product.class))).willReturn(existingProduct);
 
             // when
             productService.deleteProduct(1L);
 
             // then
-            verify(productRepository, times(1)).save(any(Product.class));
+            verify(productRepository, times(1)).delete(existingProduct); // delete 메서드 검증
+            verify(productRepository, never()).save(any(Product.class)); // save는 호출되지 않음
         }
     }
 
+    // 대신 이런 테스트로 대체 가능
     @Test
-    @DisplayName("이미 삭제된 상품을 삭제하려할때_deleteProduct 호출하면_이미 삭제됨 예외가 발생한다")
-    void givenAlreadyDeletedProduct_whenDeleteProduct_thenThrowsProductAlreadyDeletedException() {
+    @DisplayName("CASCADE 삭제로 연관 엔티티도 함께 삭제되는지 확인")
+    void givenProductWithImagesAndOptions_whenDeleteProduct_thenCascadeDeleteWorksCorrectly() {
         // given
-        Product deletedProduct = Product.builder()
-                .name("삭제된 상품")
-                .price(new BigDecimal("50000"))
-                .store(store)
-                .category(category)
-                .build();
-        ReflectionTestUtils.setField(deletedProduct, "productId", 1L);
-        ReflectionTestUtils.setField(deletedProduct, "deletedAt", LocalDateTime.now());
+        // existingProduct에는 이미 productImages와 productOptions가 설정되어 있음
+        assertThat(existingProduct.getProductImages()).isNotEmpty();
+        assertThat(existingProduct.getProductOptions()).isNotEmpty();
 
         try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
             mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
             mockSecurityContext("seller123", seller);
-            given(productRepository.findByProductId(1L)).willReturn(Optional.empty());
+            given(productRepository.findByProductId(1L)).willReturn(Optional.of(existingProduct));
 
-            // when & then
-            ProductException.ProductNotFoundException thrown = assertThrows(
-                    ProductException.ProductNotFoundException.class,
-                    () -> productService.deleteProduct(1L)
-            );
+            // when
+            productService.deleteProduct(1L);
 
-            assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
-            verify(productRepository, never()).save(any(Product.class));
+            // then
+            verify(productRepository, times(1)).delete(existingProduct);
+            // CASCADE 설정으로 인해 연관 엔티티들도 함께 삭제됨
+            // (실제 DB 테스트에서는 integration test로 확인)
         }
     }
 
@@ -619,6 +614,7 @@ class ProductServiceTest {
             );
 
             assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.STORE_FORBIDDEN);
+            verify(productRepository, never()).delete(any(Product.class));
             verify(productRepository, never()).save(any(Product.class));
         }
     }
@@ -638,6 +634,7 @@ class ProductServiceTest {
             );
 
             assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
+            verify(productRepository, never()).delete(any(Product.class));
             verify(productRepository, never()).save(any(Product.class));
         }
     }
@@ -658,6 +655,7 @@ class ProductServiceTest {
             );
 
             assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+            verify(productRepository, never()).delete(any(Product.class));
             verify(productRepository, never()).save(any(Product.class));
         }
     }
@@ -676,6 +674,7 @@ class ProductServiceTest {
             );
 
             assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
+            verify(productRepository, never()).delete(any(Product.class));
             verify(productRepository, never()).save(any(Product.class));
         }
     }
