@@ -124,7 +124,7 @@ class ProductServiceTest {
         ReflectionTestUtils.setField(existingProduct, "productImages", existingImages);
 
         List<ProductOption> existingOptions = new ArrayList<>();
-        existingOptions.add(new ProductOption(Gender.MEN, Size.SIZE_250, Color.BLACK, 10, existingProduct));
+        existingOptions.add(new ProductOption(Gender.MEN, Size.SIZE_250, Color.WHITE, 10, existingProduct));
         ReflectionTestUtils.setField(existingProduct, "productOptions", existingOptions);
     }
 
@@ -143,7 +143,7 @@ class ProductServiceTest {
         ProductOptionRequest optionRequest = new ProductOptionRequest();
         ReflectionTestUtils.setField(optionRequest, "gender", Gender.UNISEX);
         ReflectionTestUtils.setField(optionRequest, "size", Size.SIZE_250);
-        ReflectionTestUtils.setField(optionRequest, "color", Color.BLACK);
+        ReflectionTestUtils.setField(optionRequest, "color", Color.WHITE);
         ReflectionTestUtils.setField(optionRequest, "stock", 100);
         ReflectionTestUtils.setField(createRequest, "options", List.of(optionRequest));
     }
@@ -385,7 +385,7 @@ class ProductServiceTest {
         ProductOptionRequest newOptionRequest = new ProductOptionRequest();
         ReflectionTestUtils.setField(newOptionRequest, "gender", Gender.WOMEN);
         ReflectionTestUtils.setField(newOptionRequest, "size", Size.SIZE_255);
-        ReflectionTestUtils.setField(newOptionRequest, "color", Color.WHITE);
+        ReflectionTestUtils.setField(newOptionRequest, "color", Color.SILVER);
         ReflectionTestUtils.setField(newOptionRequest, "stock", 50);
         ReflectionTestUtils.setField(updateRequest, "options", List.of(newOptionRequest));
 

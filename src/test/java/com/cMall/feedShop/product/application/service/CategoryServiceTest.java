@@ -34,7 +34,7 @@ class CategoryServiceTest {
     void givenCategoriesExist_whenGetAllCategories_thenReturnAllCategories() {
         // given
         Category sneakers = new Category(CategoryType.SNEAKERS, "운동화");
-        Category dress = new Category(CategoryType.DRESS, "드레스");
+        Category dress = new Category(CategoryType.RUNNING, "드레스");
         ReflectionTestUtils.setField(sneakers, "categoryId", 1L);
         ReflectionTestUtils.setField(dress, "categoryId", 2L);
 
@@ -48,7 +48,7 @@ class CategoryServiceTest {
         assertThat(result.get(0).getName()).isEqualTo("운동화");
         assertThat(result.get(0).getType()).isEqualTo(CategoryType.SNEAKERS);
         assertThat(result.get(1).getName()).isEqualTo("드레스");
-        assertThat(result.get(1).getType()).isEqualTo(CategoryType.DRESS);
+        assertThat(result.get(1).getType()).isEqualTo(CategoryType.RUNNING);
         verify(categoryRepository, times(1)).findAll();
     }
 

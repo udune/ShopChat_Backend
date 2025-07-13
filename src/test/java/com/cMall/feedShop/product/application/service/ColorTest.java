@@ -18,9 +18,9 @@ class ColorTest {
         // then
         assertThat(result).hasSize(12);
         assertThat(result).contains(
-                Color.BLACK, Color.WHITE, Color.BROWN, Color.NAVY,
-                Color.GRAY, Color.RED, Color.GREEN, Color.BLUE,
-                Color.YELLOW, Color.PURPLE, Color.PINK, Color.ORANGE
+                Color.WHITE, Color.SILVER, Color.LIGHT_GRAY, Color.GRAY,
+                Color.DARK_GRAY, Color.BLACK, Color.RED, Color.DEEP_RED,
+                Color.BURGUNDY, Color.PALE_PINK, Color.LIGHT_PINK, Color.PINK
         );
     }
 
@@ -28,21 +28,21 @@ class ColorTest {
     @DisplayName("기본 색상들이 정의되었을때_객체 생성하면_null이 아니다")
     void givenBasicColors_whenCreateObjects_thenNotNull() {
         // when & then
-        assertThat(Color.BLACK).isNotNull();
         assertThat(Color.WHITE).isNotNull();
+        assertThat(Color.SILVER).isNotNull();
+        assertThat(Color.BLACK).isNotNull();
+        assertThat(Color.DEEP_RED).isNotNull();
         assertThat(Color.RED).isNotNull();
-        assertThat(Color.BLUE).isNotNull();
-        assertThat(Color.GREEN).isNotNull();
     }
 
     @Test
     @DisplayName("Color가 주어졌을때_name 호출하면_정확한 이름이 반환된다")
     void givenColor_whenCallName_thenReturnCorrectName() {
         // when & then
-        assertThat(Color.BLACK.name()).isEqualTo("BLACK");
-        assertThat(Color.WHITE.name()).isEqualTo("WHITE");
-        assertThat(Color.RED.name()).isEqualTo("RED");
-        assertThat(Color.BLUE.name()).isEqualTo("BLUE");
+        assertThat(Color.WHITE.name()).isEqualTo("BLACK");
+        assertThat(Color.SILVER.name()).isEqualTo("WHITE");
+        assertThat(Color.BLACK.name()).isEqualTo("RED");
+        assertThat(Color.DEEP_RED.name()).isEqualTo("BLUE");
     }
 
     @Test
@@ -59,26 +59,26 @@ class ColorTest {
     @DisplayName("동일한 Color가 주어졌을때_equals 비교하면_true가 반환된다")
     void givenSameColor_whenCompareEquals_thenReturnTrue() {
         // when & then
+        assertThat(Color.WHITE).isEqualTo(Color.WHITE);
         assertThat(Color.BLACK).isEqualTo(Color.BLACK);
-        assertThat(Color.RED).isEqualTo(Color.RED);
     }
 
     @Test
     @DisplayName("다른 Color가 주어졌을때_equals 비교하면_false가 반환된다")
     void givenDifferentColor_whenCompareEquals_thenReturnFalse() {
         // when & then
-        assertThat(Color.BLACK).isNotEqualTo(Color.WHITE);
-        assertThat(Color.RED).isNotEqualTo(Color.BLUE);
-        assertThat(Color.GREEN).isNotEqualTo(Color.YELLOW);
+        assertThat(Color.WHITE).isNotEqualTo(Color.SILVER);
+        assertThat(Color.BLACK).isNotEqualTo(Color.DEEP_RED);
+        assertThat(Color.RED).isNotEqualTo(Color.BURGUNDY);
     }
 
     @Test
     @DisplayName("Color ordinal이 주어졌을때_순서가 정확하다")
     void givenColorOrdinal_whenCheckOrder_thenCorrectOrder() {
         // when & then
-        assertThat(Color.BLACK.ordinal()).isZero();
-        assertThat(Color.WHITE.ordinal()).isEqualTo(1);
-        assertThat(Color.BROWN.ordinal()).isEqualTo(2);
+        assertThat(Color.WHITE.ordinal()).isZero();
+        assertThat(Color.SILVER.ordinal()).isEqualTo(1);
+        assertThat(Color.LIGHT_GRAY.ordinal()).isEqualTo(2);
     }
 
     @Test
@@ -88,10 +88,10 @@ class ColorTest {
         Color[] colors = Color.values();
 
         // when & then
-        assertThat(colors).contains(Color.NAVY);
         assertThat(colors).contains(Color.GRAY);
-        assertThat(colors).contains(Color.PURPLE);
+        assertThat(colors).contains(Color.DARK_GRAY);
+        assertThat(colors).contains(Color.PALE_PINK);
+        assertThat(colors).contains(Color.LIGHT_PINK);
         assertThat(colors).contains(Color.PINK);
-        assertThat(colors).contains(Color.ORANGE);
     }
 }
