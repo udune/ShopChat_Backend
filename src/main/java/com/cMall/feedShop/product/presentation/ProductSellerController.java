@@ -44,4 +44,17 @@ public class ProductSellerController {
         productService.updateProduct(productId, request);
         return ApiResponse.success(null);
     }
+
+    /**
+     * 상품 삭제 API
+     * DELETE /api/seller/products/{productId}
+     */
+    @DeleteMapping("/products/{productId}")
+    @PreAuthorize("hasRole('SELLER')")
+    @ApiResponseFormat(message = "상품이 성공적으로 삭제되었습니다.")
+    public ApiResponse<Void> deleteProduct(@PathVariable Long productId)
+    {
+        productService.deleteProduct(productId);
+        return ApiResponse.success(null);
+    }
 }

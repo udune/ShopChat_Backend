@@ -78,7 +78,7 @@ class ProductReadServiceTest {
     void givenProductsExist_whenGetProductList_thenReturnProductList() {
         // given
         Page<Product> productPage = new PageImpl<>(List.of(product), PageRequest.of(0, 20), 1);
-        given(productRepository.findByDeletedAtIsNullOrderByCreatedAtDesc(any()))
+        given(productRepository.findAllByOrderByCreatedAtDesc(any()))
                 .willReturn(productPage);
         given(discountCalculator.calculateDiscountPrice(any(), any(), any()))
                 .willReturn(new BigDecimal("45000"));
@@ -93,7 +93,7 @@ class ProductReadServiceTest {
         assertThat(result.getTotalPages()).isEqualTo(1);
         assertThat(result.getSize()).isEqualTo(20);
         assertThat(result.getNumber()).isEqualTo(0);
-        verify(productRepository, times(1)).findByDeletedAtIsNullOrderByCreatedAtDesc(any());
+        verify(productRepository, times(1)).findAllByOrderByCreatedAtDesc(any());
     }
 
     @Test
@@ -101,7 +101,7 @@ class ProductReadServiceTest {
     void givenNoProductsExist_whenGetProductList_thenReturnEmptyList() {
         // given
         Page<Product> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 20), 0);
-        given(productRepository.findByDeletedAtIsNullOrderByCreatedAtDesc(any()))
+        given(productRepository.findAllByOrderByCreatedAtDesc(any()))
                 .willReturn(emptyPage);
 
         // when
@@ -117,7 +117,7 @@ class ProductReadServiceTest {
     void givenNegativePage_whenGetProductList_thenPageAdjustedToZero() {
         // given
         Page<Product> productPage = new PageImpl<>(List.of(product), PageRequest.of(0, 20), 1);
-        given(productRepository.findByDeletedAtIsNullOrderByCreatedAtDesc(any()))
+        given(productRepository.findAllByOrderByCreatedAtDesc(any()))
                 .willReturn(productPage);
         given(discountCalculator.calculateDiscountPrice(any(), any(), any()))
                 .willReturn(new BigDecimal("45000"));
@@ -127,7 +127,7 @@ class ProductReadServiceTest {
 
         // then
         assertThat(result.getNumber()).isEqualTo(0);
-        verify(productRepository, times(1)).findByDeletedAtIsNullOrderByCreatedAtDesc(
+        verify(productRepository, times(1)).findAllByOrderByCreatedAtDesc(
                 PageRequest.of(0, 20));
     }
 
@@ -136,7 +136,7 @@ class ProductReadServiceTest {
     void givenInvalidSize_whenGetProductList_thenSizeAdjustedToDefault() {
         // given
         Page<Product> productPage = new PageImpl<>(List.of(product), PageRequest.of(0, 20), 1);
-        given(productRepository.findByDeletedAtIsNullOrderByCreatedAtDesc(any()))
+        given(productRepository.findAllByOrderByCreatedAtDesc(any()))
                 .willReturn(productPage);
         given(discountCalculator.calculateDiscountPrice(any(), any(), any()))
                 .willReturn(new BigDecimal("45000"));
@@ -146,7 +146,7 @@ class ProductReadServiceTest {
 
         // then
         assertThat(result.getSize()).isEqualTo(20);
-        verify(productRepository, times(1)).findByDeletedAtIsNullOrderByCreatedAtDesc(
+        verify(productRepository, times(1)).findAllByOrderByCreatedAtDesc(
                 PageRequest.of(0, 20));
     }
 
@@ -154,7 +154,7 @@ class ProductReadServiceTest {
     @DisplayName("유효한 상품ID가 주어졌을때_getProductDetail 호출하면_상품 상세정보가 반환된다")
     void givenValidProductId_whenGetProductDetail_thenReturnProductDetail() {
         // given
-        given(productRepository.findByProductIdAndDeletedAtIsNull(1L))
+        given(productRepository.findByProductId(1L))
                 .willReturn(Optional.of(product));
         given(discountCalculator.calculateDiscountPrice(any(), any(), any()))
                 .willReturn(new BigDecimal("45000"));
@@ -179,7 +179,7 @@ class ProductReadServiceTest {
     @DisplayName("존재하지않는 상품ID가 주어졌을때_getProductDetail 호출하면_상품 없음 예외가 발생한다")
     void givenNonExistentProductId_whenGetProductDetail_thenThrowsProductNotFoundException() {
         // given
-        given(productRepository.findByProductIdAndDeletedAtIsNull(999L))
+        given(productRepository.findByProductId(999L))
                 .willReturn(Optional.empty());
 
         // when & then
@@ -188,14 +188,14 @@ class ProductReadServiceTest {
                 () -> productReadService.getProductDetail(999L));
 
         assertThat(thrown.getErrorCode().getMessage()).contains("상품을 찾을 수 없습니다");
-        verify(productRepository, times(1)).findByProductIdAndDeletedAtIsNull(999L);
+        verify(productRepository, times(1)).findByProductId(999L);
     }
 
     @Test
     @DisplayName("삭제된 상품ID가 주어졌을때_getProductDetail 호출하면_상품 없음 예외가 발생한다")
     void givenDeletedProductId_whenGetProductDetail_thenThrowsProductNotFoundException() {
         // given
-        given(productRepository.findByProductIdAndDeletedAtIsNull(1L))
+        given(productRepository.findByProductId(1L))
                 .willReturn(Optional.empty());
 
         // when & then
@@ -211,7 +211,7 @@ class ProductReadServiceTest {
     void givenLargePageSize_whenGetProductList_thenSizeLimitedToMaximum() {
         // given
         Page<Product> productPage = new PageImpl<>(List.of(product), PageRequest.of(0, 20), 1);
-        given(productRepository.findByDeletedAtIsNullOrderByCreatedAtDesc(any()))
+        given(productRepository.findAllByOrderByCreatedAtDesc(any()))
                 .willReturn(productPage);
         given(discountCalculator.calculateDiscountPrice(any(), any(), any()))
                 .willReturn(new BigDecimal("45000"));
@@ -220,7 +220,7 @@ class ProductReadServiceTest {
         ProductPageResponse result = productReadService.getProductList(0, 150);
 
         // then
-        verify(productRepository, times(1)).findByDeletedAtIsNullOrderByCreatedAtDesc(
+        verify(productRepository, times(1)).findAllByOrderByCreatedAtDesc(
                 PageRequest.of(0, 20)); // 최대 100을 넘으면 기본값 20으로 설정
     }
 }

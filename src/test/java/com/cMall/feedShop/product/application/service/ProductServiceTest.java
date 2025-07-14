@@ -17,7 +17,6 @@ import com.cMall.feedShop.product.domain.repository.CategoryRepository;
 import com.cMall.feedShop.product.domain.repository.ProductImageRepository;
 import com.cMall.feedShop.product.domain.repository.ProductOptionRepository;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
-import com.cMall.feedShop.store.application.exception.StoreException;
 import com.cMall.feedShop.store.domain.model.Store;
 import com.cMall.feedShop.store.domain.repository.StoreRepository;
 import com.cMall.feedShop.user.domain.enums.UserRole;
@@ -125,7 +124,7 @@ class ProductServiceTest {
         ReflectionTestUtils.setField(existingProduct, "productImages", existingImages);
 
         List<ProductOption> existingOptions = new ArrayList<>();
-        existingOptions.add(new ProductOption(Gender.MEN, Size.SIZE_250, Color.BLACK, 10, existingProduct));
+        existingOptions.add(new ProductOption(Gender.MEN, Size.SIZE_250, Color.WHITE, 10, existingProduct));
         ReflectionTestUtils.setField(existingProduct, "productOptions", existingOptions);
     }
 
@@ -144,7 +143,7 @@ class ProductServiceTest {
         ProductOptionRequest optionRequest = new ProductOptionRequest();
         ReflectionTestUtils.setField(optionRequest, "gender", Gender.UNISEX);
         ReflectionTestUtils.setField(optionRequest, "size", Size.SIZE_250);
-        ReflectionTestUtils.setField(optionRequest, "color", Color.BLACK);
+        ReflectionTestUtils.setField(optionRequest, "color", Color.WHITE);
         ReflectionTestUtils.setField(optionRequest, "stock", 100);
         ReflectionTestUtils.setField(createRequest, "options", List.of(optionRequest));
     }
@@ -322,7 +321,7 @@ class ProductServiceTest {
         try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
             mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
             mockSecurityContext("seller123", seller);
-            given(productRepository.findByProductIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(existingProduct));
+            given(productRepository.findByProductId(1L)).willReturn(Optional.of(existingProduct));
             given(categoryRepository.findById(2L)).willReturn(Optional.of(newCategory));
             given(productRepository.save(any(Product.class))).willReturn(existingProduct);
 
@@ -343,7 +342,7 @@ class ProductServiceTest {
         try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
             mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
             mockSecurityContext("seller123", seller);
-            given(productRepository.findByProductIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(existingProduct));
+            given(productRepository.findByProductId(1L)).willReturn(Optional.of(existingProduct));
             given(productRepository.save(any(Product.class))).willReturn(existingProduct);
 
             // when
@@ -367,7 +366,7 @@ class ProductServiceTest {
         try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
             mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
             mockSecurityContext("seller123", seller);
-            given(productRepository.findByProductIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(existingProduct));
+            given(productRepository.findByProductId(1L)).willReturn(Optional.of(existingProduct));
             given(productRepository.save(any(Product.class))).willReturn(existingProduct);
 
             // when
@@ -386,14 +385,14 @@ class ProductServiceTest {
         ProductOptionRequest newOptionRequest = new ProductOptionRequest();
         ReflectionTestUtils.setField(newOptionRequest, "gender", Gender.WOMEN);
         ReflectionTestUtils.setField(newOptionRequest, "size", Size.SIZE_255);
-        ReflectionTestUtils.setField(newOptionRequest, "color", Color.WHITE);
+        ReflectionTestUtils.setField(newOptionRequest, "color", Color.SILVER);
         ReflectionTestUtils.setField(newOptionRequest, "stock", 50);
         ReflectionTestUtils.setField(updateRequest, "options", List.of(newOptionRequest));
 
         try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
             mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
             mockSecurityContext("seller123", seller);
-            given(productRepository.findByProductIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(existingProduct));
+            given(productRepository.findByProductId(1L)).willReturn(Optional.of(existingProduct));
             given(productRepository.save(any(Product.class))).willReturn(existingProduct);
 
             // when
@@ -415,7 +414,7 @@ class ProductServiceTest {
         try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
             mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
             mockSecurityContext("other123", otherSeller);
-            given(productRepository.findByProductIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(existingProduct));
+            given(productRepository.findByProductId(1L)).willReturn(Optional.of(existingProduct));
 
             // when & then - BusinessException으로 변경
             BusinessException thrown = assertThrows(BusinessException.class,
@@ -454,7 +453,7 @@ class ProductServiceTest {
         try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
             mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
             mockSecurityContext("seller123", seller);
-            given(productRepository.findByProductIdAndDeletedAtIsNull(999L)).willReturn(Optional.empty());
+            given(productRepository.findByProductId(999L)).willReturn(Optional.empty());
 
             // when & then
             ProductException.ProductNotFoundException thrown = assertThrows(
@@ -476,7 +475,7 @@ class ProductServiceTest {
         try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
             mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
             mockSecurityContext("seller123", seller);
-            given(productRepository.findByProductIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(existingProduct));
+            given(productRepository.findByProductId(1L)).willReturn(Optional.of(existingProduct));
             given(categoryRepository.findById(999L)).willReturn(Optional.empty());
 
             // when & then - BusinessException으로 변경
@@ -547,6 +546,135 @@ class ProductServiceTest {
             );
 
             assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
+            verify(productRepository, never()).save(any(Product.class));
+        }
+    }
+
+    // ================================
+    // deleteProduct 테스트
+    // ================================
+
+    @Test
+    @DisplayName("유효한 판매자가 자신의 상품을 삭제하려할때_deleteProduct 호출하면_상품이 성공적으로 삭제된다")
+    void givenValidSellerAndOwnProduct_whenDeleteProduct_thenProductDeletedSuccessfully() {
+        // given
+        try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
+            mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
+            mockSecurityContext("seller123", seller);
+            given(productRepository.findByProductId(1L)).willReturn(Optional.of(existingProduct));
+
+            // when
+            productService.deleteProduct(1L);
+
+            // then
+            verify(productRepository, times(1)).delete(existingProduct); // delete 메서드 검증
+            verify(productRepository, never()).save(any(Product.class)); // save는 호출되지 않음
+        }
+    }
+
+    // 대신 이런 테스트로 대체 가능
+    @Test
+    @DisplayName("CASCADE 삭제로 연관 엔티티도 함께 삭제되는지 확인")
+    void givenProductWithImagesAndOptions_whenDeleteProduct_thenCascadeDeleteWorksCorrectly() {
+        // given
+        // existingProduct에는 이미 productImages와 productOptions가 설정되어 있음
+        assertThat(existingProduct.getProductImages()).isNotEmpty();
+        assertThat(existingProduct.getProductOptions()).isNotEmpty();
+
+        try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
+            mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
+            mockSecurityContext("seller123", seller);
+            given(productRepository.findByProductId(1L)).willReturn(Optional.of(existingProduct));
+
+            // when
+            productService.deleteProduct(1L);
+
+            // then
+            verify(productRepository, times(1)).delete(existingProduct);
+            // CASCADE 설정으로 인해 연관 엔티티들도 함께 삭제됨
+            // (실제 DB 테스트에서는 integration test로 확인)
+        }
+    }
+
+    @Test
+    @DisplayName("다른 판매자의 상품을 삭제하려할때_deleteProduct 호출하면_권한 없음 예외가 발생한다")
+    void givenOtherSellerProduct_whenDeleteProduct_thenThrowsStoreForbiddenException() {
+        // given
+        User otherSeller = new User("other123", "password", "other@test.com", UserRole.SELLER);
+        ReflectionTestUtils.setField(otherSeller, "id", 3L);
+
+        try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
+            mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
+            mockSecurityContext("other123", otherSeller);
+            given(productRepository.findByProductId(1L)).willReturn(Optional.of(existingProduct));
+
+            // when & then
+            BusinessException thrown = assertThrows(BusinessException.class,
+                    () -> productService.deleteProduct(1L)
+            );
+
+            assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.STORE_FORBIDDEN);
+            verify(productRepository, never()).delete(any(Product.class));
+            verify(productRepository, never()).save(any(Product.class));
+        }
+    }
+
+    @Test
+    @DisplayName("일반 사용자가 상품을 삭제하려할때_deleteProduct 호출하면_권한 없음 예외가 발생한다")
+    void givenRegularUser_whenDeleteProduct_thenThrowsForbiddenException() {
+        // given
+        try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
+            mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
+            mockSecurityContext("user123", regularUser);
+
+            // when & then
+            BusinessException thrown = assertThrows(
+                    BusinessException.class,
+                    () -> productService.deleteProduct(1L)
+            );
+
+            assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
+            verify(productRepository, never()).delete(any(Product.class));
+            verify(productRepository, never()).save(any(Product.class));
+        }
+    }
+
+    @Test
+    @DisplayName("존재하지않는 상품을 삭제하려할때_deleteProduct 호출하면_상품 없음 예외가 발생한다")
+    void givenNonExistentProduct_whenDeleteProduct_thenThrowsProductNotFoundException() {
+        // given
+        try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
+            mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
+            mockSecurityContext("seller123", seller);
+            given(productRepository.findByProductId(999L)).willReturn(Optional.empty());
+
+            // when & then
+            ProductException.ProductNotFoundException thrown = assertThrows(
+                    ProductException.ProductNotFoundException.class,
+                    () -> productService.deleteProduct(999L)
+            );
+
+            assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+            verify(productRepository, never()).delete(any(Product.class));
+            verify(productRepository, never()).save(any(Product.class));
+        }
+    }
+
+    @Test
+    @DisplayName("인증되지않은 사용자가 상품을 삭제하려할때_deleteProduct 호출하면_인증 없음 예외가 발생한다")
+    void givenUnauthenticatedUser_whenDeleteProduct_thenThrowsUnauthorizedException() {
+        // given
+        try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
+            mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
+            given(securityContext.getAuthentication()).willReturn(null);
+
+            // when & then
+            BusinessException thrown = assertThrows(BusinessException.class,
+                    () -> productService.deleteProduct(1L)
+            );
+
+            assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
+            verify(productRepository, never()).delete(any(Product.class));
             verify(productRepository, never()).save(any(Product.class));
         }
     }

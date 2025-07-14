@@ -112,6 +112,24 @@ public class ProductService {
         // 8. DB 저장
         productRepository.save(product);
     }
+  
+    // 상품 삭제
+    public void deleteProduct(Long productId) {
+        // 1. 현재 사용자 ID 가져오기
+        Long currentUserId = getCurrentUserId();
+
+        // 2. 판매자 권한 검증
+        validateSellerPermission(currentUserId);
+
+        // 3. 상품 조회 (소유권 검증 포함)
+        Product product = getProductOwnership(productId, currentUserId);
+
+        // 4. 주문에 포함된 상품인지 확인
+        validateProductNotInOrders(productId);
+
+        // 5. DB 에서 삭제 (CASCADE DELETE)
+        productRepository.delete(product);
+    }
 
     // JWT 에서 현재 사용자 ID 추출
     private Long getCurrentUserId() {
@@ -156,7 +174,7 @@ public class ProductService {
     // 상품 조회 및 소유권 검증
     private Product getProductOwnership(Long productId, Long currentUserId) {
         // 상품을 찾는다.
-        Product product = productRepository.findByProductIdAndDeletedAtIsNull(productId)
+        Product product = productRepository.findByProductId(productId)
                 .orElseThrow(() -> new ProductException.ProductNotFoundException());
 
         // 상품 소유권 검증
@@ -166,6 +184,11 @@ public class ProductService {
         }
 
         return product;
+    }
+
+    // 주문에 포함된 상품인지 확인
+    private void validateProductNotInOrders(Long productId) {
+        // 주문 도메인 작업할때 진행
     }
 
     // 상품 이미지 생성
