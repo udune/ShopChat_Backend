@@ -1,5 +1,6 @@
 package com.cMall.feedShop.cart.domain.model;
 
+import com.cMall.feedShop.cart.application.exception.CartException;
 import com.cMall.feedShop.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.Builder;
@@ -42,7 +43,7 @@ public class CartItem extends BaseTimeEntity {
 
     public void updateQuantity(Integer newQuantity) {
         if (newQuantity < 1) {
-            throw new IllegalArgumentException("수량은 1개 이상이어야 합니다.");
+            throw new CartException.CartZeroQuantityException();
         }
         this.quantity = newQuantity;
     }

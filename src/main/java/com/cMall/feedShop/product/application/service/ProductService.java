@@ -42,6 +42,7 @@ public class ProductService {
 
     // 상품 등록
     public ProductCreateResponse createProduct(ProductCreateRequest request, UserDetails userDetails) {
+        System.out.println("ProductService.createProduct() called with request: " + request);
         // 1. 현재 사용자 ID 가져오기
         Long currentUserId = getCurrentUserId(userDetails);
 

@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class CartItemCreateRequest {
-
     @NotNull(message = "상품 옵션 ID는 필수입니다.")
     private Long optionId;
 

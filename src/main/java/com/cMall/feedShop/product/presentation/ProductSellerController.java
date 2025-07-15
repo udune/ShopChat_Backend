@@ -64,35 +64,4 @@ public class ProductSellerController {
         productService.deleteProduct(productId, userDetails);
         return ApiResponse.success(null);
     }
-
-    /**
-     * 상품 수정 API
-     * PUT /api/seller/products/{productId}
-     */
-    @PutMapping("/products/{productId}")
-    @PreAuthorize("hasRole('SELLER')")
-    @ApiResponseFormat(message = "상품이 성공적으로 수정되었습니다.")
-    public ApiResponse<Void> updateProduct(
-            @PathVariable Long productId,
-            @Valid @RequestBody ProductUpdateRequest request,
-            @AuthenticationPrincipal UserDetails userDetails
-    ) {
-        productService.updateProduct(productId, request, userDetails);
-        return ApiResponse.success(null);
-    }
-
-    /**
-     * 상품 삭제 API
-     * DELETE /api/seller/products/{productId}
-     */
-    @DeleteMapping("/products/{productId}")
-    @PreAuthorize("hasRole('SELLER')")
-    @ApiResponseFormat(message = "상품이 성공적으로 삭제되었습니다.")
-    public ApiResponse<Void> deleteProduct(
-            @PathVariable Long productId,
-            @AuthenticationPrincipal UserDetails userDetails)
-    {
-        productService.deleteProduct(productId, userDetails);
-        return ApiResponse.success(null);
-    }
 }
