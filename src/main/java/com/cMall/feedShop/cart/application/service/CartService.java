@@ -112,12 +112,24 @@ public class CartService {
     }
 
     private Cart getOrCreateCart(Long currentUserId) {
-        return cartRepository.findByUserId(currentUserId)
-                .orElseGet(() -> {
-                    Cart newCart = Cart.builder()
-                            .userId(currentUserId)
-                            .build();
-                    return cartRepository.save(newCart);
-                });
+        // user를 찾는다.
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // user의 cart가 있으면 해당 cart를 반환
+        if (user.getCart() != null) {
+            return user.getCart();
+        }
+
+        // user의 cart가 없으면 새로 생성
+        Cart newCart = Cart.builder()
+                .user(user)
+                .build();
+
+        // 새로 생성한 cart를 DB에 저장
+        Cart savedCart = cartRepository.save(newCart);
+        user.setCart(savedCart);
+
+        return savedCart;
     }
 }

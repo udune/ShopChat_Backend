@@ -1,5 +1,6 @@
 package com.cMall.feedShop.cart.domain.model;
 
+import com.cMall.feedShop.user.domain.model.User;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,14 +19,15 @@ public class Cart {
     @Column(name = "cart_id")
     private Long cartId;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL)
     private List<CartItem> cartItems = new ArrayList<>();
 
     @Builder
-    public Cart(Long userId) {
-        this.userId = userId;
+    public Cart(User user) {
+        this.user = user;
     }
 }

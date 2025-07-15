@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class CartUserController {
 
@@ -23,9 +23,9 @@ public class CartUserController {
 
     /**
      * 장바구니에 상품 추가
-     * POST /api/user/cart/items
+     * POST /api/users/cart/items
      */
-    @PostMapping("/items")
+    @PostMapping("/cart/items")
     @ApiResponseFormat(message = "상품이 장바구니에 추가되었습니다.")
     public ApiResponse<CartItemResponse> addCartItem(
             @Valid @RequestBody CartItemCreateRequest request,
