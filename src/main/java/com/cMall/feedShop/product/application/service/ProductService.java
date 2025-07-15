@@ -23,8 +23,7 @@ import com.cMall.feedShop.user.domain.enums.UserRole;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,9 +41,9 @@ public class ProductService {
     private final ProductOptionRepository productOptionRepository;
 
     // 상품 등록
-    public ProductCreateResponse createProduct(ProductCreateRequest request) {
+    public ProductCreateResponse createProduct(ProductCreateRequest request, UserDetails userDetails) {
         // 1. 현재 사용자 ID 가져오기
-        Long currentUserId = getCurrentUserId();
+        Long currentUserId = getCurrentUserId(userDetails);
 
         // 2. 판매자 권한 검증
         validateSellerPermission(currentUserId);
@@ -80,9 +79,9 @@ public class ProductService {
     }
 
     // 상품 수정
-    public void updateProduct(Long productId, ProductUpdateRequest request) {
+    public void updateProduct(Long productId, ProductUpdateRequest request, UserDetails userDetails) {
         // 1. 현재 사용자 ID 가져오기
-        Long currentUserId = getCurrentUserId();
+        Long currentUserId = getCurrentUserId(userDetails);
 
         // 2. 판매자 권한 검증
         validateSellerPermission(currentUserId);
@@ -114,9 +113,9 @@ public class ProductService {
     }
 
     // 상품 삭제
-    public void deleteProduct(Long productId) {
+    public void deleteProduct(Long productId, UserDetails userDetails) {
         // 1. 현재 사용자 ID 가져오기
-        Long currentUserId = getCurrentUserId();
+        Long currentUserId = getCurrentUserId(userDetails);
 
         // 2. 판매자 권한 검증
         validateSellerPermission(currentUserId);
@@ -132,14 +131,8 @@ public class ProductService {
     }
 
     // JWT 에서 현재 사용자 ID 추출
-    private Long getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated() ) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-        }
-
-        String login_id = authentication.getName();
-
+    private Long getCurrentUserId(UserDetails userDetails) {
+        String login_id = userDetails.getUsername();
         User user = userRepository.findByLoginId(login_id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
