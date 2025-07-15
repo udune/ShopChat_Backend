@@ -23,9 +23,7 @@ public class ProductException {
     }
 
     public static class ProductInOrderException extends BusinessException {
-        public ProductInOrderException() {
-            super(ErrorCode.PRODUCT_IN_ORDER);
-        }
+        public ProductInOrderException() { super(ErrorCode.PRODUCT_IN_ORDER); }
     }
 
     public static class ProductOptionNotFoundException extends BusinessException {
