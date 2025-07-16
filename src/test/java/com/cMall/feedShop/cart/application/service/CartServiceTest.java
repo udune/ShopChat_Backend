@@ -200,7 +200,6 @@ class CartServiceTest {
     void addCartItem_Fail_ProductOptionNotFound() {
         // given
         user.setCart(cart);
-
         given(userDetails.getUsername()).willReturn("test@test.com");
         given(userRepository.findByLoginId("test@test.com")).willReturn(Optional.of(user));
         given(productOptionRepository.findByOptionId(1L)).willReturn(Optional.empty());
@@ -219,7 +218,6 @@ class CartServiceTest {
     void addCartItem_Fail_ProductImageNotFound() {
         // given
         user.setCart(cart);
-
         given(userDetails.getUsername()).willReturn("test@test.com");
         given(userRepository.findByLoginId("test@test.com")).willReturn(Optional.of(user));
         given(productOptionRepository.findByOptionId(1L)).willReturn(Optional.of(productOption));
@@ -239,7 +237,6 @@ class CartServiceTest {
     void addCartItem_Fail_OutOfStock() {
         // given
         user.setCart(cart);
-
         ProductOption lowStockOption = new ProductOption(Gender.UNISEX, Size.SIZE_250, Color.WHITE, 1, null);
         ReflectionTestUtils.setField(lowStockOption, "optionId", 1L);
 
@@ -262,7 +259,6 @@ class CartServiceTest {
     void addCartItem_Fail_NoStock() {
         // given
         user.setCart(cart);
-
         ProductOption noStockOption = new ProductOption(Gender.UNISEX, Size.SIZE_250, Color.WHITE, 0, null);
         ReflectionTestUtils.setField(noStockOption, "optionId", 1L);
 
