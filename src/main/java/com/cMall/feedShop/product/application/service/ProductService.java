@@ -186,7 +186,7 @@ public class ProductService {
     }
 
     // 상품 이미지 생성
-    private void createProductImages(Product product, List<ProductImageRequest> requests)
+    public void createProductImages(Product product, List<ProductImageRequest> requests)
     {
         List<ProductImage> productImages = requests.stream()
                 .map(request -> new ProductImage(
