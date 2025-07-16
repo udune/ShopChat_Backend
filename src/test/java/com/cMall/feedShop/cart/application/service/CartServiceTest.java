@@ -2,7 +2,6 @@ package com.cMall.feedShop.cart.application.service;
 
 import com.cMall.feedShop.cart.application.dto.request.CartItemCreateRequest;
 import com.cMall.feedShop.cart.application.dto.response.CartItemResponse;
-import com.cMall.feedShop.cart.application.exception.CartException;
 import com.cMall.feedShop.cart.domain.model.Cart;
 import com.cMall.feedShop.cart.domain.model.CartItem;
 import com.cMall.feedShop.cart.domain.repository.CartItemRepository;
@@ -31,6 +30,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -78,7 +78,7 @@ class CartServiceTest {
                 .user(user)
                 .build();
         ReflectionTestUtils.setField(cart, "cartId", 1L);
-        user.setCart(cart);
+        // user.setCart(cart);
     }
 
     private void setupProductOption() {
@@ -102,8 +102,10 @@ class CartServiceTest {
     @DisplayName("장바구니에 새 상품 추가 성공")
     void addCartItem_Success_NewItem() {
         // given
+        user.setCart(cart);
         given(userDetails.getUsername()).willReturn("test@test.com");
         given(userRepository.findByLoginId("test@test.com")).willReturn(Optional.of(user));
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(productOptionRepository.findByOptionId(1L)).willReturn(Optional.of(productOption));
         given(productImageRepository.findByImageId(1L)).willReturn(Optional.of(productImage));
         given(cartItemRepository.findByCartAndOptionIdAndImageId(cart, 1L, 1L)).willReturn(Optional.empty());
@@ -115,12 +117,33 @@ class CartServiceTest {
                 .quantity(2)
                 .build();
         ReflectionTestUtils.setField(savedCartItem, "cartItemId", 1L);
-        given(cartItemRepository.save(any(CartItem.class))).willReturn(savedCartItem);
+        ReflectionTestUtils.setField(savedCartItem, "createdAt", LocalDateTime.now());
+        ReflectionTestUtils.setField(savedCartItem, "updatedAt", LocalDateTime.now());
+
+        // 🔥 Answer를 사용해서 실제 저장되는 객체의 필드 확인
+        given(cartItemRepository.save(any(CartItem.class))).willAnswer(invocation -> {
+            CartItem cartItem = invocation.getArgument(0);
+            // ID와 시간 필드 설정
+            ReflectionTestUtils.setField(cartItem, "cartItemId", 1L);
+            ReflectionTestUtils.setField(cartItem, "createdAt", LocalDateTime.now());
+            ReflectionTestUtils.setField(cartItem, "updatedAt", LocalDateTime.now());
+
+            // 디버깅 출력
+            System.out.println("Saved CartItem ID: " + cartItem.getCartItemId());
+            System.out.println("Saved CartItem Cart: " + cartItem.getCart());
+            System.out.println("Saved CartItem Cart ID: " + (cartItem.getCart() != null ? cartItem.getCart().getCartId() : "null"));
+
+            return cartItem;
+        });
 
         // when
         CartItemResponse response = cartService.addCartItem(request, userDetails);
 
+        // 디버깅 출력
+        System.out.println("Response: " + response);
+
         // then
+        assertThat(response).isNotNull();
         assertThat(response.getCartItemId()).isEqualTo(1L);
         assertThat(response.getQuantity()).isEqualTo(2);
         verify(cartItemRepository, times(1)).save(any(CartItem.class));
@@ -130,6 +153,8 @@ class CartServiceTest {
     @DisplayName("장바구니에 기존 상품 수량 증가 성공")
     void addCartItem_Success_UpdateExistingItem() {
         // given
+        user.setCart(cart);
+
         CartItem existingCartItem = CartItem.builder()
                 .cart(cart)
                 .optionId(1L)
@@ -140,6 +165,7 @@ class CartServiceTest {
 
         given(userDetails.getUsername()).willReturn("test@test.com");
         given(userRepository.findByLoginId("test@test.com")).willReturn(Optional.of(user));
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(productOptionRepository.findByOptionId(1L)).willReturn(Optional.of(productOption));
         given(productImageRepository.findByImageId(1L)).willReturn(Optional.of(productImage));
         given(cartItemRepository.findByCartAndOptionIdAndImageId(cart, 1L, 1L))
@@ -149,6 +175,7 @@ class CartServiceTest {
         CartItemResponse response = cartService.addCartItem(request, userDetails);
 
         // then
+        assertThat(response).isNotNull();
         assertThat(response.getQuantity()).isEqualTo(5); // 3 + 2
         verify(cartItemRepository, never()).save(any(CartItem.class));
     }
@@ -172,6 +199,8 @@ class CartServiceTest {
     @DisplayName("장바구니 추가 실패 - 상품 옵션 없음")
     void addCartItem_Fail_ProductOptionNotFound() {
         // given
+        user.setCart(cart);
+
         given(userDetails.getUsername()).willReturn("test@test.com");
         given(userRepository.findByLoginId("test@test.com")).willReturn(Optional.of(user));
         given(productOptionRepository.findByOptionId(1L)).willReturn(Optional.empty());
@@ -189,6 +218,8 @@ class CartServiceTest {
     @DisplayName("장바구니 추가 실패 - 상품 이미지 없음")
     void addCartItem_Fail_ProductImageNotFound() {
         // given
+        user.setCart(cart);
+
         given(userDetails.getUsername()).willReturn("test@test.com");
         given(userRepository.findByLoginId("test@test.com")).willReturn(Optional.of(user));
         given(productOptionRepository.findByOptionId(1L)).willReturn(Optional.of(productOption));
@@ -207,6 +238,8 @@ class CartServiceTest {
     @DisplayName("장바구니 추가 실패 - 재고 부족")
     void addCartItem_Fail_OutOfStock() {
         // given
+        user.setCart(cart);
+
         ProductOption lowStockOption = new ProductOption(Gender.UNISEX, Size.SIZE_250, Color.WHITE, 1, null);
         ReflectionTestUtils.setField(lowStockOption, "optionId", 1L);
 
@@ -228,6 +261,8 @@ class CartServiceTest {
     @DisplayName("장바구니 추가 실패 - 재고 없음")
     void addCartItem_Fail_NoStock() {
         // given
+        user.setCart(cart);
+
         ProductOption noStockOption = new ProductOption(Gender.UNISEX, Size.SIZE_250, Color.WHITE, 0, null);
         ReflectionTestUtils.setField(noStockOption, "optionId", 1L);
 
@@ -280,6 +315,7 @@ class CartServiceTest {
         CartItemResponse response = cartService.addCartItem(request, userDetails);
 
         // then
+        assertThat(response).isNotNull();
         assertThat(response.getCartId()).isEqualTo(2L);
         assertThat(response.getQuantity()).isEqualTo(2);
         verify(cartRepository, times(1)).save(any(Cart.class));
