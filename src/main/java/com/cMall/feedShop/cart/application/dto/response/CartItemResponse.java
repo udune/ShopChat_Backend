@@ -15,12 +15,16 @@ public class CartItemResponse {
     private Long imageId;
     private Integer quantity;
     private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private LocalDateTime updatedAt;\
 
     public static CartItemResponse from(CartItem cartItem) {
+        if (cartItem == null) {
+            return null;
+        }
+
         return CartItemResponse.builder()
                 .cartItemId(cartItem.getCartItemId())
-                .cartId(cartItem.getCart().getCartId())
+                .cartId(cartItem.getCart() != null ? cartItem.getCart().getCartId() : null)\
                 .optionId(cartItem.getOptionId())
                 .imageId(cartItem.getImageId())
                 .quantity(cartItem.getQuantity())
