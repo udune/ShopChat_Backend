@@ -17,7 +17,6 @@ import com.cMall.feedShop.product.domain.model.ProductImage;
 import com.cMall.feedShop.product.domain.model.ProductOption;
 import com.cMall.feedShop.product.domain.repository.ProductImageRepository;
 import com.cMall.feedShop.product.domain.repository.ProductOptionRepository;
-import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +41,6 @@ public class CartService {
     private final ProductImageRepository productImageRepository;
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    private final ProductRepository productRepository;
     private final DiscountCalculator discountCalculator;
 
     /**
@@ -111,59 +109,50 @@ public class CartService {
         // 1. 현재 사용자 ID 가져오기
         Long currentUserId = getCurrentUserId(userDetails);
 
-        // 2. 사용자 ID로 장바구니 조회
-        List<CartItem> cartItems = cartItemRepository.findByCart_User_IdOrderByCreatedAtDesc(currentUserId);
+        // 2. 사용자 ID로 장바구니 조회 (CartItem + Cart + User)
+        List<CartItem> cartItems = cartItemRepository.findByUserIdWithCart(currentUserId);
 
         if (cartItems.isEmpty()) {
             return CartItemListResponse.empty();
         }
 
-        // 3. 장바구니 아이템이 존재하면 각 아이템에 대한 상세 정보를 조회
-
-        // 3-1. 상품 옵션 ID 목록 추출
+        // 3. 상품 옵션 추출 (ProductOption + Product + Store + Category)
         Set<Long> optionIds = cartItems.stream()
                 .map(CartItem::getOptionId)
                 .collect(Collectors.toSet());
 
-        // 3-2. 상품 이미지 ID 목록 추출
+        Map<Long, ProductOption> optionMap = productOptionRepository
+                .findAllByOptionIdIn(optionIds).stream()
+                .collect(Collectors.toMap(ProductOption::getOptionId, Function.identity()));
+
+        // 4. 상품 이미지 추출 (ProductImage)
         Set<Long> imageIds = cartItems.stream()
                 .map(CartItem::getImageId)
                 .collect(Collectors.toSet());
 
-        // 3-3. 상품 옵션을 DB 에서 조회
-        Map<Long, ProductOption> optionMap = productOptionRepository
-                .findAllById(optionIds).stream()
-                .collect(Collectors.toMap(ProductOption::getOptionId, Function.identity()));
-
-        // 3-4. DB 에서 조회한 상품 옵션에서 상품 ID 목록 추출
-        Set<Long> productIds = optionMap.values().stream()
-                .map(productOption -> productOption.getProduct().getProductId())
-                .collect(Collectors.toSet());
-
-        // 3-5. 이미지를 DB 에서 조회
         Map<Long, ProductImage> imageMap = productImageRepository
                 .findAllById(imageIds).stream()
                 .collect(Collectors.toMap(ProductImage::getImageId, Function.identity()));
 
-        // 3-6. 상품을 DB 에서 조회
-        Map<Long, Product> productMap = productRepository
-                .findAllById(productIds).stream()
-                .collect(Collectors.toMap(Product::getProductId, Function.identity()));
-
-        // 4. List<CartItemInfo>로 변환
+        // 5. DTO 변환
         List<CartItemInfo> items = cartItems.stream()
                 .map(cartItem -> {
                     ProductOption option = optionMap.get(cartItem.getOptionId());
                     ProductImage image = imageMap.get(cartItem.getImageId());
-                    Product product = productMap.get(option.getProduct().getProductId());
+                    Product product = option.getProduct();
 
-                    BigDecimal discountPrice = discountCalculator.calculateDiscountPrice(
-                            product.getPrice(),
-                            product.getDiscountType(),
-                            product.getDiscountValue()
-                    );
+                    BigDecimal discountPrice = discountCalculator
+                            .calculateDiscountPrice(
+                                    product.getPrice(),
+                                    product.getDiscountType(),
+                                    product.getDiscountValue());
 
-                    return CartItemInfo.from(cartItem, product, option, image, discountPrice);
+                    return CartItemInfo.from(
+                            cartItem,
+                            product,
+                            option,
+                            image,
+                            discountPrice);
                 })
                 .toList();
 
