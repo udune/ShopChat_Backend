@@ -22,6 +22,7 @@ import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -104,7 +105,7 @@ public class CartService {
      * @param userDetails 현재 로그인한 사용자 정보
      * @return CartItemListResponse 장바구니 아이템 리스트 응답
      */
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
     public CartItemListResponse getCartItems(UserDetails userDetails) {
         // 1. 현재 사용자 ID 가져오기
         Long currentUserId = getCurrentUserId(userDetails);
@@ -139,6 +140,15 @@ public class CartService {
                 .map(cartItem -> {
                     ProductOption option = optionMap.get(cartItem.getOptionId());
                     ProductImage image = imageMap.get(cartItem.getImageId());
+
+                    if (option == null) {
+                        throw new ProductException.ProductOptionNotFoundException();
+                    }
+
+                    if (image == null) {
+                        throw new ProductException.ProductImageNotFoundException();
+                    }
+
                     Product product = option.getProduct();
 
                     BigDecimal discountPrice = discountCalculator
