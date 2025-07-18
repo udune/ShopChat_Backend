@@ -29,6 +29,9 @@ public class CartItem extends BaseTimeEntity {
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
+    @Column(name = "selected", nullable = false, columnDefinition = "boolean default true")
+    private Boolean selected;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_id", nullable = false)
     private Cart cart;
@@ -39,6 +42,7 @@ public class CartItem extends BaseTimeEntity {
         this.optionId = optionId;
         this.imageId = imageId;
         this.quantity = quantity;
+        this.selected = true;
     }
 
     public void updateQuantity(Integer newQuantity) {

@@ -1,6 +1,8 @@
 package com.cMall.feedShop.cart.application.service;
 
+import com.cMall.feedShop.cart.application.dto.common.CartItemInfo;
 import com.cMall.feedShop.cart.application.dto.request.CartItemCreateRequest;
+import com.cMall.feedShop.cart.application.dto.response.CartItemListResponse;
 import com.cMall.feedShop.cart.application.dto.response.CartItemResponse;
 import com.cMall.feedShop.cart.domain.model.Cart;
 import com.cMall.feedShop.cart.domain.model.CartItem;
@@ -9,10 +11,13 @@ import com.cMall.feedShop.cart.domain.repository.CartRepository;
 import com.cMall.feedShop.common.exception.BusinessException;
 import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.product.application.exception.ProductException;
+import com.cMall.feedShop.product.application.util.DiscountCalculator;
+import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.model.ProductImage;
 import com.cMall.feedShop.product.domain.model.ProductOption;
 import com.cMall.feedShop.product.domain.repository.ProductImageRepository;
 import com.cMall.feedShop.product.domain.repository.ProductOptionRepository;
+import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +25,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +42,16 @@ public class CartService {
     private final ProductImageRepository productImageRepository;
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
+    private final ProductRepository productRepository;
+    private final DiscountCalculator discountCalculator;
 
+    /**
+     * 장바구니에 상품을 추가하는 서비스 메서드
+     *
+     * @param request      장바구니 아이템 생성 요청
+     * @param userDetails  현재 로그인한 사용자 정보
+     * @return CartItemResponse 장바구니 아이템 응답
+     */
     public CartItemResponse addCartItem(CartItemCreateRequest request, UserDetails userDetails) {
         // 1. 현재 사용자 ID 가져오기
         Long currentUserId = getCurrentUserId(userDetails);
@@ -78,6 +98,101 @@ public class CartService {
 
         // 10. 응답값 리턴
         return CartItemResponse.from(cartItem);
+    }
+
+    /**
+     * 장바구니에 있는 모든 아이템을 조회하는 서비스 메서드
+     *
+     * @param userDetails 현재 로그인한 사용자 정보
+     * @return CartItemListResponse 장바구니 아이템 리스트 응답
+     */
+    @Transactional(readOnly = true)
+    public CartItemListResponse getCartItems(UserDetails userDetails) {
+        // 1. 현재 사용자 ID 가져오기
+        Long currentUserId = getCurrentUserId(userDetails);
+
+        // 2. 사용자 ID로 장바구니 조회
+        List<CartItem> cartItems = cartItemRepository.findByCart_User_IdOrderByCreatedAtDesc(currentUserId);
+
+        if (cartItems.isEmpty()) {
+            return CartItemListResponse.empty();
+        }
+
+        // 3. 장바구니 아이템이 존재하면 각 아이템에 대한 상세 정보를 조회
+
+        // 3-1. 상품 옵션 ID 목록 추출
+        Set<Long> optionIds = cartItems.stream()
+                .map(CartItem::getOptionId)
+                .collect(Collectors.toSet());
+
+        // 3-2. 상품 이미지 ID 목록 추출
+        Set<Long> imageIds = cartItems.stream()
+                .map(CartItem::getImageId)
+                .collect(Collectors.toSet());
+
+        // 3-3. 상품 옵션을 DB 에서 조회
+        Map<Long, ProductOption> optionMap = productOptionRepository
+                .findAllById(optionIds).stream()
+                .collect(Collectors.toMap(ProductOption::getOptionId, Function.identity()));
+
+        // 3-4. DB 에서 조회한 상품 옵션에서 상품 ID 목록 추출
+        Set<Long> productIds = optionMap.values().stream()
+                .map(productOption -> productOption.getProduct().getProductId())
+                .collect(Collectors.toSet());
+
+        // 3-5. 이미지를 DB 에서 조회
+        Map<Long, ProductImage> imageMap = productImageRepository
+                .findAllById(imageIds).stream()
+                .collect(Collectors.toMap(ProductImage::getImageId, Function.identity()));
+
+        // 3-6. 상품을 DB 에서 조회
+        Map<Long, Product> productMap = productRepository
+                .findAllById(productIds).stream()
+                .collect(Collectors.toMap(Product::getProductId, Function.identity()));
+
+        // 4. List<CartItemInfo>로 변환
+        List<CartItemInfo> items = cartItems.stream()
+                .map(cartItem -> {
+                    ProductOption option = optionMap.get(cartItem.getOptionId());
+                    ProductImage image = imageMap.get(cartItem.getImageId());
+                    Product product = productMap.get(option.getProduct().getProductId());
+
+                    BigDecimal discountPrice = discountCalculator.calculateDiscountPrice(
+                            product.getPrice(),
+                            product.getDiscountType(),
+                            product.getDiscountValue()
+                    );
+
+                    return CartItemInfo.from(cartItem, product, option, image, discountPrice);
+                })
+                .toList();
+
+        // 5. 장바구니 아이템 가격 계산 후 최종 리스트 응답 생성
+        return calculateCartSummary(items);
+    }
+
+    private CartItemListResponse calculateCartSummary(List<CartItemInfo> items) {
+
+        // 선택된 아이템들만 계산한다. (실제 결제 대상)
+        List<CartItemInfo> selectedItems = items.stream()
+                .filter(CartItemInfo::getSelected)
+                .toList();
+
+        // 상품 가격을 수량과 곱해서 전체 가격을 구한다.
+        BigDecimal totalOriginalPrice = selectedItems.stream()
+                .map(item -> item.getProductPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // 할인 가격을 수량과 곱해서 전체 할인 가격을 구한다.
+        BigDecimal totalDiscountPrice = selectedItems.stream()
+                .map(item -> item.getDiscountPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // 전체 가격 - 할인 가격을 해서 총 절약 금액을 계산한다.
+        BigDecimal totalSavings = totalOriginalPrice.subtract(totalDiscountPrice);
+
+        // CartItemListResponse 객체를 생성하여 반환한다.
+        return CartItemListResponse.of(items, totalOriginalPrice, totalDiscountPrice, totalSavings);
     }
 
     // JWT 에서 현재 사용자 ID 추출
