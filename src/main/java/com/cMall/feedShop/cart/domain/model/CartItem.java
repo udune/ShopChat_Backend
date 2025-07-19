@@ -53,6 +53,8 @@ public class CartItem extends BaseTimeEntity {
     }
 
     public void updateSelected(Boolean selected) {
-
+        if (selected != null) {
+            this.selected = selected;
+        }
     }
 }

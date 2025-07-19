@@ -205,11 +205,10 @@ public class CartService {
 
         // 4. 선택 상태 변경 처리
         if (request.getSelected() != null) {
-
+            cartItem.updateSelected(request.getSelected());
         }
 
-
-        // 6. DB에 저장 (트랜잭션 관리)
+        // 5. DB에 저장 (트랜잭션 관리)
         cartItemRepository.save(cartItem);
     }
 
