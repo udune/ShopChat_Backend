@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class CartItemUpdateRequest {
-    @Min(value = 0, message = "수량은 0 이상이어야 합니다.")
+    @Min(value = 1, message = "수량은 1 이상이어야 합니다.")
     private Integer quantity;
 
     private Boolean selected;

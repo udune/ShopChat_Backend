@@ -107,7 +107,7 @@ public class CartService {
      * @param userDetails 현재 로그인한 사용자 정보
      * @return CartItemListResponse 장바구니 아이템 리스트 응답
      */
-    @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
+    @Transactional(readOnly = true)
     public CartItemListResponse getCartItems(UserDetails userDetails) {
         // 1. 현재 사용자 ID 가져오기
         Long currentUserId = getCurrentUserId(userDetails);
@@ -173,11 +173,11 @@ public class CartService {
     }
 
     /**
-     * 장바구니 아이템의 선택 상태를 업데이트하는 서비스 메서드
+     * 장바구니 아이템을 업데이트하는 서비스 메서드
      *
-     * @param cartItemId  장바구니 아이템 ID
-     * @param selected    선택 상태 (true: 선택, false: 선택 해제)
-     * @param userDetails 현재 로그인한 사용자 정보
+     * @param cartItemId
+     * @param request
+     * @param userDetails
      */
     public void updateCartItem(Long cartItemId, CartItemUpdateRequest request, UserDetails userDetails) {
         // 1. 현재 사용자 ID 가져오기
@@ -189,12 +189,6 @@ public class CartService {
 
         // 3. 수량 변경 처리
         if (request.getQuantity() != null) {
-            // 수량이 0이면 해당 아이템 삭제
-            if (request.getQuantity() == 0) {
-                cartItemRepository.delete(cartItem);
-                return;
-            }
-
             // 재고 확인
             ProductOption productOption = validateProductOption(cartItem.getOptionId());
             validateStock(productOption, request.getQuantity());
