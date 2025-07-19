@@ -2,8 +2,10 @@ package com.cMall.feedShop.cart.application.service;
 
 import com.cMall.feedShop.cart.application.dto.common.CartItemInfo;
 import com.cMall.feedShop.cart.application.dto.request.CartItemCreateRequest;
+import com.cMall.feedShop.cart.application.dto.request.CartItemUpdateRequest;
 import com.cMall.feedShop.cart.application.dto.response.CartItemListResponse;
 import com.cMall.feedShop.cart.application.dto.response.CartItemResponse;
+import com.cMall.feedShop.cart.application.exception.CartException;
 import com.cMall.feedShop.cart.domain.model.Cart;
 import com.cMall.feedShop.cart.domain.model.CartItem;
 import com.cMall.feedShop.cart.domain.repository.CartItemRepository;
@@ -90,10 +92,10 @@ public class CartService {
                     .imageId(request.getImageId())
                     .quantity(request.getQuantity())
                     .build();
-
-            // 9. DB에 저장
-            cartItemRepository.save(cartItem);
         }
+
+        // 9. DB에 저장
+        cartItemRepository.save(cartItem);
 
         // 10. 응답값 리턴
         return CartItemResponse.from(cartItem);
@@ -105,7 +107,7 @@ public class CartService {
      * @param userDetails 현재 로그인한 사용자 정보
      * @return CartItemListResponse 장바구니 아이템 리스트 응답
      */
-    @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
+    @Transactional(readOnly = true)
     public CartItemListResponse getCartItems(UserDetails userDetails) {
         // 1. 현재 사용자 ID 가져오기
         Long currentUserId = getCurrentUserId(userDetails);
@@ -168,6 +170,40 @@ public class CartService {
 
         // 5. 장바구니 아이템 가격 계산 후 최종 리스트 응답 생성
         return calculateCartSummary(items);
+    }
+
+    /**
+     * 장바구니 아이템을 업데이트하는 서비스 메서드
+     *
+     * @param cartItemId
+     * @param request
+     * @param userDetails
+     */
+    public void updateCartItem(Long cartItemId, CartItemUpdateRequest request, UserDetails userDetails) {
+        // 1. 현재 사용자 ID 가져오기
+        Long currentUserId = getCurrentUserId(userDetails);
+
+        // 2. 장바구니 아이템 조회
+        CartItem cartItem = cartItemRepository.findByCartItemIdAndUserId(cartItemId, currentUserId)
+                .orElseThrow(() -> new CartException.CartItemNotFoundException());
+
+        // 3. 수량 변경 처리
+        if (request.getQuantity() != null) {
+            // 재고 확인
+            ProductOption productOption = validateProductOption(cartItem.getOptionId());
+            validateStock(productOption, request.getQuantity());
+
+            // 수량 업데이트
+            cartItem.updateQuantity(request.getQuantity());
+        }
+
+        // 4. 선택 상태 변경 처리
+        if (request.getSelected() != null) {
+            cartItem.updateSelected(request.getSelected());
+        }
+
+        // 5. DB에 저장 (트랜잭션 관리)
+        cartItemRepository.save(cartItem);
     }
 
     private CartItemListResponse calculateCartSummary(List<CartItemInfo> items) {
