@@ -181,10 +181,10 @@ public class CartService {
      */
     public void updateCartItem(Long cartItemId, CartItemUpdateRequest request, UserDetails userDetails) {
         // 1. 현재 사용자 ID 가져오기
-        Long currentUserId = getCurrentUserId(userDetails);
+        User currentUser = getCurrentUser(userDetails);
 
         // 2. 장바구니 아이템 조회
-        CartItem cartItem = cartItemRepository.findByCartItemIdAndUserId(cartItemId, currentUserId)
+        CartItem cartItem = cartItemRepository.findByCartItemIdAndUserId(cartItemId, currentUser.getId())
                 .orElseThrow(() -> new CartException.CartItemNotFoundException());
 
         // 3. 수량 변경 처리
