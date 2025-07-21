@@ -146,7 +146,7 @@ class CartServiceTest {
         // given
         given(userDetails.getUsername()).willReturn("test@test.com");
         given(userRepository.findByLoginId("test@test.com")).willReturn(Optional.of(user));
-        given(userRepository.findById(1L)).willReturn(Optional.of(user)); // 추가
+//        given(userRepository.findById(1L)).willReturn(Optional.of(user)); // 추가
         given(productOptionRepository.findByOptionId(1L)).willReturn(Optional.of(productOption1));
         given(productImageRepository.findByImageId(1L)).willReturn(Optional.of(productImage1));
         given(cartItemRepository.findByCartAndOptionIdAndImageId(cart, 1L, 1L)).willReturn(Optional.empty());
@@ -290,7 +290,7 @@ class CartServiceTest {
 
         given(userDetails.getUsername()).willReturn("test@test.com");
         given(userRepository.findByLoginId("test@test.com")).willReturn(Optional.of(userWithoutCart));
-        given(userRepository.findById(1L)).willReturn(Optional.of(userWithoutCart)); // 추가
+//        given(userRepository.findById(1L)).willReturn(Optional.of(userWithoutCart)); // 추가
         given(productOptionRepository.findByOptionId(1L)).willReturn(Optional.of(productOption1));
         given(productImageRepository.findByImageId(1L)).willReturn(Optional.of(productImage1));
         given(cartRepository.save(any(Cart.class))).willReturn(newCart);
@@ -445,7 +445,7 @@ class CartServiceTest {
         // 재고가 100개인 옵션에 99개가 이미 있고, 2개를 더 추가하려고 함 (총 101개 > 100개)
         given(userDetails.getUsername()).willReturn("test@test.com");
         given(userRepository.findByLoginId("test@test.com")).willReturn(Optional.of(user));
-        given(userRepository.findById(1L)).willReturn(Optional.of(user)); // 추가
+//        given(userRepository.findById(1L)).willReturn(Optional.of(user)); // 추가
         given(productOptionRepository.findByOptionId(1L)).willReturn(Optional.of(productOption1));
         given(productImageRepository.findByImageId(1L)).willReturn(Optional.of(productImage1));
         given(cartItemRepository.findByCartAndOptionIdAndImageId(cart, 1L, 1L))
