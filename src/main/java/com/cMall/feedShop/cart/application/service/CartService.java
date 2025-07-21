@@ -54,8 +54,8 @@ public class CartService {
      * @return CartItemResponse 장바구니 아이템 응답
      */
     public CartItemResponse addCartItem(CartItemCreateRequest request, UserDetails userDetails) {
-        // 1. 현재 사용자 ID 가져오기
-        Long currentUserId = getCurrentUserId(userDetails);
+        // 1. 현재 사용자 조회
+        User currentUser = getCurrentUser(userDetails);
 
         // 2. 상품 옵션 검증
         ProductOption productOption = validateProductOption(request.getOptionId());
@@ -67,7 +67,7 @@ public class CartService {
         validateStock(productOption, request.getQuantity());
 
         // 5. 장바구니 조회 또는 생성
-        Cart cart = getOrCreateCart(currentUserId);
+        Cart cart = getOrCreateCart(currentUser);
 
         // 6. 해당 장바구니의 아이템에서 cart와 optionId와 imageId로 이미 저장된 같은 아이템이 있는지 조회
         Optional<CartItem> existingCartItem = cartItemRepository
@@ -109,11 +109,11 @@ public class CartService {
      */
     @Transactional(readOnly = true)
     public CartItemListResponse getCartItems(UserDetails userDetails) {
-        // 1. 현재 사용자 ID 가져오기
-        Long currentUserId = getCurrentUserId(userDetails);
+        // 1. 현재 사용자 조회
+        User currentUser = getCurrentUser(userDetails);
 
         // 2. 사용자 ID로 장바구니 조회 (CartItem + Cart + User)
-        List<CartItem> cartItems = cartItemRepository.findByUserIdWithCart(currentUserId);
+        List<CartItem> cartItems = cartItemRepository.findByUserIdWithCart(currentUser.getId());
 
         if (cartItems.isEmpty()) {
             return CartItemListResponse.empty();
@@ -249,12 +249,10 @@ public class CartService {
     }
 
     // JWT 에서 현재 사용자 ID 추출
-    private Long getCurrentUserId(UserDetails userDetails) {
+    private User getCurrentUser(UserDetails userDetails) {
         String login_id = userDetails.getUsername();
-        User user = userRepository.findByLoginId(login_id)
+        return userRepository.findByLoginId(login_id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        return user.getId();
     }
 
     private ProductOption validateProductOption(Long optionId) {
@@ -279,25 +277,19 @@ public class CartService {
         }
     }
 
-    private Cart getOrCreateCart(Long currentUserId) {
-        // user를 찾는다.
-        User user = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    private Cart getOrCreateCart(User user) {
+        return Optional.ofNullable(user.getCart())
+                .orElseGet(() -> {
+                    // user의 cart가 없으면 새로 생성
+                    Cart newCart = Cart.builder()
+                            .user(user)
+                            .build();
 
-        // user의 cart가 있으면 해당 cart를 반환
-        if (user.getCart() != null) {
-            return user.getCart();
-        }
+                    // 새로 생성한 cart를 DB에 저장
+                    Cart savedCart = cartRepository.save(newCart);
+                    user.setCart(savedCart);
 
-        // user의 cart가 없으면 새로 생성
-        Cart newCart = Cart.builder()
-                .user(user)
-                .build();
-
-        // 새로 생성한 cart를 DB에 저장
-        Cart savedCart = cartRepository.save(newCart);
-        user.setCart(savedCart);
-
-        return savedCart;
+                    return savedCart;
+                });
     }
 }
