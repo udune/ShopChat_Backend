@@ -5,14 +5,14 @@ import com.cMall.feedShop.cart.application.dto.request.CartItemCreateRequest;
 import com.cMall.feedShop.cart.application.dto.request.CartItemUpdateRequest;
 import com.cMall.feedShop.cart.application.dto.response.CartItemListResponse;
 import com.cMall.feedShop.cart.application.dto.response.CartItemResponse;
-import com.cMall.feedShop.cart.application.exception.CartException;
+import com.cMall.feedShop.cart.domain.exception.CartException;
 import com.cMall.feedShop.cart.domain.model.Cart;
 import com.cMall.feedShop.cart.domain.model.CartItem;
 import com.cMall.feedShop.cart.domain.repository.CartItemRepository;
 import com.cMall.feedShop.cart.domain.repository.CartRepository;
 import com.cMall.feedShop.common.exception.BusinessException;
 import com.cMall.feedShop.common.exception.ErrorCode;
-import com.cMall.feedShop.product.application.exception.ProductException;
+import com.cMall.feedShop.product.domain.exception.ProductException;
 import com.cMall.feedShop.product.application.util.DiscountCalculator;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.model.ProductImage;
@@ -24,7 +24,6 @@ import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -180,7 +179,7 @@ public class CartService {
      * @param userDetails
      */
     public void updateCartItem(Long cartItemId, CartItemUpdateRequest request, UserDetails userDetails) {
-        // 1. 현재 사용자 ID 가져오기
+        // 1. 현재 사용자 조회
         User currentUser = getCurrentUser(userDetails);
 
         // 2. 장바구니 아이템 조회
@@ -213,7 +212,7 @@ public class CartService {
      * @param userDetails 현재 로그인한 사용자 정보
      */
     public void deleteCartItem(Long cartItemId, UserDetails userDetails) {
-        // 1. 현재 사용자 ID 가져오기
+        // 1. 현재 사용자 조회
         User currentUser = getCurrentUser(userDetails);
 
         // 2. 장바구니 아이템 조회
