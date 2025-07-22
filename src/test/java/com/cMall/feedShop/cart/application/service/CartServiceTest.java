@@ -9,7 +9,7 @@ import com.cMall.feedShop.cart.domain.repository.CartItemRepository;
 import com.cMall.feedShop.cart.domain.repository.CartRepository;
 import com.cMall.feedShop.common.exception.BusinessException;
 import com.cMall.feedShop.common.exception.ErrorCode;
-import com.cMall.feedShop.product.application.exception.ProductException;
+import com.cMall.feedShop.product.domain.exception.ProductException;
 import com.cMall.feedShop.product.application.util.DiscountCalculator;
 import com.cMall.feedShop.product.domain.enums.*;
 import com.cMall.feedShop.product.domain.model.Category;
