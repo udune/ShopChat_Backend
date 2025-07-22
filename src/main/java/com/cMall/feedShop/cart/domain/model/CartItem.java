@@ -1,13 +1,11 @@
 package com.cMall.feedShop.cart.domain.model;
 
-import com.cMall.feedShop.cart.application.exception.CartException;
+import com.cMall.feedShop.cart.domain.exception.CartException;
 import com.cMall.feedShop.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "cart_items")
