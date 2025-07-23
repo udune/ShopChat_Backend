@@ -25,7 +25,7 @@ public class OrderUserController {
      * USER 권한이 있는 로그인된 사용자만 주문 가능
      */
     @PostMapping("/orders")
-    @PreAuthorize("hasRole('User')")
+    @PreAuthorize("hasRole('USER')")
     @ApiResponseFormat(message = "주문이 성공적으로 생성되었습니다.")
     public ApiResponse<OrderCreateResponse> createOrder(
             @Valid @RequestBody OrderCreateRequest request,
