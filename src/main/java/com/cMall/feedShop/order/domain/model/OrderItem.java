@@ -36,19 +36,19 @@ public class OrderItem extends BaseTimeEntity {
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
-    @Column(name = "price", nullable = false)
-    private BigDecimal price;
+    @Column(name = "total_price", nullable = false)
+    private BigDecimal totalPrice;
 
-    @Column(name = "discount_price", nullable = false)
-    private BigDecimal discountPrice;
+    @Column(name = "final_price", nullable = false)
+    private BigDecimal finalPrice;
 
     @Builder
-    public OrderItem(Order order, ProductOption productOption, ProductImage productImage, Integer quantity, BigDecimal price, BigDecimal discountPrice) {
+    public OrderItem(Order order, ProductOption productOption, ProductImage productImage, Integer quantity, BigDecimal totalPrice, BigDecimal finalPrice) {
         this.order = order;
         this.productOption = productOption;
         this.productImage = productImage;
         this.quantity = quantity;
-        this.price = price;
-        this.discountPrice = discountPrice;
+        this.totalPrice = totalPrice;
+        this.finalPrice = finalPrice;
     }
 }

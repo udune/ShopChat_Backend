@@ -265,7 +265,8 @@ public class OrderService {
         return Order.builder()
                 .user(user)
                 .status(OrderStatus.ORDERED)
-                .totalPrice(calculation.getFinalAmount())
+                .totalPrice(calculation.getTotalAmount())
+                .finalPrice(calculation.getFinalAmount())
                 .deliveryFee(request.getDeliveryFee())
                 .usedPoints(calculation.getActualUsedPoints())
                 .earnedPoints(calculation.getEarnedPoints())
@@ -289,11 +290,11 @@ public class OrderService {
             ProductImage image = imageMap.get(cartItem.getImageId());
             Product product = option.getProduct();
 
-            // originalPrice : 상품의 원래 가격
-            BigDecimal originalPrice = product.getPrice();
-            // discountPrice : 상품의 할인된 가격
-            BigDecimal discountPrice = discountCalculator.calculateDiscountPrice(
-                    originalPrice,
+            // totalPrice : 상품의 원래 가격
+            BigDecimal totalPrice = product.getPrice();
+            // finalPrice : 상품의 할인된 최종 가격
+            BigDecimal finalPrice = discountCalculator.calculateDiscountPrice(
+                    totalPrice,
                     product.getDiscountType(),
                     product.getDiscountValue()
             );
@@ -303,8 +304,8 @@ public class OrderService {
                     .productOption(option)
                     .productImage(image)
                     .quantity(cartItem.getQuantity())
-                    .price(originalPrice)
-                    .discountPrice(discountPrice)
+                    .totalPrice(totalPrice)
+                    .finalPrice(finalPrice)
                     .build();
 
             order.addOrderItem(orderItem);

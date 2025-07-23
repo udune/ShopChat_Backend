@@ -36,11 +36,11 @@ public class Order extends BaseTimeEntity {
     @Column(name = "delivery_fee", nullable = false)
     private BigDecimal deliveryFee = BigDecimal.ZERO;
 
+    @Column(name = "final_price", nullable = false)
+    private BigDecimal finalPrice;
+
     @Column(name = "total_price", nullable = false)
     private BigDecimal totalPrice;
-
-    @Column(name = "total_discount_price", nullable = false)
-    private BigDecimal totalDiscountPrice;
 
     @Column(name = "used_points", nullable = false)
     private Integer usedPoints = 0;
@@ -85,15 +85,15 @@ public class Order extends BaseTimeEntity {
     private List<OrderItem> orderItems = new ArrayList<>();
 
     @Builder
-    public Order(User user, OrderStatus status, BigDecimal totalPrice, BigDecimal deliveryFee, BigDecimal totalDiscountPrice,
+    public Order(User user, OrderStatus status, BigDecimal finalPrice, BigDecimal deliveryFee, BigDecimal totalPrice,
                  Integer usedPoints, Integer earnedPoints, String deliveryAddress, String deliveryDetailAddress,
                  String postalCode, String recipientName, String recipientPhone, String deliveryMessage,
                  String paymentMethod, String cardNumber, String cardExpiry, String cardCvc) {
         this.user = user;
         this.status = status;
-        this.totalPrice = totalPrice;
+        this.finalPrice = finalPrice;
         this.deliveryFee = deliveryFee != null ? deliveryFee : BigDecimal.ZERO;
-        this.totalDiscountPrice = totalDiscountPrice;
+        this.totalPrice = totalPrice;
         this.usedPoints = usedPoints != null ? usedPoints : 0;
         this.earnedPoints = earnedPoints != null ? earnedPoints : 0;
         this.deliveryAddress = deliveryAddress;
