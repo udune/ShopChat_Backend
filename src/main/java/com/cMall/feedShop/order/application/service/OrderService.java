@@ -262,11 +262,13 @@ public class OrderService {
 
     // 주문 Entity 생성
     private Order createOrderEntity(User user, OrderCreateRequest request, OrderCalculation calculation) {
+        BigDecimal finalPrice = calculation.getFinalAmount().add(request.getDeliveryFee());
+
         return Order.builder()
                 .user(user)
                 .status(OrderStatus.ORDERED)
                 .totalPrice(calculation.getTotalAmount())
-                .finalPrice(calculation.getFinalAmount())
+                .finalPrice(finalPrice)
                 .deliveryFee(request.getDeliveryFee())
                 .usedPoints(calculation.getActualUsedPoints())
                 .earnedPoints(calculation.getEarnedPoints())
