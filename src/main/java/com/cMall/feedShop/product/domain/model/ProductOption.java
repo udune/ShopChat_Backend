@@ -1,9 +1,11 @@
 package com.cMall.feedShop.product.domain.model;
 
+import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.product.domain.converter.SizeConverter;
 import com.cMall.feedShop.product.domain.enums.Color;
 import com.cMall.feedShop.product.domain.enums.Gender;
 import com.cMall.feedShop.product.domain.enums.Size;
+import com.cMall.feedShop.product.domain.exception.ProductException;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -48,5 +50,30 @@ public class ProductOption {
     // 재고 확인
     public boolean isInStock() {
         return stock != null && stock > 0;
+    }
+
+    // 재고 차감
+    public void decreaseStock(Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new ProductException(ErrorCode.OUT_OF_STOCK, "차감할 수량은 1 이상이어야 합니다.");
+        }
+        if (this.stock == null || this.stock < quantity) {
+            throw new ProductException(ErrorCode.OUT_OF_STOCK);
+        }
+
+        this.stock -= quantity;
+    }
+
+    // 재고 증가 (주문 취소시)
+    public void increaseStock(Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new ProductException(ErrorCode.OUT_OF_STOCK, "증가할 수량은 1 이상이어야 합니다.");
+        }
+
+        if (this.stock == null) {
+            this.stock = quantity;
+        }
+
+        this.stock += quantity;
     }
 }
