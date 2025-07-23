@@ -33,12 +33,6 @@ public class OrderItem extends BaseTimeEntity {
     @JoinColumn(name = "product_image_id", nullable = false)
     private ProductImage productImage;
 
-    @Column(name = "option_id", nullable = false)
-    private Long optionId;
-
-    @Column(name = "image_id", nullable = false)
-    private Long imageId;
-
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
@@ -49,10 +43,10 @@ public class OrderItem extends BaseTimeEntity {
     private BigDecimal discountPrice;
 
     @Builder
-    public OrderItem(Order order, Long optionId, Long imageId, Integer quantity, BigDecimal price, BigDecimal discountPrice) {
+    public OrderItem(Order order, ProductOption productOption, ProductImage productImage, Integer quantity, BigDecimal price, BigDecimal discountPrice) {
         this.order = order;
-        this.optionId = optionId;
-        this.imageId = imageId;
+        this.productOption = productOption;
+        this.productImage = productImage;
         this.quantity = quantity;
         this.price = price;
         this.discountPrice = discountPrice;

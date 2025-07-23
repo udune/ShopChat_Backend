@@ -15,7 +15,9 @@ import com.cMall.feedShop.order.domain.repository.OrderRepository;
 import com.cMall.feedShop.product.application.util.DiscountCalculator;
 import com.cMall.feedShop.product.domain.exception.ProductException;
 import com.cMall.feedShop.product.domain.model.Product;
+import com.cMall.feedShop.product.domain.model.ProductImage;
 import com.cMall.feedShop.product.domain.model.ProductOption;
+import com.cMall.feedShop.product.domain.repository.ProductImageRepository;
 import com.cMall.feedShop.product.domain.repository.ProductOptionRepository;
 import com.cMall.feedShop.user.domain.enums.UserRole;
 import com.cMall.feedShop.user.domain.exception.UserException;
@@ -45,6 +47,7 @@ public class OrderService {
     private final DiscountCalculator discountCalculator;
     private final OrderRepository orderRepository;
     private final UserPointRepository userPointRepository;
+    private final ProductImageRepository productImageRepository;
 
     /**
      * 주문 생성
@@ -68,28 +71,31 @@ public class OrderService {
         // 4. 상품 옵션 조회 및 재고 확인
         Map<Long, ProductOption> optionMap = validateGetProductOptions(selectedCartItems);
 
-        // 5. 주문 금액 계싼
+        // 5. 상품 이미지 조회
+        Map<Long, ProductImage> imageMap = validateGetProductImages(selectedCartItems);
+
+        // 6. 주문 금액 계산
         OrderCalculation calculation = calculateOrderAmount(selectedCartItems, optionMap, request.getUsedPoints());
 
-        // 6. 포인트 사용 가능 여부 확인
+        // 7. 포인트 사용 가능 여부 확인
         validatePointUsage(currentUser, calculation.getActualUsedPoints());
 
-        // 7. 주문 생성
+        // 8. 주문 생성
         Order order = createOrderEntity(currentUser, request, calculation);
 
-        // 8. 주문 아이템 생성
-        createOrderItems(order, selectedCartItems, optionMap);
+        // 9. 주문 아이템 생성
+        createOrderItems(order, selectedCartItems, optionMap, imageMap);
 
-        // 9. 재고 차감
+        // 10. 재고 차감
         decreaseStock(selectedCartItems, optionMap);
 
-        // 10. 주문 저장
+        // 11. 주문 저장
         Order savedOrder = orderRepository.save(order);
 
-        // 11. 포인트 처리 (사용 및 적립)
+        // 12. 포인트 처리 (사용 및 적립)
         processUserPoints(currentUser, calculation.getActualUsedPoints(), calculation.getEarnedPoints());
 
-        // 12. 장바구니 아이템 삭제 (선택된 아이템들만)
+        // 13. 장바구니 아이템 삭제 (선택된 아이템들만)
         cartItemRepository.deleteAll(selectedCartItems);
 
         // 13. 주문 생성 응답 반환
@@ -116,6 +122,16 @@ public class OrderService {
         return cartItems.stream()
                 .filter(CartItem::getSelected)
                 .toList();
+    }
+
+    private Map<Long, ProductImage> validateGetProductImages(List<CartItem> cartItems) {
+        // 장바구니 아이템에서 이미지 ID를 추출하여 중복 제거
+        Set<Long> imageIds = cartItems.stream()
+                .map(CartItem::getImageId)
+                .collect(Collectors.toSet());
+
+        return productImageRepository.findAllById(imageIds).stream()
+                .collect(Collectors.toMap(ProductImage::getImageId, Function.identity()));
     }
 
     // 상품 옵션 조회 및 재고 확인
@@ -267,9 +283,10 @@ public class OrderService {
     }
 
     // 장바구니 아이템을 주문의 주문 아이템 Entity로 만든다.
-    private void createOrderItems(Order order, List<CartItem> cartItems, Map<Long, ProductOption> optionMap) {
+    private void createOrderItems(Order order, List<CartItem> cartItems, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
         for (CartItem cartItem : cartItems) {
             ProductOption option = optionMap.get(cartItem.getOptionId());
+            ProductImage image = imageMap.get(cartItem.getImageId());
             Product product = option.getProduct();
 
             // originalPrice : 상품의 원래 가격
@@ -283,8 +300,8 @@ public class OrderService {
 
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
-                    .optionId(cartItem.getOptionId())
-                    .imageId(cartItem.getImageId())
+                    .productOption(option)
+                    .productImage(image)
                     .quantity(cartItem.getQuantity())
                     .price(originalPrice)
                     .discountPrice(discountPrice)
