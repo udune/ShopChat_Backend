@@ -1,6 +1,8 @@
 package com.cMall.feedShop.order.domain.model;
 
 import com.cMall.feedShop.common.BaseTimeEntity;
+import com.cMall.feedShop.product.domain.model.ProductImage;
+import com.cMall.feedShop.product.domain.model.ProductOption;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,6 +24,14 @@ public class OrderItem extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_option_id", nullable = false)
+    private ProductOption productOption;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_image_id", nullable = false)
+    private ProductImage productImage;
 
     @Column(name = "option_id", nullable = false)
     private Long optionId;

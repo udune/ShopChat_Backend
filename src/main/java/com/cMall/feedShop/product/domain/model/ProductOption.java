@@ -1,6 +1,7 @@
 package com.cMall.feedShop.product.domain.model;
 
 import com.cMall.feedShop.common.exception.ErrorCode;
+import com.cMall.feedShop.order.domain.model.OrderItem;
 import com.cMall.feedShop.product.domain.converter.SizeConverter;
 import com.cMall.feedShop.product.domain.enums.Color;
 import com.cMall.feedShop.product.domain.enums.Gender;
@@ -9,6 +10,9 @@ import com.cMall.feedShop.product.domain.exception.ProductException;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "product_options")
@@ -38,6 +42,9 @@ public class ProductOption {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     private Product product;
+
+    @OneToMany(mappedBy = "productOption", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<OrderItem> orderItems = new ArrayList<>();
 
     public ProductOption(Gender gender, Size size, Color color, Integer stock, Product product) {
         this.gender = gender;
