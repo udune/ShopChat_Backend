@@ -4,6 +4,7 @@ import com.cMall.feedShop.common.aop.ApiResponseFormat;
 import com.cMall.feedShop.common.dto.ApiResponse;
 import com.cMall.feedShop.order.application.dto.request.OrderCreateRequest;
 import com.cMall.feedShop.order.application.dto.response.OrderCreateResponse;
+import com.cMall.feedShop.order.application.dto.response.OrderPageResponse;
 import com.cMall.feedShop.order.application.dto.response.PurchasedItemListResponse;
 import com.cMall.feedShop.order.application.service.OrderService;
 import com.cMall.feedShop.order.application.service.PurchasedItemService;
@@ -34,6 +35,26 @@ public class OrderUserController {
             @Valid @RequestBody OrderCreateRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         OrderCreateResponse data = orderService.createOrder(request, userDetails);
+        return ApiResponse.success(data);
+    }
+
+    /**
+     * 주문 목록 조회 API
+     * @param page
+     * @param size
+     * @param status
+     * @param userDetails
+     * @return
+     */
+    @GetMapping("/orders")
+    @ApiResponseFormat(message = "주문 목록 조회 완료")
+    public ApiResponse<OrderPageResponse> getOrderList(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String status,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        OrderPageResponse data = orderService.getOrderList(page, size, status, userDetails);
         return ApiResponse.success(data);
     }
 
