@@ -88,7 +88,7 @@ public class Order extends BaseTimeEntity {
     public Order(User user, OrderStatus status, BigDecimal finalPrice, BigDecimal deliveryFee, BigDecimal totalPrice,
                  Integer usedPoints, Integer earnedPoints, String deliveryAddress, String deliveryDetailAddress,
                  String postalCode, String recipientName, String recipientPhone, String deliveryMessage,
-                 String paymentMethod, String cardNumber, String cardExpiry, String cardCvc) {
+                 String paymentMethod, String cardNumber, String cardExpiry, String cardCvc, String currency) {
         this.user = user;
         this.status = status;
         this.finalPrice = finalPrice;
@@ -106,6 +106,7 @@ public class Order extends BaseTimeEntity {
         this.cardNumber = cardNumber;
         this.cardExpiry = cardExpiry;
         this.cardCvc = cardCvc;
+        this.currency = currency;
     }
 
     // 주문 아이템 추가

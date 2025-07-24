@@ -8,6 +8,8 @@ import com.cMall.feedShop.order.application.dto.response.OrderPageResponse;
 import com.cMall.feedShop.order.application.dto.response.PurchasedItemListResponse;
 import com.cMall.feedShop.order.application.service.OrderService;
 import com.cMall.feedShop.order.application.service.PurchasedItemService;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -49,8 +51,16 @@ public class OrderUserController {
     @GetMapping("/orders")
     @ApiResponseFormat(message = "주문 목록 조회 완료")
     public ApiResponse<OrderPageResponse> getOrderList(
+            @Parameter(description = "페이지 번호 (0부터 시작)")
             @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "페이지 크기 (1~100)")
             @RequestParam(defaultValue = "10") int size,
+            @Parameter(
+                    description = "주문 상태 필터링(전체 조회시 'ALL' 또는 'NULL')",
+                    schema = @Schema(
+                            type = "string",
+                            allowableValues = {"ORDERED", "SHIPPED", "DELIVERED", "CANCELLED", "RETURNED", "ALL"}
+                    ))
             @RequestParam(required = false) String status,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
