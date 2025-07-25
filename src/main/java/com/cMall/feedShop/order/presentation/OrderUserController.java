@@ -4,6 +4,7 @@ import com.cMall.feedShop.common.aop.ApiResponseFormat;
 import com.cMall.feedShop.common.dto.ApiResponse;
 import com.cMall.feedShop.order.application.dto.request.OrderCreateRequest;
 import com.cMall.feedShop.order.application.dto.response.OrderCreateResponse;
+import com.cMall.feedShop.order.application.dto.response.OrderDetailResponse;
 import com.cMall.feedShop.order.application.dto.response.OrderPageResponse;
 import com.cMall.feedShop.order.application.dto.response.PurchasedItemListResponse;
 import com.cMall.feedShop.order.application.service.OrderService;
@@ -65,6 +66,22 @@ public class OrderUserController {
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         OrderPageResponse data = orderService.getOrderList(page, size, status, userDetails);
+        return ApiResponse.success(data);
+    }
+
+    /**
+     * 주문 상세 조회 API
+     * GET /api/users/orders/{orderId}
+     * @param orderId
+     * @param userDetails
+     * @return
+     */
+    @GetMapping("/orders/{orderId}")
+    public ApiResponse<OrderDetailResponse> getOrderDetail(
+            @PathVariable Long orderId,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        OrderDetailResponse data = orderService.getOrderDetail(orderId, userDetails);
         return ApiResponse.success(data);
     }
 
