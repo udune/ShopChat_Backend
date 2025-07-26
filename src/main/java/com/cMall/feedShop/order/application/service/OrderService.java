@@ -174,25 +174,6 @@ public class OrderService {
         return OrderDetailResponse.from(order);
     }
 
-    /**
-     * 주문 상세 조회
-     * @param orderId
-     * @param userDetails
-     * @return
-     */
-    @Transactional(readOnly = true)
-    public OrderDetailResponse getOrderDetail(Long orderId, UserDetails userDetails) {
-        // 1. 현재 사용자 조회 및 권한 검증
-        User currentUser = getCurrentUserAndValidatePermission(userDetails);
-
-        // 2. 주문 조회 및 권한 검증
-        Order order = orderRepository.findByOrderIdAndUser(orderId, currentUser)
-                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
-
-        // 3. 주문 상세 조회 응답 반환
-        return OrderDetailResponse.from(order);
-    }
-
     // JWT 에서 현재 사용자 정보 조회
     // 사용자 권한 검증
     private User getCurrentUserAndValidatePermission(UserDetails userDetails) {
