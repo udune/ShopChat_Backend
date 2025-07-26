@@ -159,6 +159,7 @@ public class OrderService {
      * @param userDetails
      * @return
      */
+    @Transactional
     public OrderStatusUpdateResponse updateOrderStatus(Long orderId, OrderStatusUpdateRequest request, UserDetails userDetails) {
         // 1. 판매자 권한 검증
         User seller = getCurrentUserAndValidateSellerPermission(userDetails);
@@ -173,10 +174,7 @@ public class OrderService {
         // 4. 주문 상태 업데이트
         order.updateStatus(request.getStatus());
 
-        // 5. DB에 저장
-        orderRepository.save(order);
-
-        // 6. 주문 상태 변경 응답 반환
+        // 5. 주문 상태 변경 응답 반환
         return OrderStatusUpdateResponse.from(order);
     }
 
