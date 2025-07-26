@@ -65,7 +65,7 @@ public class OrderUserController {
             @RequestParam(required = false) String status,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        OrderPageResponse data = orderService.getOrderList(page, size, status, userDetails);
+        OrderPageResponse data = orderService.getOrderList(page, size, status, userDetails, false);
         return ApiResponse.success(data);
     }
 
