@@ -102,7 +102,7 @@ public class OrderService {
     }
 
     /**
-     * 주문 목록 조회
+     * 주문 목록 조회 (사용자, 판매자 공통)
      * @param page
      * @param size
      * @param status
@@ -110,9 +110,11 @@ public class OrderService {
      * @return
      */
     @Transactional(readOnly = true)
-    public OrderPageResponse getOrderList(int page, int size, String status, UserDetails userDetails) {
+    public OrderPageResponse getOrderList(int page, int size, String status, UserDetails userDetails, boolean isSeller) {
         // 1. 현재 사용자 조회를 하고 사용자 권한을 검증
-        User currentUser = getCurrentUserAndValidatePermission(userDetails);
+        User currentUser = isSeller ?
+                getCurrentUserAndValidateSellerPermission(userDetails) :
+                getCurrentUserAndValidatePermission(userDetails);
 
         // 2. 페이지 파라미터 검증
         if (page < 0) {
@@ -126,21 +128,50 @@ public class OrderService {
         Pageable pageable = PageRequest.of(page, size);
 
         // 3. 주문 목록 조회
-        Page<Order> orderPage;
-        if (status != null && !status.equalsIgnoreCase("all")) {
-            try {
-                OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
-                orderPage = orderRepository.findByUserAndStatusOrderByCreatedAtDesc(currentUser, orderStatus, pageable);
-            } catch (IllegalArgumentException e) {
-                throw new OrderException(ErrorCode.INVALID_ORDER_STATUS);
-            }
-        } else {
-            orderPage = orderRepository.findByUserOrderByCreatedAtDesc(currentUser, pageable);
-        }
+        Page<Order> orderPage = getOrderPage(currentUser, status, pageable, isSeller);
 
         // 4. 주문 목록 응답 반환
         Page<OrderListResponse> response = orderPage.map(OrderListResponse::from);
         return OrderPageResponse.of(response);
+    }
+
+    // 주문 페이지 조회 (사용자, 판매자 분기)
+    private Page<Order> getOrderPage(User currentUser, String status, Pageable pageable, boolean isSeller) {
+        if (status != null && !status.equalsIgnoreCase("all")) {
+            try {
+                // 특정 주문 상태 필터링 조회
+                OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
+                return isSeller ?
+                        orderRepository.findByOrderItemsProductOptionProductStoreSellerIdAndStatusOrderByCreatedAtDesc(currentUser.getId(), orderStatus, pageable) :
+                        orderRepository.findByUserAndStatusOrderByCreatedAtDesc(currentUser, orderStatus, pageable);
+            } catch (IllegalArgumentException e) {
+                throw new OrderException(ErrorCode.INVALID_ORDER_STATUS);
+            }
+        } else {
+            // 전체 조회
+            return isSeller ?
+                    orderRepository.findByOrderItemsProductOptionProductStoreSellerIdOrderByCreatedAtDesc(currentUser.getId(), pageable) :
+                    orderRepository.findByUserOrderByCreatedAtDesc(currentUser, pageable);
+        }
+    }
+
+    /**
+     * 주문 상세 조회
+     * @param orderId
+     * @param userDetails
+     * @return
+     */
+    @Transactional(readOnly = true)
+    public OrderDetailResponse getOrderDetail(Long orderId, UserDetails userDetails) {
+        // 1. 현재 사용자 조회 및 권한 검증
+        User currentUser = getCurrentUserAndValidatePermission(userDetails);
+
+        // 2. 주문 조회 및 권한 검증
+        Order order = orderRepository.findByOrderIdAndUser(orderId, currentUser)
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+
+        // 3. 주문 상세 조회 응답 반환
+        return OrderDetailResponse.from(order);
     }
 
     /**
@@ -169,6 +200,19 @@ public class OrderService {
                 .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
 
         if (user.getRole() != UserRole.USER) {
+            throw new OrderException(ErrorCode.ORDER_FORBIDDEN);
+        }
+
+        return user;
+    }
+
+    // 판매자 권한 검증
+    private User getCurrentUserAndValidateSellerPermission(UserDetails userDetails) {
+        String loginId = userDetails.getUsername();
+        User user = userRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getRole() != UserRole.SELLER) {
             throw new OrderException(ErrorCode.ORDER_FORBIDDEN);
         }
 

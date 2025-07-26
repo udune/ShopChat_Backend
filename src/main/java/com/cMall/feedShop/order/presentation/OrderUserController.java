@@ -65,7 +65,23 @@ public class OrderUserController {
             @RequestParam(required = false) String status,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        OrderPageResponse data = orderService.getOrderList(page, size, status, userDetails);
+        OrderPageResponse data = orderService.getOrderList(page, size, status, userDetails, false);
+        return ApiResponse.success(data);
+    }
+
+    /**
+     * 주문 상세 조회 API
+     * GET /api/users/orders/{orderId}
+     * @param orderId
+     * @param userDetails
+     * @return
+     */
+    @GetMapping("/orders/{orderId}")
+    public ApiResponse<OrderDetailResponse> getOrderDetail(
+            @PathVariable Long orderId,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        OrderDetailResponse data = orderService.getOrderDetail(orderId, userDetails);
         return ApiResponse.success(data);
     }
 
