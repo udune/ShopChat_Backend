@@ -86,22 +86,6 @@ public class OrderUserController {
     }
 
     /**
-     * 주문 상세 조회 API
-     * GET /api/users/orders/{orderId}
-     * @param orderId
-     * @param userDetails
-     * @return
-     */
-    @GetMapping("/orders/{orderId}")
-    public ApiResponse<OrderDetailResponse> getOrderDetail(
-            @PathVariable Long orderId,
-            @AuthenticationPrincipal UserDetails userDetails
-    ) {
-        OrderDetailResponse data = orderService.getOrderDetail(orderId, userDetails);
-        return ApiResponse.success(data);
-    }
-
-    /**
      * 구매한 상품 목록 조회 API
      * 피드 작성 시 사용할 구매 상품
      * GET /api/users/orders/items
