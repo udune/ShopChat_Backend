@@ -217,26 +217,6 @@ public class OrderService {
         }
     }
 
-    // 주문 페이지 조회 (사용자, 판매자 분기)
-    private Page<Order> getOrderPage(User currentUser, String status, Pageable pageable, boolean isSeller) {
-        if (status != null && !status.equalsIgnoreCase("all")) {
-            try {
-                // 특정 주문 상태 필터링 조회
-                OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
-                return isSeller ?
-                        orderRepository.findByOrderItemsProductOptionProductStoreSellerIdAndStatusOrderByCreatedAtDesc(currentUser.getId(), orderStatus, pageable) :
-                        orderRepository.findByUserAndStatusOrderByCreatedAtDesc(currentUser, orderStatus, pageable);
-            } catch (IllegalArgumentException e) {
-                throw new OrderException(ErrorCode.INVALID_ORDER_STATUS);
-            }
-        } else {
-            // 전체 조회
-            return isSeller ?
-                    orderRepository.findByOrderItemsProductOptionProductStoreSellerIdOrderByCreatedAtDesc(currentUser.getId(), pageable) :
-                    orderRepository.findByUserOrderByCreatedAtDesc(currentUser, pageable);
-        }
-    }
-
     // JWT 에서 현재 사용자 정보 조회
     // 사용자 권한 검증
     private User getCurrentUserAndValidatePermission(UserDetails userDetails) {
