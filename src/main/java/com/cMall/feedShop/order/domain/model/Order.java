@@ -106,6 +106,7 @@ public class Order extends BaseTimeEntity {
         this.cardNumber = cardNumber;
         this.cardExpiry = cardExpiry;
         this.cardCvc = cardCvc;
+        this.currency = "KRW";
     }
 
     // 주문 아이템 추가
