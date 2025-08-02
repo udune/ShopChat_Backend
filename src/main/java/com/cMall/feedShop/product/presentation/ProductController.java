@@ -7,6 +7,7 @@ import com.cMall.feedShop.product.application.dto.response.CategoryResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductDetailResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductPageResponse;
 import com.cMall.feedShop.product.application.service.CategoryService;
+import com.cMall.feedShop.product.application.service.ProductFilterService;
 import com.cMall.feedShop.product.application.service.ProductReadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ import java.util.List;
 public class ProductController {
     private final ProductReadService productReadService;
     private final CategoryService categoryService;
+    private final ProductFilterService productFilterService;
 
     /**
      * 상품 목록 조회 API
@@ -60,9 +62,21 @@ public class ProductController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
+        // 1. 필터링 요청 객체를 생성한다.
         ProductFilterRequest request = new ProductFilterRequest().builder()
+                .categoryId(categoryId)
+                .minPrice(minPrice)
+                .maxPrice(maxPrice)
+                .storeId(storeId)
+                .build();
 
-        ProductPageResponse data =
+        // 2. 가격 범위 유효성을 검증한다.
+        if (!request.isValidPriceRange()) {
+            throw new IllegalArgumentException("최소 가격은 최대 가격보다 작거나 같아야 합니다.");
+        }
+
+        // 3. 필터링된 상품 목록을 조회한다.
+        ProductPageResponse data = productFilterService.filterProductList(request, page, size);
         return ApiResponse.success(data);
     }
 
