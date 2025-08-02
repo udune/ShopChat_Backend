@@ -2,6 +2,7 @@ package com.cMall.feedShop.product.presentation;
 
 import com.cMall.feedShop.common.aop.ApiResponseFormat;
 import com.cMall.feedShop.common.dto.ApiResponse;
+import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.product.application.dto.request.ProductFilterRequest;
 import com.cMall.feedShop.product.application.dto.response.CategoryResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductDetailResponse;
@@ -9,6 +10,7 @@ import com.cMall.feedShop.product.application.dto.response.ProductPageResponse;
 import com.cMall.feedShop.product.application.service.CategoryService;
 import com.cMall.feedShop.product.application.service.ProductFilterService;
 import com.cMall.feedShop.product.application.service.ProductReadService;
+import com.cMall.feedShop.product.domain.exception.ProductException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -72,7 +74,7 @@ public class ProductController {
 
         // 2. 가격 범위 유효성을 검증한다.
         if (!request.isValidPriceRange()) {
-            throw new IllegalArgumentException("최소 가격은 최대 가격보다 작거나 같아야 합니다.");
+            throw new ProductException(ErrorCode.INVALID_PRODUCT_FILTER_PRICE_RANGE);
         }
 
         // 3. 필터링된 상품 목록을 조회한다.
