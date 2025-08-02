@@ -2,6 +2,7 @@ package com.cMall.feedShop.product.presentation;
 
 import com.cMall.feedShop.common.aop.ApiResponseFormat;
 import com.cMall.feedShop.common.dto.ApiResponse;
+import com.cMall.feedShop.product.application.dto.request.ProductFilterRequest;
 import com.cMall.feedShop.product.application.dto.response.CategoryResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductDetailResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductPageResponse;
@@ -10,6 +11,7 @@ import com.cMall.feedShop.product.application.service.ProductReadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -34,6 +36,33 @@ public class ProductController {
             @RequestParam(defaultValue = "20") int size
     ) {
         ProductPageResponse data = productReadService.getProductList(page, size);
+        return ApiResponse.success(data);
+    }
+
+    /**
+     * 상품 목록 필터링 조회 API
+     * /api/products/filter?categoryId=1&minPrice=1000&maxPrice=5000&storeId=2&page=0&size=20
+     * @param categoryId 카테고리 아이디 (선택적)
+     * @param minPrice 최소 가격 (선택적)
+     * @param maxPrice 최대 가격 (선택적)
+     * @param storeId 매장 아이디 (선택적)
+     * @param page 페이지 번호 (기본값: 0)
+     * @param size 페이지 크기 (기본값: 20)
+     * @return 필터링된 상품 목록 응답
+     */
+    @GetMapping("/filter")
+    @ApiResponseFormat(message = "상품 목록을 필터링하여 성공적으로 조회했습니다.")
+    public ApiResponse<ProductPageResponse> filterProductList(
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) Long storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        ProductFilterRequest request = new ProductFilterRequest().builder()
+
+        ProductPageResponse data =
         return ApiResponse.success(data);
     }
 
