@@ -28,7 +28,7 @@ public class ProductFilterRequest {
     // 가격 범위가 올바른지 검증
     public boolean isValidPriceRange() {
         // 둘 다 null인 경우는 유효한 가격 범위로 간주
-        if (minPrice == null && maxPrice == null) {
+        if (minPrice == null || maxPrice == null) {
             return true;
         }
 
