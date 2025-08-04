@@ -65,6 +65,7 @@ public enum ErrorCode {
     INVALID_POINT(400, "O005", "유효하지 않은 포인트입니다."),
     ORDER_CANCEL_FORBIDDEN(403, "O006", "취소할 수 없는 주문 상태입니다."),
     
+
     // 리뷰 관련
     REVIEW_NOT_FOUND(404, "R001", "리뷰를 찾을 수 없습니다."),
     DUPLICATE_REVIEW(409, "R002", "이미 해당 상품에 대한 리뷰를 작성하셨습니다."),
