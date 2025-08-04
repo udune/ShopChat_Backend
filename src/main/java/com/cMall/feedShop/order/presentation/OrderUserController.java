@@ -86,6 +86,7 @@ public class OrderUserController {
      * @return
      */
     @GetMapping("/orders/{orderId}")
+    @ApiResponseFormat(message = "주문 상세 조회 완료")
     public ApiResponse<OrderDetailResponse> getOrderDetail(
             @PathVariable Long orderId,
             @AuthenticationPrincipal UserDetails userDetails
