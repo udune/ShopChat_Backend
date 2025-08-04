@@ -24,10 +24,14 @@ public class CardPaymentValidator implements ConstraintValidator<ValidCardPaymen
 
         // 결제 방법이 "카드"인 경우 카드 정보 유효성 검증
         boolean isValid = true;
-        context.disableDefaultConstraintViolation();
+        boolean hasViolation = false;
 
         // 카드 번호 검증 (10~14자리 숫자)
         if (!isValidCardNumber(request.getCardNumber())) {
+            if (!hasViolation) {
+                context.disableDefaultConstraintViolation();
+                hasViolation = true;
+            }
             context.buildConstraintViolationWithTemplate("카드 번호는 10~14자리 숫자여야 합니다.")
                     .addPropertyNode("cardNumber")
                     .addConstraintViolation();
@@ -36,6 +40,10 @@ public class CardPaymentValidator implements ConstraintValidator<ValidCardPaymen
 
         // 유효기간 검증 (4자리 숫자)
         if (!isValidCardExpiry(request.getCardExpiry())) {
+            if (!hasViolation) {
+                context.disableDefaultConstraintViolation();
+                hasViolation = true;
+            }
             context.buildConstraintViolationWithTemplate("카드 유효기간은 4자리 숫자여야 합니다. (예: 1225)")
                     .addPropertyNode("cardExpiry")
                     .addConstraintViolation();
@@ -44,6 +52,10 @@ public class CardPaymentValidator implements ConstraintValidator<ValidCardPaymen
 
         // CVC 검증 (3자리 숫자)
         if (!isValidCardCvc(request.getCardCvc())) {
+            if (!hasViolation) {
+                context.disableDefaultConstraintViolation();
+                hasViolation = true;
+            }
             context.buildConstraintViolationWithTemplate("카드 CVC는 3자리 숫자여야 합니다.")
                     .addPropertyNode("cardCvc")
                     .addConstraintViolation();
