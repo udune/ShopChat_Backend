@@ -12,15 +12,19 @@ import com.cMall.feedShop.order.application.service.PurchasedItemService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@Validated
 public class OrderUserController {
 
     private final OrderService orderService;
@@ -53,9 +57,14 @@ public class OrderUserController {
     @ApiResponseFormat(message = "주문 목록 조회 완료")
     public ApiResponse<OrderPageResponse> getOrderList(
             @Parameter(description = "페이지 번호 (0부터 시작)")
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0")
+            @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.")
+            int page,
             @Parameter(description = "페이지 크기 (1~100)")
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "10")
+            @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.")
+            @Max(value = 100, message = "페이지 크기는 100 이하이어야 합니다.")
+            int size,
             @Parameter(
                     description = "주문 상태 필터링(전체 조회시 'ALL' 또는 'NULL')",
                     schema = @Schema(
