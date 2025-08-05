@@ -126,7 +126,7 @@ public class OrderService {
         Pageable pageable = PageRequest.of(page, size);
 
         // 3. 주문 목록 조회
-        Page<Order> orderPage = getOrderPage(currentUser, status, pageable, isSeller);
+        Page<Order> orderPage = getOrderPageForUser(currentUser, status, pageable);
 
         // 4. 주문 목록 응답 반환
         Page<OrderListResponse> response = orderPage.map(OrderListResponse::from);
@@ -158,30 +158,42 @@ public class OrderService {
         Pageable pageable = PageRequest.of(page, size);
 
         // 3. 주문 목록 조회
-        Page<Order> orderPage = getOrderPage(currentUser, status, pageable, isSeller);
+        Page<Order> orderPage = getOrderPageForSeller(currentUser, status, pageable);
 
         // 4. 주문 목록 응답 반환
         Page<OrderListResponse> response = orderPage.map(OrderListResponse::from);
         return OrderPageResponse.of(response);
     }
 
-    // 주문 페이지 조회 (사용자, 판매자 분기)
-    private Page<Order> getOrderPage(User currentUser, String status, Pageable pageable, boolean isSeller) {
+    // 주문 페이지 조회 (사용자)
+    private Page<Order> getOrderPageForUser(User currentUser, String status, Pageable pageable) {
         if (status != null && !status.equalsIgnoreCase("all")) {
             try {
                 // 특정 주문 상태 필터링 조회
                 OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
-                return isSeller ?
-                        orderRepository.findByOrderItemsProductOptionProductStoreSellerIdAndStatusOrderByCreatedAtDesc(currentUser.getId(), orderStatus, pageable) :
-                        orderRepository.findByUserAndStatusOrderByCreatedAtDesc(currentUser, orderStatus, pageable);
+                return orderRepository.findByUserAndStatusOrderByCreatedAtDesc(currentUser, orderStatus, pageable);
             } catch (IllegalArgumentException e) {
                 throw new OrderException(ErrorCode.INVALID_ORDER_STATUS);
             }
         } else {
             // 전체 조회
-            return isSeller ?
-                    orderRepository.findByOrderItemsProductOptionProductStoreSellerIdOrderByCreatedAtDesc(currentUser.getId(), pageable) :
-                    orderRepository.findByUserOrderByCreatedAtDesc(currentUser, pageable);
+            return orderRepository.findByUserOrderByCreatedAtDesc(currentUser, pageable);
+        }
+    }
+
+    // 주문 페이지 조회 (판매자)
+    private Page<Order> getOrderPageForSeller(User currentUser, String status, Pageable pageable) {
+        if (status != null && !status.equalsIgnoreCase("all")) {
+            try {
+                // 특정 주문 상태 필터링 조회
+                OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
+                return orderRepository.findByOrderItemsProductOptionProductStoreSellerIdAndStatusOrderByCreatedAtDesc(currentUser.getId(), orderStatus, pageable);
+            } catch (IllegalArgumentException e) {
+                throw new OrderException(ErrorCode.INVALID_ORDER_STATUS);
+            }
+        } else {
+            // 전체 조회
+            return orderRepository.findByOrderItemsProductOptionProductStoreSellerIdOrderByCreatedAtDesc(currentUser.getId(), pageable);
         }
     }
 
