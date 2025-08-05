@@ -227,7 +227,7 @@ public class OrderService {
         User seller = getCurrentUserAndValidateSellerPermission(userDetails);
 
         // 2. 주문 조회 및 권한 검증
-        Order order = orderRepository.findByOrderIdAndOrderItemsProductOptionProductStoreSellerId(orderId, seller.getId())
+        Order order = orderRepository.findByOrderIdAndSellerId(orderId, seller.getId())
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
 
         // 3. 상태 변경 가능 여부 검증
