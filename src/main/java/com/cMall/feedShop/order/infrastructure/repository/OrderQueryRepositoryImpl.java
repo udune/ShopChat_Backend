@@ -4,7 +4,6 @@ import com.cMall.feedShop.order.domain.enums.OrderStatus;
 import com.cMall.feedShop.order.domain.model.Order;
 import com.cMall.feedShop.order.domain.model.QOrder;
 import com.cMall.feedShop.order.domain.model.QOrderItem;
-import com.cMall.feedShop.order.infrastructure.repository.OrderQueryRepository;
 import com.cMall.feedShop.product.domain.model.QProduct;
 import com.cMall.feedShop.product.domain.model.QProductImage;
 import com.cMall.feedShop.product.domain.model.QProductOption;
@@ -34,6 +33,55 @@ public class OrderQueryRepositoryImpl implements OrderQueryRepository {
     @Override
     public Page<Order> findOrdersBySellerIdAndStatus(Long sellerId, OrderStatus status, Pageable pageable) {
         return findOrdersBySellerIdWithCondition(sellerId, status, pageable);
+    }
+
+    // 사용자별 주문 목록 조회 (EntityGraph 대체)
+    public Page<Order> findByUserOrderByCreatedAtDesc(Long userId, Pageable pageable) {
+        QOrder order = QOrder.order;
+
+        List<Order> orders = createBaseQuery()
+                .where(order.user.id.eq(userId))
+                .orderBy(order.createdAt.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        JPAQuery<Long> countQuery = queryFactory
+                .select(order.count())
+                .from(order)
+                .where(order.user.id.eq(userId));
+
+        return PageableExecutionUtils.getPage(orders, pageable, countQuery::fetchOne);
+    }
+
+    // 사용자별 + 상태별 주문 목록 조회 (EntityGraph 대체)
+    public Page<Order> findByUserAndStatusOrderByCreatedAtDesc(Long userId, OrderStatus status, Pageable pageable) {
+        QOrder order = QOrder.order;
+
+        List<Order> orders = createBaseQuery()
+                .where(order.user.id.eq(userId).and(order.status.eq(status)))
+                .orderBy(order.createdAt.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        JPAQuery<Long> countQuery = queryFactory
+                .select(order.count())
+                .from(order)
+                .where(order.user.id.eq(userId).and(order.status.eq(status)));
+
+        return PageableExecutionUtils.getPage(orders, pageable, countQuery::fetchOne);
+    }
+
+    // 사용자별 특정 주문 조회 (EntityGraph 대체)
+    public Optional<Order> findByOrderIdAndUserId(Long orderId, Long userId) {
+        QOrder order = QOrder.order;
+
+        Order result = createBaseQuery()
+                .where(order.orderId.eq(orderId).and(order.user.id.eq(userId)))
+                .fetchOne();
+
+        return Optional.ofNullable(result);
     }
 
     private Page<Order> findOrdersBySellerIdWithCondition(Long sellerId, OrderStatus status, Pageable pageable) {
