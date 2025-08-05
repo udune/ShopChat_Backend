@@ -3,7 +3,6 @@ package com.cMall.feedShop.product.application.service;
 import com.cMall.feedShop.product.application.dto.request.ProductFilterRequest;
 import com.cMall.feedShop.product.application.dto.response.ProductListResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductPageResponse;
-import com.cMall.feedShop.product.application.mapper.ProductMapper;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +11,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor

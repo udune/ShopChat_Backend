@@ -73,7 +73,7 @@ public class ProductController {
                 .build();
 
         // 2. 가격 범위 유효성을 검증한다.
-        if (!isValidPriceRange(minPrice, maxPrice)) {
+        if (!request.isValidPriceRange()) {
             throw new ProductException(ErrorCode.INVALID_PRODUCT_FILTER_PRICE_RANGE);
         }
 
@@ -105,24 +105,5 @@ public class ProductController {
     public ApiResponse<List<CategoryResponse>> getAllCategories() {
         List<CategoryResponse> data = categoryService.getAllCategories();
         return ApiResponse.success(data);
-    }
-
-    /**
-     * 가격 범위가 올바른지 검증하는 메서드
-     * - 최소가격과 최대가격이 모두 있을 때만 검증
-     * - 최소가격이 최대가격보다 크면 잘못된 범위
-     *
-     * @param minPrice 최소 가격
-     * @param maxPrice 최대 가격
-     * @return 올바른 가격 범위면 true, 아니면 false
-     */
-    private boolean isValidPriceRange(BigDecimal minPrice, BigDecimal maxPrice) {
-        // 둘 다 null 이거나 둘 중 하나만 있으면 검증할 필요 없음
-        if (minPrice == null || maxPrice == null) {
-            return true;
-        }
-
-        // 최소가격이 최대가격보다 작거나 같아야 함
-        return minPrice.compareTo(maxPrice) <= 0;
     }
 }

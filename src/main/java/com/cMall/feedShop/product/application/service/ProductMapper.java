@@ -1,4 +1,4 @@
-package com.cMall.feedShop.product.application.mapper;
+package com.cMall.feedShop.product.application.service;
 
 import com.cMall.feedShop.product.application.calculator.DiscountCalculator;
 import com.cMall.feedShop.product.application.dto.response.ProductListResponse;
