@@ -317,7 +317,7 @@ class OrderServiceTest {
                 .thenReturn(orderPage);
 
         // When
-        OrderPageResponse response = orderService.getOrderList(0, 10, null, userDetails, false);
+        OrderPageResponse response = orderService.getOrderListForUser(0, 10, null, userDetails);
 
         // Then
         assertThat(response).isNotNull();
@@ -351,7 +351,7 @@ class OrderServiceTest {
                 .thenReturn(orderPage);
 
         // When
-        OrderPageResponse response = orderService.getOrderList(0, 10, "ORDERED", userDetails, false);
+        OrderPageResponse response = orderService.getOrderListForUser(0, 10, "ORDERED", userDetails);
 
         // Then
         assertThat(response).isNotNull();
@@ -373,7 +373,7 @@ class OrderServiceTest {
                 .thenReturn(orderPage);
 
         // When
-        OrderPageResponse response = orderService.getOrderList(0, 10, "all", userDetails, false);
+        OrderPageResponse response = orderService.getOrderListForUser(0, 10, "all", userDetails);
 
         // Then
         assertThat(response.getContent()).hasSize(2);
@@ -391,7 +391,7 @@ class OrderServiceTest {
                 .thenReturn(orderPage);
 
         // When
-        OrderPageResponse response = orderService.getOrderList(-5, 10, null, userDetails, false);
+        OrderPageResponse response = orderService.getOrderListForUser(-5, 10, null, userDetails);
 
         // Then
         assertThat(response.getNumber()).isEqualTo(0);
@@ -409,8 +409,8 @@ class OrderServiceTest {
                 .thenReturn(orderPage);
 
         // When
-        OrderPageResponse response1 = orderService.getOrderList(0, 0, null, userDetails, false);
-        OrderPageResponse response2 = orderService.getOrderList(0, 200, null, userDetails, false);
+        OrderPageResponse response1 = orderService.getOrderListForUser(0, 0, null, userDetails);
+        OrderPageResponse response2 = orderService.getOrderListForUser(0, 200, null, userDetails);
 
         // Then
         assertThat(response1.getSize()).isEqualTo(10); // 기본값으로 조정
@@ -428,7 +428,7 @@ class OrderServiceTest {
                 .thenReturn(emptyPage);
 
         // When
-        OrderPageResponse response = orderService.getOrderList(0, 10, null, userDetails, false);
+        OrderPageResponse response = orderService.getOrderListForUser(0, 10, null, userDetails);
 
         // Then
         assertThat(response.getContent()).isEmpty();
@@ -442,7 +442,7 @@ class OrderServiceTest {
         when(userRepository.findByLoginId("testuser")).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> orderService.getOrderList(0, 10, null, userDetails, false))
+        assertThatThrownBy(() -> orderService.getOrderListForUser(0, 10, null, userDetails))
                 .isInstanceOf(UserException.class)
                 .hasMessage(ErrorCode.USER_NOT_FOUND.getMessage());
 
@@ -459,7 +459,7 @@ class OrderServiceTest {
         when(userRepository.findByLoginId("testuser")).thenReturn(Optional.of(sellerUser));
 
         // When & Then
-        assertThatThrownBy(() -> orderService.getOrderList(0, 10, null, userDetails, false))
+        assertThatThrownBy(() -> orderService.getOrderListForUser(0, 10, null, userDetails))
                 .isInstanceOf(OrderException.class)
                 .hasMessage(ErrorCode.ORDER_FORBIDDEN.getMessage());
     }
@@ -471,7 +471,7 @@ class OrderServiceTest {
         when(userRepository.findByLoginId("testuser")).thenReturn(Optional.of(user));
 
         // When & Then
-        assertThatThrownBy(() -> orderService.getOrderList(0, 10, "INVALID_STATUS", userDetails, false))
+        assertThatThrownBy(() -> orderService.getOrderListForUser(0, 10, "INVALID_STATUS", userDetails))
                 .isInstanceOf(OrderException.class)
                 .hasMessage(ErrorCode.INVALID_ORDER_STATUS.getMessage());
     }
