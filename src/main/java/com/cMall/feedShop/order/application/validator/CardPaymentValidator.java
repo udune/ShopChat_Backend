@@ -51,7 +51,6 @@ public class CardPaymentValidator implements ConstraintValidator<ValidCardPaymen
                     isEmptyString(request.getCardExpiry()) &&
                     isEmptyString(request.getCardCvc());
         }
-
     }
 
     private boolean isEmptyString(String value) {
