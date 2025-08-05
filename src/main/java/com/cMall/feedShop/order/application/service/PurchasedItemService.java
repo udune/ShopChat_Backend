@@ -31,7 +31,7 @@ public class PurchasedItemService {
                     log.warn("구매 상품 목록 조회 시 사용자를 찾을 수 없음. username: {}", userDetails.getUsername());
                     return new UserException(ErrorCode.USER_NOT_FOUND);
                 });
-      
+
         // 구매한 상품 목록 조회
         List<PurchasedItemInfo> items = orderItemQueryRepository.findPurchasedItemsByUserId(currentUser.getId());
 
