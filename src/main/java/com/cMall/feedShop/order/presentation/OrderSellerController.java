@@ -54,7 +54,7 @@ public class OrderSellerController {
             String status,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        OrderPageResponse data = orderService.getOrderList(page, size, status, userDetails, true);
+        OrderPageResponse data = orderService.getOrderListForSeller(page, size, status, userDetails);
         return ApiResponse.success(data);
     }
 }
