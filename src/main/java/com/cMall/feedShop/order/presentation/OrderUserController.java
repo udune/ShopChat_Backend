@@ -74,7 +74,7 @@ public class OrderUserController {
             @RequestParam(required = false) String status,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        OrderPageResponse data = orderService.getOrderList(page, size, status, userDetails, false);
+        OrderPageResponse data = orderService.getOrderListForUser(page, size, status, userDetails);
         return ApiResponse.success(data);
     }
 
@@ -86,6 +86,7 @@ public class OrderUserController {
      * @return
      */
     @GetMapping("/orders/{orderId}")
+    @ApiResponseFormat(message = "주문 상세 조회 완료")
     public ApiResponse<OrderDetailResponse> getOrderDetail(
             @PathVariable
             @Min(value = 1, message = "주문 ID는 1 이상이어야 합니다.")

@@ -50,10 +50,11 @@ public class OrderSellerController {
                             type = "string",
                             allowableValues = {"ORDERED", "SHIPPED", "DELIVERED", "CANCELLED", "RETURNED", "ALL"}
                     ))
-            @RequestParam(required = false) String status,
+            @RequestParam(required = false)
+            String status,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        OrderPageResponse data = orderService.getOrderList(page, size, status, userDetails, true);
+        OrderPageResponse data = orderService.getOrderListForSeller(page, size, status, userDetails);
         return ApiResponse.success(data);
     }
 
