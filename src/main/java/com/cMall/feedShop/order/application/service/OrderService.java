@@ -102,7 +102,7 @@ public class OrderService {
     }
 
     /**
-     * 주문 목록 조회 (사용자, 판매자 공통)
+     * 주문 목록 조회 (사용자)
      * @param page
      * @param size
      * @param status
@@ -110,11 +110,41 @@ public class OrderService {
      * @return
      */
     @Transactional(readOnly = true)
-    public OrderPageResponse getOrderList(int page, int size, String status, UserDetails userDetails, boolean isSeller) {
+    public OrderPageResponse getOrderListForUser(int page, int size, String status, UserDetails userDetails) {
         // 1. 현재 사용자 조회를 하고 사용자 권한을 검증
-        User currentUser = isSeller ?
-                getCurrentUserAndValidateSellerPermission(userDetails) :
-                getCurrentUserAndValidatePermission(userDetails);
+        User currentUser = getCurrentUserAndValidatePermission(userDetails);
+
+        // 2. 페이지 파라미터 검증
+        if (page < 0) {
+            page = 0;
+        }
+
+        if (size < 1 || size > 100) {
+            size = 10;
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        // 3. 주문 목록 조회
+        Page<Order> orderPage = getOrderPage(currentUser, status, pageable, isSeller);
+
+        // 4. 주문 목록 응답 반환
+        Page<OrderListResponse> response = orderPage.map(OrderListResponse::from);
+        return OrderPageResponse.of(response);
+    }
+
+    /**
+     * 주문 목록 조회 (판매자)
+     * @param page
+     * @param size
+     * @param status
+     * @param userDetails
+     * @return
+     */
+    @Transactional(readOnly = true)
+    public OrderPageResponse getOrderListForSeller(int page, int size, String status, UserDetails userDetails) {
+        // 1. 현재 사용자 조회를 하고 사용자 권한을 검증
+        User currentUser = getCurrentUserAndValidateSellerPermission(userDetails);
 
         // 2. 페이지 파라미터 검증
         if (page < 0) {
