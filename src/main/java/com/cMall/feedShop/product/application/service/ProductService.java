@@ -1,6 +1,5 @@
 package com.cMall.feedShop.product.application.service;
 
-import com.cMall.feedShop.common.exception.BusinessException;
 import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.product.application.dto.request.ProductCreateRequest;
 import com.cMall.feedShop.product.application.dto.request.ProductImageRequest;
@@ -16,11 +15,9 @@ import com.cMall.feedShop.product.domain.repository.CategoryRepository;
 import com.cMall.feedShop.product.domain.repository.ProductImageRepository;
 import com.cMall.feedShop.product.domain.repository.ProductOptionRepository;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
-import com.cMall.feedShop.store.domain.exception.StoreException;
 import com.cMall.feedShop.store.domain.model.Store;
 import com.cMall.feedShop.store.domain.repository.StoreRepository;
 import com.cMall.feedShop.user.domain.enums.UserRole;
-import com.cMall.feedShop.user.domain.exception.UserException;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -46,21 +43,18 @@ public class ProductService {
         // 1. 현재 사용자 ID 가져오기
         Long currentUserId = getCurrentUserId(userDetails);
 
-        // 2. 판매자 권한 검증
-        validateSellerPermission(currentUserId);
-
-        // 3. 사용자 스토어 찾기
+        // 2. 사용자 스토어 찾기
         Store userStore = getUserStore(currentUserId);
 
-        // 4. 카테고리 존재 확인
+        // 3. 카테고리 존재 확인
         Category category = getCategory(request.getCategoryId());
 
-        // 5. 상품명 중복 확인
+        // 4. 상품명 중복 확인
         // (등록 시에는 아직 DB에 저장되지 않은 상태이므로
         // 현재 DB 같은 스토어에 같은 이름이 있는지만 확인)
         validateProductNameDuplication(userStore, request.getName());
 
-        // 6. 상품 생성
+        // 5. 상품 생성
         Product product = Product.builder()
                 .name(request.getName())
                 .price(request.getPrice())
@@ -71,16 +65,16 @@ public class ProductService {
                 .category(category)
                 .build();
 
-        // 7. 상품 이미지 생성 및 저장 (메모리상에서만)
+        // 6. 상품 이미지 생성 및 저장 (메모리상에서만)
         createProductImages(product, request.getImages());
 
-        // 8. 상품에 옵션 추가 (메모리상에서만)
+        // 7. 상품에 옵션 추가 (메모리상에서만)
         createProductOptions(product, request.getOptions());
 
-        // 9. DB 저장
+        // 8. DB 저장
         Product savedProduct = productRepository.save(product);
 
-        // 10. 응답값 리턴
+        // 9. 응답값 리턴
         return ProductCreateResponse.of(savedProduct.getProductId());
     }
 
@@ -89,19 +83,16 @@ public class ProductService {
         // 1. 현재 사용자 ID 가져오기
         Long currentUserId = getCurrentUserId(userDetails);
 
-        // 2. 판매자 권한 검증
-        validateSellerPermission(currentUserId);
-
-        // 3. 상품 조회 (소유권 검증 포함)
+        // 2. 상품 조회 (소유권 검증 포함)
         Product product = getProductOwnership(productId, currentUserId);
 
-        // 4. 카테고리 존재 확인
+        // 3. 카테고리 존재 확인
         Category category = null;
         if (request.getCategoryId() != null) {
             category = getCategory(request.getCategoryId());
         }
 
-        // 5. 상품명 중복 확인
+        // 4. 상품명 중복 확인
         // 상품명을 변경했을 경우에만 중복 확인
         // (수정 시에는 DB에 저장된 상품과 비교하는데 자기 상품과는 비교하지 않아야 한다.)
         if (request.getName() != null && !request.getName().equals(product.getName())) {
@@ -130,16 +121,10 @@ public class ProductService {
         // 1. 현재 사용자 ID 가져오기
         Long currentUserId = getCurrentUserId(userDetails);
 
-        // 2. 판매자 권한 검증
-        validateSellerPermission(currentUserId);
-
-        // 3. 상품 조회 (소유권 검증 포함)
+        // 2. 상품 조회 (소유권 검증 포함)
         Product product = getProductOwnership(productId, currentUserId);
 
-        // 4. 주문에 포함된 상품인지 확인
-        validateProductNotInOrders(productId);
-
-        // 5. DB 에서 삭제 (CASCADE DELETE)
+        // 3. DB 에서 삭제 (CASCADE DELETE)
         productRepository.delete(product);
     }
 
@@ -147,28 +132,21 @@ public class ProductService {
     private Long getCurrentUserId(UserDetails userDetails) {
         String login_id = userDetails.getUsername();
         User user = userRepository.findByLoginId(login_id)
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ProductException(ErrorCode.USER_NOT_FOUND));
+
+        // 사용자가 SELLER 권한을 가지고 있는지 확인
+        if (user.getRole() != UserRole.SELLER) {
+            throw new ProductException(ErrorCode.FORBIDDEN);
+        }
 
         return user.getId();
-    }
-
-    // 판매자 권한 검증
-    private void validateSellerPermission(Long userId) {
-        // 사용자가 SELLER 권한을 가지고 있는지 확인
-        // UserRepository 에서 사용자 조회 후 role 확인
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
-
-        if (user.getRole() != UserRole.SELLER) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
-        }
     }
 
     // 스토어 조회
     private Store getUserStore(Long userId) {
         // 내 가게를 찾는다.
         return storeRepository.findBySellerId(userId)
-                .orElseThrow(() -> new StoreException(ErrorCode.STORE_NOT_FOUND));
+                .orElseThrow(() -> new ProductException(ErrorCode.STORE_NOT_FOUND));
     }
 
     // 카테고리 조회
@@ -186,15 +164,10 @@ public class ProductService {
         // 상품 소유권 검증
         Store store = product.getStore();
         if (!store.isManagedBy(currentUserId)) {
-            throw new StoreException(ErrorCode.STORE_FORBIDDEN);
+            throw new ProductException(ErrorCode.STORE_FORBIDDEN);
         }
 
         return product;
-    }
-
-    // 주문에 포함된 상품인지 확인
-    private void validateProductNotInOrders(Long productId) {
-        // 주문 도메인 작업할때 진행
     }
 
     // 상품명 중복 확인 (상품 등록 시)
