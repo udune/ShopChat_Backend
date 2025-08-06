@@ -19,7 +19,6 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class ProductOptionService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
@@ -32,6 +31,7 @@ public class ProductOptionService {
      * @param userDetails 사용자 정보 (판매자)
      * @return 상품 옵션 정보 리스트
      */
+    @Transactional(readOnly = true)
     public List<ProductOptionInfo> getProductOptions(Long productId, UserDetails userDetails) {
         // 1. 현재 사용자 ID를 가져온다.
         Long currentUserId = getCurrentUserId(userDetails);
