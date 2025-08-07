@@ -220,7 +220,7 @@ class ProductOptionServiceTest {
         given(storeRepository.findBySellerId(seller.getId())).willReturn(Optional.of(store));
 
         // 중복 검증 쿼리를 mock으로 설정 - 중복된 옵션이 존재한다고 반환
-        given(productOptionRepository.existsByProductIdAndGenderAndSizeAndColor(
+        given(productOptionRepository.existsByProduct_ProductIdAndGenderAndSizeAndColor(
                 productId, Gender.UNISEX, Size.SIZE_250, Color.BLACK
         )).willReturn(true);
 
