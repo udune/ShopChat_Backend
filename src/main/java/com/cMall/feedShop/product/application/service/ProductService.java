@@ -42,20 +42,22 @@ public class ProductService {
     public ProductCreateResponse createProduct(ProductCreateRequest request, UserDetails userDetails) {
         // 1. 현재 사용자 정보 가져오기 및 권한 검증
         User currentUser = getCurrentUser(userDetails);
+
+        // 2. 판매자 권한 검증
         validateSellerRole(currentUser);
 
-        // 2. 사용자 스토어 찾기
+        // 3. 사용자 스토어 찾기
         Store userStore = getUserStore(currentUser.getId());
 
-        // 3. 카테고리 존재 확인
+        // 4. 카테고리 존재 확인
         Category category = getCategory(request.getCategoryId());
 
-        // 4. 상품명 중복 확인
+        // 5. 상품명 중복 확인
         // (등록 시에는 아직 DB에 저장되지 않은 상태이므로
         // 현재 DB 같은 스토어에 같은 이름이 있는지만 확인)
         validateProductNameDuplication(userStore, request.getName());
 
-        // 5. 상품 생성
+        // 6. 상품 생성
         Product product = Product.builder()
                 .name(request.getName())
                 .price(request.getPrice())
@@ -66,16 +68,16 @@ public class ProductService {
                 .category(category)
                 .build();
 
-        // 6. 상품 이미지 생성 및 저장 (메모리상에서만)
+        // 7. 상품 이미지 생성 및 저장 (메모리상에서만)
         createProductImages(product, request.getImages());
 
-        // 7. 상품에 옵션 추가 (메모리상에서만)
+        // 8. 상품에 옵션 추가 (메모리상에서만)
         createProductOptions(product, request.getOptions());
 
-        // 8. DB 저장
+        // 9. DB 저장
         Product savedProduct = productRepository.save(product);
 
-        // 9. 응답값 리턴
+        // 10. 응답값 리턴
         return ProductCreateResponse.of(savedProduct.getProductId());
     }
 
@@ -83,18 +85,20 @@ public class ProductService {
     public void updateProduct(Long productId, ProductUpdateRequest request, UserDetails userDetails) {
         // 1. 현재 사용자 정보 가져오기 및 권한 검증
         User currentUser = getCurrentUser(userDetails);
+
+        // 2. 판매자 권한 검증
         validateSellerRole(currentUser);
 
-        // 2. 상품 조회 (소유권 검증 포함)
+        // 3. 상품 조회 (소유권 검증 포함)
         Product product = getProductOwnership(productId, currentUser.getId());
 
-        // 3. 카테고리 존재 확인
+        // 4. 카테고리 존재 확인
         Category category = null;
         if (request.getCategoryId() != null) {
             category = getCategory(request.getCategoryId());
         }
 
-        // 4. 상품명 중복 확인
+        // 5. 상품명 중복 확인
         // 상품명을 변경했을 경우에만 중복 확인
         // (수정 시에는 DB에 저장된 상품과 비교하는데 자기 상품과는 비교하지 않아야 한다.)
         String currentName = product.getName();
@@ -104,20 +108,20 @@ public class ProductService {
             validateProductNameDuplicationForUpdate(product.getStore(), newName, productId);
         }
 
-        // 5. 상품 필드 업데이트
+        // 6. 상품 필드 업데이트
         updateProductFields(product, request, category);
 
-        // 6. 이미지 업데이트
+        // 7. 이미지 업데이트
         if (request.getImages() != null) {
             updateProductImages(product, request.getImages());
         }
 
-        // 7. 옵션 업데이트
+        // 8. 옵션 업데이트
         if (request.getOptions() != null) {
             updateProductOptions(product, request.getOptions());
         }
 
-        // 8. DB 저장
+        // 9. DB 저장
         productRepository.save(product);
     }
 
@@ -125,12 +129,14 @@ public class ProductService {
     public void deleteProduct(Long productId, UserDetails userDetails) {
         // 1. 현재 사용자 정보 가져오기 및 권한 검증
         User currentUser = getCurrentUser(userDetails);
+
+        // 2. 판매자 권한 검증
         validateSellerRole(currentUser);
 
-        // 2. 상품 조회 (소유권 검증 포함)
+        // 3. 상품 조회 (소유권 검증 포함)
         Product product = getProductOwnership(productId, currentUser.getId());
 
-        // 3. DB 에서 삭제 (CASCADE DELETE)
+        // 4. DB 에서 삭제 (CASCADE DELETE)
         productRepository.delete(product);
     }
 
