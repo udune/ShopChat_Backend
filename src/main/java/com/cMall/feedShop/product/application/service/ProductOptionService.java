@@ -36,23 +36,17 @@ public class ProductOptionService {
      */
     @Transactional
     public ProductOptionCreateResponse addProductOption(Long productId, ProductOptionCreateRequest request, UserDetails userDetails) {
-        // 1. 현재 사용자 ID를 가져온다.
-        Long currentUserId = getCurrentUserId(userDetails);
+        // 1. 현재 사용자를 가져오고 권한을 검증한다.
+        User currentUser = getCurrentUser(userDetails);
 
         // 2. 상품 소유권을 검증하고 상품 정보를 가져온다.
-        Product product = getProductOwnership(productId, currentUserId);
+        Product product = getProductOwnership(productId, currentUser.getId());
 
-        // 3. 같은 옵션이 이미 있는지 확인한다.
+        // 3. DB 에서 같은 옵션이 이미 있는지 확인한다.
         validateDuplicateOption(product, request);
 
         // 4. 상품 옵션을 생성한다.
-        ProductOption newOption = new ProductOption(
-                request.getGender(),
-                request.getSize(),
-                request.getColor(),
-                request.getStock(),
-                product
-        );
+        ProductOption newOption = createNewOption(request, product);
 
         // 5. 생성된 옵션을 저장한다.
         ProductOption savedOption = productOptionRepository.save(newOption);
@@ -61,7 +55,7 @@ public class ProductOptionService {
         return ProductOptionCreateResponse.of(savedOption.getOptionId());
     }
 
-    private Long getCurrentUserId(UserDetails userDetails) {
+    private User getCurrentUser(UserDetails userDetails) {
         // 사용자 정보에서 로그인 ID를 가져온다.
         String loginId = userDetails.getUsername();
 
@@ -74,8 +68,7 @@ public class ProductOptionService {
             throw new ProductException(ErrorCode.FORBIDDEN);
         }
 
-        // 사용자 ID를 반환한다.
-        return user.getId();
+        return user;
     }
 
     private Product getProductOwnership(Long productId, Long currentUserId) {
@@ -103,16 +96,28 @@ public class ProductOptionService {
 
     private void validateDuplicateOption(Product product, ProductOptionCreateRequest request) {
 
-        // 상품의 옵션들 중에서 요청한 옵션과 동일한 옵션이 있는지 확인한다.
-        boolean isDuplicate = product.getProductOptions().stream()
-                .anyMatch(option ->
-                        option.getGender() == request.getGender() &&
-                        option.getSize() == request.getSize() &&
-                        option.getColor() == request.getColor());
+        // DB 에서 상품의 옵션들 중에서 요청한 옵션과 동일한 옵션이 있는지 확인한다.
+        boolean isDuplicate = productOptionRepository.existsByProductIdAndGenderAndSizeAndColor(
+                product.getProductId(),
+                request.getGender(),
+                request.getSize(),
+                request.getColor()
+        );
 
         // 만약 동일한 옵션이 있다면 예외를 발생시킨다.
         if (isDuplicate) {
             throw new ProductException(ErrorCode.DUPLICATE_PRODUCT_OPTION);
         }
+    }
+
+    // 옵션 객체를 생성한다.
+    private ProductOption createNewOption(ProductOptionCreateRequest request, Product product) {
+        return new ProductOption(
+                request.getGender(),
+                request.getSize(),
+                request.getColor(),
+                request.getStock(),
+                product
+        );
     }
 }
