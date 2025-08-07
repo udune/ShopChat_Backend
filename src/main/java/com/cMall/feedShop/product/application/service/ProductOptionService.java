@@ -42,16 +42,16 @@ public class ProductOptionService {
         // 2. 판매자 권한을 검증한다.
         validateSellerRole(currentUser);
 
-        // 2. 상품 옵션 정보를 가져온다.
+        // 3. 상품 옵션 정보를 가져온다.
         ProductOption productOption = getProductOption(optionId);
 
-        // 3. 해당 상품 옵션이 내 가게 상품인지 검증한다.
+        // 4. 해당 상품 옵션이 내 가게 상품인지 검증한다.
         validateSellerPermission(currentUser, productOption);
 
-        // 4. 상품 옵션 정보를 업데이트한다.
+        // 5. 상품 옵션 정보를 업데이트한다.
         updateOptionInfo(productOption, request);
 
-        // 5. 변경된 상품 옵션을 저장한다.
+        // 6. 변경된 상품 옵션을 저장한다.
         productOptionRepository.save(productOption);
     }
 
