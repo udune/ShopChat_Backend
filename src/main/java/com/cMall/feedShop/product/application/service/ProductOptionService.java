@@ -10,6 +10,7 @@ import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +19,7 @@ public class ProductOptionService {
     private final UserRepository userRepository;
     private final ProductOptionRepository productOptionRepository;
 
+    @Transactional
     public void deleteProductOption(Long optionId, UserDetails userDetails) {
         // 1. 현재 사용자 정보를 가져온다.
         User currentUser = getCurrentUser(userDetails);
@@ -31,7 +33,10 @@ public class ProductOptionService {
         // 4. 해당 상품 옵션이 내 가게 상품인지 검증한다.
         validateSellerPermission(currentUser, productOption);
 
-        // 5. 상품 옵션을 삭제한다.
+        // 5. 주문 내역이 있는지 확인한다.
+        validateNotOrderedOption(productOption);
+
+        // 6. 상품 옵션을 삭제한다.
         productOptionRepository.delete(productOption);
     }
 
@@ -57,6 +62,13 @@ public class ProductOptionService {
 
         if (!currentUser.getId().equals(sellerId)) {
             throw new ProductException(ErrorCode.FORBIDDEN, "해당 상품 옵션에 대한 권한이 없습니다.");
+        }
+    }
+
+    // 추후 리팩토링으로 soft delete로 변경할 예정.
+    private void validateNotOrderedOption(ProductOption productOption) {
+        if (!productOption.getOrderItems().isEmpty()) {
+            throw new ProductException(ErrorCode.PRODUCT_IN_ORDER);
         }
     }
 }
