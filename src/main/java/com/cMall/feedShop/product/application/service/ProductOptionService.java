@@ -25,8 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductOptionService {
 
     private final UserRepository userRepository;
-    private final ProductRepository productRepository;
-    private final StoreRepository storeRepository;
     private final ProductOptionRepository productOptionRepository;
 
     /**
@@ -41,10 +39,20 @@ public class ProductOptionService {
         // 1. 현재 사용자 정보를 가져온다.
         User currentUser = getCurrentUser(userDetails);
 
+        // 2. 판매자 권한을 검증한다.
+        validateSellerRole(currentUser);
+
         // 2. 상품 옵션 정보를 가져온다.
         ProductOption productOption = getProductOption(optionId);
 
+        // 3. 해당 상품 옵션이 내 가게 상품인지 검증한다.
+        validateSellerPermission(currentUser, productOption);
+
+        // 4. 상품 옵션 정보를 업데이트한다.
         updateOptionInfo(productOption, request);
+
+        // 5. 변경된 상품 옵션을 저장한다.
+        productOptionRepository.save(productOption);
     }
 
     private User getCurrentUser(UserDetails userDetails) {
@@ -52,21 +60,19 @@ public class ProductOptionService {
                 .orElseThrow(() -> new ProductException(ErrorCode.USER_NOT_FOUND));
     }
 
-    private Long getCurrentUserId(UserDetails userDetails) {
-        // 사용자 정보에서 로그인 ID를 가져온다.
-        String loginId = userDetails.getUsername();
-
-        // 로그인 ID로 사용자 정보를 조회한다.
-        User user = userRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new ProductException(ErrorCode.USER_NOT_FOUND));
-
-        // 사용자가 SELLER 권한을 가지고 있는지 확인
+    // 판매자 권한을 검증한다.
+    private void validateSellerRole(User user) {
         if (user.getRole() != UserRole.SELLER) {
             throw new ProductException(ErrorCode.FORBIDDEN);
         }
+    }
 
-        // 사용자 ID를 반환한다.
-        return user.getId();
+    private void validateSellerPermission(User currentUser, ProductOption productOption) {
+        Long storeId = productOption.getProduct().getStore().getStoreId();
+
+        if (!currentUser.getId().equals(storeId)) {
+            throw new ProductException(ErrorCode.FORBIDDEN, "해당 상품 옵션에 대한 권한이 없습니다.");
+        }
     }
 
     private ProductOption getProductOption(Long optionId) {
