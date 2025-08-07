@@ -97,7 +97,7 @@ public class ProductOptionService {
         // 사이즈 업데이트 (사이즈는 선택사항, null 또는 빈 문자열이 아닐 때만 업데이트)
         if (request.getSize() != null && !request.getSize().trim().isEmpty()) {
             try {
-                Size size = Size.valueOf(request.getSize().toUpperCase());
+                Size size = Size.fromValue(request.getSize().toUpperCase());
                 productOption.updateSize(size);
             } catch (IllegalArgumentException e) {
                 throw new ProductException(ErrorCode.INVALID_INPUT_VALUE, "유효하지 않은 사이즈 값입니다: " + request.getSize());
