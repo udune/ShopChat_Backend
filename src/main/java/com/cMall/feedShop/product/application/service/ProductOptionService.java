@@ -48,10 +48,13 @@ public class ProductOptionService {
         // 4. 해당 상품 옵션이 내 가게 상품인지 검증한다.
         validateSellerPermission(currentUser, productOption);
 
-        // 5. 상품 옵션 정보를 업데이트한다.
+        // 5. 주문 내역이 있는지 확인한다.
+        validateNotOrderedOption(productOption);
+
+        // 6. 상품 옵션 정보를 업데이트한다.
         updateOptionInfo(productOption, request);
 
-        // 6. 변경된 상품 옵션을 저장한다.
+        // 7. 변경된 상품 옵션을 저장한다.
         productOptionRepository.save(productOption);
     }
 
@@ -67,6 +70,11 @@ public class ProductOptionService {
         }
     }
 
+    private ProductOption getProductOption(Long optionId) {
+        return productOptionRepository.findByOptionId(optionId)
+                .orElseThrow(() -> new ProductException(ErrorCode.PRODUCT_OPTION_NOT_FOUND));
+    }
+
     private void validateSellerPermission(User currentUser, ProductOption productOption) {
         Long sellerId = productOption.getProduct().getStore().getSellerId();
 
@@ -75,9 +83,11 @@ public class ProductOptionService {
         }
     }
 
-    private ProductOption getProductOption(Long optionId) {
-        return productOptionRepository.findByOptionId(optionId)
-                .orElseThrow(() -> new ProductException(ErrorCode.PRODUCT_OPTION_NOT_FOUND));
+    // 추후 리팩토링으로 soft delete로 변경할 예정.
+    private void validateNotOrderedOption(ProductOption productOption) {
+        if (!productOption.getOrderItems().isEmpty()) {
+            throw new ProductException(ErrorCode.PRODUCT_IN_ORDER);
+        }
     }
 
     private void updateOptionInfo(ProductOption productOption, ProductOptionUpdateRequest request) {
