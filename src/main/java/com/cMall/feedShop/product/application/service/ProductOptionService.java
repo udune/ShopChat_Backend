@@ -68,9 +68,9 @@ public class ProductOptionService {
     }
 
     private void validateSellerPermission(User currentUser, ProductOption productOption) {
-        Long storeId = productOption.getProduct().getStore().getStoreId();
+        Long sellerId = productOption.getProduct().getStore().getSellerId();
 
-        if (!currentUser.getId().equals(storeId)) {
+        if (!currentUser.getId().equals(sellerId)) {
             throw new ProductException(ErrorCode.FORBIDDEN, "해당 상품 옵션에 대한 권한이 없습니다.");
         }
     }
