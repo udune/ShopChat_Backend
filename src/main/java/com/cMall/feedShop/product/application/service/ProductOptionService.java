@@ -36,11 +36,11 @@ public class ProductOptionService {
      */
     @Transactional
     public ProductOptionCreateResponse addProductOption(Long productId, ProductOptionCreateRequest request, UserDetails userDetails) {
-        // 1. 현재 사용자 ID를 가져온다.
-        Long currentUserId = getCurrentUserId(userDetails);
+        // 1. 현재 사용자를 가져오고 권한을 검증한다.
+        User currentUser = getCurrentUser(userDetails);
 
         // 2. 상품 소유권을 검증하고 상품 정보를 가져온다.
-        Product product = getProductOwnership(productId, currentUserId);
+        Product product = getProductOwnership(productId, currentUser.getId());
 
         // 3. 같은 옵션이 이미 있는지 확인한다.
         validateDuplicateOption(product, request);
@@ -61,7 +61,7 @@ public class ProductOptionService {
         return ProductOptionCreateResponse.of(savedOption.getOptionId());
     }
 
-    private Long getCurrentUserId(UserDetails userDetails) {
+    private User getCurrentUser(UserDetails userDetails) {
         // 사용자 정보에서 로그인 ID를 가져온다.
         String loginId = userDetails.getUsername();
 
@@ -74,8 +74,7 @@ public class ProductOptionService {
             throw new ProductException(ErrorCode.FORBIDDEN);
         }
 
-        // 사용자 ID를 반환한다.
-        return user.getId();
+        return user;
     }
 
     private Product getProductOwnership(Long productId, Long currentUserId) {
