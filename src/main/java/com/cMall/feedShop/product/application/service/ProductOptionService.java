@@ -97,7 +97,7 @@ public class ProductOptionService {
     private void validateDuplicateOption(Product product, ProductOptionCreateRequest request) {
 
         // DB 에서 상품의 옵션들 중에서 요청한 옵션과 동일한 옵션이 있는지 확인한다.
-        boolean isDuplicate = productOptionRepository.existsByProductIdAndGenderAndSizeAndColor(
+        boolean isDuplicate = productOptionRepository.existsByProduct_ProductIdAndGenderAndSizeAndColor(
                 product.getProductId(),
                 request.getGender(),
                 request.getSize(),

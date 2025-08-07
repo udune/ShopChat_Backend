@@ -17,7 +17,7 @@ public interface ProductOptionRepository extends JpaRepository<ProductOption, Lo
     @EntityGraph(attributePaths = {"product", "product.store", "product.category"})
     List<ProductOption> findAllByOptionIdIn(Set<Long> optionIds);
 
-    boolean existsByProductIdAndGenderAndSizeAndColor(
+    boolean existsByProduct_ProductIdAndGenderAndSizeAndColor(
             Long productId,
             Gender gender,
             Size size,
