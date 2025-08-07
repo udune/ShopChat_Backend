@@ -36,10 +36,13 @@ public class ProductOptionService {
         // 1. 현재 사용자를 가져오고 권한을 검증한다.
         User currentUser = getCurrentUser(userDetails);
 
-        // 2. 상품 소유권을 검증하고 상품 정보를 가져온다.
+        // 2. 판매자 권한을 검증한다.
+        validateSellerRole(currentUser);
+
+        // 3. 상품 소유권을 검증하고 상품 정보를 가져온다.
         Product product = getProductOwnership(productId, currentUser.getId());
 
-        // 3. 상품 옵션 정보를 조회하여 반환한다.
+        // 4. 상품 옵션 정보를 조회하여 반환한다.
         return ProductOptionInfo.fromList(product.getProductOptions());
     }
 
@@ -80,5 +83,11 @@ public class ProductOptionService {
         // 내 가게를 찾는다.
         return storeRepository.findBySellerId(userId)
                 .orElseThrow(() -> new ProductException(ErrorCode.STORE_NOT_FOUND));
+    }
+
+    private void validateSellerRole(User user) {
+        if (user.getRole() != UserRole.SELLER) {
+            throw new ProductException(ErrorCode.FORBIDDEN);
+        }
     }
 }
