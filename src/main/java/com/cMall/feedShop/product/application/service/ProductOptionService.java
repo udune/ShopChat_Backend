@@ -48,13 +48,10 @@ public class ProductOptionService {
         // 4. 해당 상품 옵션이 내 가게 상품인지 검증한다.
         validateSellerPermission(currentUser, productOption);
 
-        // 5. 주문 내역이 있는지 확인한다.
-        validateNotOrderedOption(productOption);
-
-        // 6. 상품 옵션 정보를 업데이트한다.
+        // 5. 상품 옵션 정보를 업데이트한다.
         updateOptionInfo(productOption, request);
 
-        // 7. 변경된 상품 옵션을 저장한다.
+        // 6. 변경된 상품 옵션을 저장한다.
         productOptionRepository.save(productOption);
     }
 
@@ -80,13 +77,6 @@ public class ProductOptionService {
 
         if (!currentUser.getId().equals(sellerId)) {
             throw new ProductException(ErrorCode.FORBIDDEN, "해당 상품 옵션에 대한 권한이 없습니다.");
-        }
-    }
-
-    // 추후 리팩토링으로 soft delete로 변경할 예정.
-    private void validateNotOrderedOption(ProductOption productOption) {
-        if (!productOption.getOrderItems().isEmpty()) {
-            throw new ProductException(ErrorCode.PRODUCT_IN_ORDER);
         }
     }
 
