@@ -214,24 +214,24 @@ class ProductOptionServiceTest {
         // given - 이미 같은 옵션이 존재하는 상황 만들기
         Long productId = 1L;
 
-        // 기존에 같은 옵션이 이미 있다고 가정
-        ProductOption existingOption = new ProductOption(
-                Gender.UNISEX, Size.SIZE_250, Color.BLACK, 30, product
-        );
-
-        // 상품에 기존 옵션 추가
-        ReflectionTestUtils.setField(product, "productOptions", Arrays.asList(existingOption));
-
         given(userDetails.getUsername()).willReturn("seller123");
         given(userRepository.findByLoginId("seller123")).willReturn(Optional.of(seller));
         given(productRepository.findByProductId(productId)).willReturn(Optional.of(product));
         given(storeRepository.findBySellerId(seller.getId())).willReturn(Optional.of(store));
+
+        // 중복 검증 쿼리를 mock으로 설정 - 중복된 옵션이 존재한다고 반환
+        given(productOptionRepository.existsByProductIdAndGenderAndSizeAndColor(
+                productId, Gender.UNISEX, Size.SIZE_250, Color.BLACK
+        )).willReturn(true);
 
         // when & then - 중복 옵션 예외가 발생하는지 확인
         assertThatThrownBy(() ->
                 productOptionService.addProductOption(productId, request, userDetails))
                 .isInstanceOf(ProductException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.DUPLICATE_PRODUCT_OPTION);
+
+        // save 메서드가 호출되지 않았는지 확인
+        verify(productOptionRepository, never()).save(any(ProductOption.class));
     }
 
     /**
