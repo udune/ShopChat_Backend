@@ -83,12 +83,44 @@ public class ProductOption {
         }
     }
 
+    // 재고 업데이트 (관리자용)
+    public void updateStock(Integer quantity) {
+        if (quantity == null || quantity < 0) {
+            throw new ProductException(ErrorCode.INVALID_INPUT_VALUE, "재고 수량은 0 이상이어야 합니다.");
+        }
+
+        this.stock = quantity;
+    }
+
+    public void updateGender(Gender gender) {
+        if (gender == null) {
+            throw new ProductException(ErrorCode.INVALID_INPUT_VALUE, "성별은 필수값입니다.");
+        }
+        this.gender = gender;
+    }
+
+    public void updateSize(Size size) {
+        if (size == null) {
+            throw new ProductException(ErrorCode.INVALID_INPUT_VALUE, "사이즈는 필수값입니다.");
+        }
+        this.size = size;
+    }
+
+    public void updateColor(Color color) {
+        if (color == null) {
+            throw new ProductException(ErrorCode.INVALID_INPUT_VALUE, "색상은 필수값입니다.");
+        }
+        this.color = color;
+    }
+
+    // 유효성 검사: 차감할 수량이 1 이상인지 확인
     private void validateQuantityForDecrease(Integer quantity) {
         if (quantity == null || quantity <= 0) {
             throw new ProductException(ErrorCode.OUT_OF_STOCK, "차감할 수량은 1 이상이어야 합니다.");
         }
     }
 
+    // 재고가 충분한지 확인
     private boolean hasEnoughStock(Integer quantity) {
         return this.stock != null && this.stock >= quantity;
     }
