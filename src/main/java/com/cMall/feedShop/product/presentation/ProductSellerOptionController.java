@@ -3,6 +3,7 @@ package com.cMall.feedShop.product.presentation;
 import com.cMall.feedShop.common.aop.ApiResponseFormat;
 import com.cMall.feedShop.common.dto.ApiResponse;
 import com.cMall.feedShop.product.application.dto.request.ProductOptionUpdateRequest;
+import com.cMall.feedShop.product.application.service.ProductOptionService;
 import com.cMall.feedShop.product.application.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ProductSellerOptionController {
 
-    private final ProductService productService;
+    private final ProductOptionService productOptionService;
 
     /**
      * 상품 옵션을 수정하는 API
@@ -35,7 +36,8 @@ public class ProductSellerOptionController {
             @Valid @RequestBody ProductOptionUpdateRequest request,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        productService.
+        productOptionService.updateProductOption(optionId, request, userDetails);
+        return ApiResponse.success(null);
     }
 
 }

@@ -2,7 +2,9 @@ package com.cMall.feedShop.product.application.service;
 
 import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.product.application.dto.request.ProductOptionUpdateRequest;
+import com.cMall.feedShop.product.domain.enums.Color;
 import com.cMall.feedShop.product.domain.enums.Gender;
+import com.cMall.feedShop.product.domain.enums.Size;
 import com.cMall.feedShop.product.domain.exception.ProductException;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.model.ProductOption;
@@ -36,13 +38,18 @@ public class ProductOptionService {
      */
     @Transactional
     public void updateProductOption(Long optionId, ProductOptionUpdateRequest request, UserDetails userDetails) {
-        // 1. 현재 사용자 ID를 가져온다.
-        Long currentUserId = getCurrentUserId(userDetails);
+        // 1. 현재 사용자 정보를 가져온다.
+        User currentUser = getCurrentUser(userDetails);
 
         // 2. 상품 옵션 정보를 가져온다.
         ProductOption productOption = getProductOption(optionId);
 
         updateOptionInfo(productOption, request);
+    }
+
+    private User getCurrentUser(UserDetails userDetails) {
+        return userRepository.findByLoginId(userDetails.getUsername())
+                .orElseThrow(() -> new ProductException(ErrorCode.USER_NOT_FOUND));
     }
 
     private Long getCurrentUserId(UserDetails userDetails) {
@@ -77,7 +84,28 @@ public class ProductOptionService {
                 Gender gender = Gender.valueOf(request.getGender().toUpperCase());
                 productOption.updateGender(gender);
             } catch (IllegalArgumentException e) {
-                throw new ProductException(ErrorCode.INVALID_G
+                throw new ProductException(ErrorCode.INVALID_INPUT_VALUE, "유효하지 않은 성별 값입니다: " + request.getGender());
+            }
+        }
+
+        // 사이즈 업데이트 (사이즈는 선택사항, null 또는 빈 문자열이 아닐 때만 업데이트)
+        if (request.getSize() != null && !request.getSize().trim().isEmpty()) {
+            try {
+                Size size = Size.valueOf(request.getSize().toUpperCase());
+                productOption.updateSize(size);
+            } catch (IllegalArgumentException e) {
+                throw new ProductException(ErrorCode.INVALID_INPUT_VALUE, "유효하지 않은 사이즈 값입니다: " + request.getSize());
+            }
+        }
+
+        // 색상 업데이트 (색상은 선택사항, null 또는 빈 문자열이 아닐 때만 업데이트)
+        if (request.getColor() != null && !request.getColor().trim().isEmpty()) {
+            try {
+                Color color = Color.valueOf(request.getColor().toUpperCase());
+                productOption.updateColor(color);
+            } catch (IllegalArgumentException e) {
+                throw new ProductException(ErrorCode.INVALID_INPUT_VALUE, "유효하지 않은 색상 값입니다: " + request.getColor());
+            }
         }
     }
 }
