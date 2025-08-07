@@ -40,11 +40,12 @@ public class ProductService {
 
     // 상품 등록
     public ProductCreateResponse createProduct(ProductCreateRequest request, UserDetails userDetails) {
-        // 1. 현재 사용자 ID 가져오기
-        Long currentUserId = getCurrentUserId(userDetails);
+        // 1. 현재 사용자 정보 가져오기 및 권한 검증
+        User currentUser = getCurrentUser(userDetails);
+        validateSellerRole(currentUser);
 
         // 2. 사용자 스토어 찾기
-        Store userStore = getUserStore(currentUserId);
+        Store userStore = getUserStore(currentUser.getId());
 
         // 3. 카테고리 존재 확인
         Category category = getCategory(request.getCategoryId());
@@ -80,11 +81,12 @@ public class ProductService {
 
     // 상품 수정
     public void updateProduct(Long productId, ProductUpdateRequest request, UserDetails userDetails) {
-        // 1. 현재 사용자 ID 가져오기
-        Long currentUserId = getCurrentUserId(userDetails);
+        // 1. 현재 사용자 정보 가져오기 및 권한 검증
+        User currentUser = getCurrentUser(userDetails);
+        validateSellerRole(currentUser);
 
         // 2. 상품 조회 (소유권 검증 포함)
-        Product product = getProductOwnership(productId, currentUserId);
+        Product product = getProductOwnership(productId, currentUser.getId());
 
         // 3. 카테고리 존재 확인
         Category category = null;
@@ -95,8 +97,11 @@ public class ProductService {
         // 4. 상품명 중복 확인
         // 상품명을 변경했을 경우에만 중복 확인
         // (수정 시에는 DB에 저장된 상품과 비교하는데 자기 상품과는 비교하지 않아야 한다.)
-        if (request.getName() != null && !request.getName().equals(product.getName())) {
-            validateProductNameDuplicationForUpdate(product.getStore(), request.getName(), productId);
+        String currentName = product.getName();
+        String newName = request.getName();
+        boolean isNameChanged = newName != null && !newName.equals(currentName);
+        if (isNameChanged) {
+            validateProductNameDuplicationForUpdate(product.getStore(), newName, productId);
         }
 
         // 5. 상품 필드 업데이트
@@ -118,28 +123,22 @@ public class ProductService {
 
     // 상품 삭제
     public void deleteProduct(Long productId, UserDetails userDetails) {
-        // 1. 현재 사용자 ID 가져오기
-        Long currentUserId = getCurrentUserId(userDetails);
+        // 1. 현재 사용자 정보 가져오기 및 권한 검증
+        User currentUser = getCurrentUser(userDetails);
+        validateSellerRole(currentUser);
 
         // 2. 상품 조회 (소유권 검증 포함)
-        Product product = getProductOwnership(productId, currentUserId);
+        Product product = getProductOwnership(productId, currentUser.getId());
 
         // 3. DB 에서 삭제 (CASCADE DELETE)
         productRepository.delete(product);
     }
 
-    // JWT 에서 현재 사용자 ID 추출
-    private Long getCurrentUserId(UserDetails userDetails) {
-        String login_id = userDetails.getUsername();
-        User user = userRepository.findByLoginId(login_id)
+    // JWT 에서 현재 사용자 추출
+    private User getCurrentUser(UserDetails userDetails) {
+        String loginId = userDetails.getUsername();
+        return userRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new ProductException(ErrorCode.USER_NOT_FOUND));
-
-        // 사용자가 SELLER 권한을 가지고 있는지 확인
-        if (user.getRole() != UserRole.SELLER) {
-            throw new ProductException(ErrorCode.FORBIDDEN);
-        }
-
-        return user.getId();
     }
 
     // 스토어 조회
@@ -168,6 +167,13 @@ public class ProductService {
         }
 
         return product;
+    }
+
+    // 판매자 권한을 검증한다.
+    private void validateSellerRole(User user) {
+        if (user.getRole() != UserRole.SELLER) {
+            throw new ProductException(ErrorCode.FORBIDDEN);
+        }
     }
 
     // 상품명 중복 확인 (상품 등록 시)
