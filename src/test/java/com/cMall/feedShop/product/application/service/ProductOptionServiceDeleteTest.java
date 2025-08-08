@@ -1,6 +1,7 @@
 package com.cMall.feedShop.product.application.service;
 
 import com.cMall.feedShop.common.exception.ErrorCode;
+import com.cMall.feedShop.order.domain.repository.OrderItemRepository;
 import com.cMall.feedShop.product.domain.exception.ProductException;
 import com.cMall.feedShop.product.domain.model.Category;
 import com.cMall.feedShop.product.domain.model.Product;
@@ -40,11 +41,14 @@ import static org.mockito.Mockito.*;
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("상품 옵션 삭제 서비스 테스트")
-class ProductOptionServiceTest {
+class ProductOptionServiceDeleteTest {
 
     // ========== 가짜 객체들 (실제 데이터베이스 없이 테스트하기 위해) ==========
     @Mock
     private UserRepository userRepository; // 사용자 정보 저장소
+
+    @Mock
+    private OrderItemRepository orderItemRepository;
 
     @Mock
     private ProductOptionRepository productOptionRepository; // 상품 옵션 저장소
