@@ -1,6 +1,7 @@
 package com.cMall.feedShop.product.application.service;
 
 import com.cMall.feedShop.common.exception.ErrorCode;
+import com.cMall.feedShop.order.domain.repository.OrderItemRepository;
 import com.cMall.feedShop.product.domain.exception.ProductException;
 import com.cMall.feedShop.product.domain.model.ProductOption;
 import com.cMall.feedShop.product.domain.repository.ProductOptionRepository;
@@ -12,12 +13,15 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class ProductOptionService {
 
     private final UserRepository userRepository;
     private final ProductOptionRepository productOptionRepository;
+    private final OrderItemRepository orderItemRepository;
 
     @Transactional
     public void deleteProductOption(Long optionId, UserDetails userDetails) {
@@ -67,7 +71,7 @@ public class ProductOptionService {
 
     // 추후 리팩토링으로 soft delete로 변경할 예정.
     private void validateNotOrderedOption(ProductOption productOption) {
-        if (!productOption.getOrderItems().isEmpty()) {
+        if (orderItemRepository.existsByProductOption(productOption)) {
             throw new ProductException(ErrorCode.PRODUCT_IN_ORDER);
         }
     }
