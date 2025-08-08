@@ -1,15 +1,16 @@
 package com.cMall.feedShop.product.application.service;
 
 import com.cMall.feedShop.common.exception.ErrorCode;
-import com.cMall.feedShop.product.application.dto.request.ProductOptionUpdateRequest;
+import com.cMall.feedShop.product.application.dto.response.info.ProductOptionInfo;
 import com.cMall.feedShop.product.domain.enums.Color;
 import com.cMall.feedShop.product.domain.enums.Gender;
 import com.cMall.feedShop.product.domain.enums.Size;
 import com.cMall.feedShop.product.domain.exception.ProductException;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.model.ProductOption;
-import com.cMall.feedShop.product.domain.repository.ProductOptionRepository;
+import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import com.cMall.feedShop.store.domain.model.Store;
+import com.cMall.feedShop.store.domain.repository.StoreRepository;
 import com.cMall.feedShop.user.domain.enums.UserRole;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
@@ -20,33 +21,32 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
-/**
- * ProductOptionService 테스트 클래스
- * - 상품 옵션 수정 기능을 테스트합니다
- * - 초등학생도 이해할 수 있도록 자세한 주석을 작성했습니다
- */
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)  // UnnecessaryStubbingException 방지
-@DisplayName("상품 옵션 서비스 테스트")
+@DisplayName("ProductOptionService 테스트")
 class ProductOptionServiceTest {
+
+    @Mock
+    private ProductRepository productRepository;
 
     @Mock
     private UserRepository userRepository;
 
     @Mock
-    private ProductOptionRepository productOptionRepository;
+    private StoreRepository storeRepository;
 
     @Mock
     private UserDetails userDetails;
@@ -55,217 +55,192 @@ class ProductOptionServiceTest {
     private ProductOptionService productOptionService;
 
     private User seller;
-    private User buyer;
+    private User normalUser;
     private Store store;
+    private Store otherStore;
     private Product product;
-    private ProductOption productOption;
-    private ProductOptionUpdateRequest request;
+    private ProductOption option1;
+    private ProductOption option2;
 
     @BeforeEach
     void setUp() {
-        // 1. 판매자 계정 생성 - 실제 객체로 생성
-        seller = new User("seller@test.com", "password123", "seller@test.com", UserRole.SELLER);
+        // 판매자 사용자 생성 - 생성자 사용
+        seller = new User("seller@test.com", "password", "seller@test.com", UserRole.SELLER);
         ReflectionTestUtils.setField(seller, "id", 1L);
 
-        // 2. 일반 구매자 계정 생성
-        buyer = new User("buyer@test.com", "password123", "buyer@test.com", UserRole.USER);
-        ReflectionTestUtils.setField(buyer, "id", 2L);
+        // 일반 사용자 생성 - 생성자 사용
+        normalUser = new User("user@test.com", "password", "user@test.com", UserRole.USER);
+        ReflectionTestUtils.setField(normalUser, "id", 2L);
 
-        // 3. 가게 생성 - 실제 객체로 생성
+        // 판매자의 가게 생성
         store = Store.builder()
-                .storeName("테스트 가게")
+                .storeName("테스트 스토어")
                 .sellerId(1L)
-                .description("테스트용 가게입니다")
                 .build();
         ReflectionTestUtils.setField(store, "storeId", 1L);
 
-        // 4. 상품 생성 - mock으로 생성
-        product = mock(Product.class);
-        given(product.getStore()).willReturn(store);
+        // 다른 판매자의 가게 생성
+        otherStore = Store.builder()
+                .storeName("다른 스토어")
+                .sellerId(3L)
+                .build();
+        ReflectionTestUtils.setField(otherStore, "storeId", 2L);
 
-        // 5. 상품 옵션 생성 - mock으로 생성
-        productOption = mock(ProductOption.class);
-        given(productOption.getProduct()).willReturn(product);
+        // 상품 생성
+        product = Product.builder()
+                .name("테스트 상품")
+                .price(new BigDecimal("50000"))
+                .store(store)
+                .build();
+        ReflectionTestUtils.setField(product, "productId", 1L);
 
-        // 6. 수정 요청 데이터 생성
-        request = createUpdateRequest(50, "BLACK", "245", "UNISEX");
-    }
+        // 상품 옵션 생성
+        option1 = new ProductOption(Gender.UNISEX, Size.SIZE_250, Color.BLACK, 50, product);
+        ReflectionTestUtils.setField(option1, "optionId", 1L);
 
-    private ProductOptionUpdateRequest createUpdateRequest(Integer stock, String color, String size, String gender) {
-        ProductOptionUpdateRequest request = new ProductOptionUpdateRequest();
-        if (stock != null) {
-            ReflectionTestUtils.setField(request, "stock", stock);
-        }
-        if (color != null) {
-            ReflectionTestUtils.setField(request, "color", color);
-        }
-        if (size != null) {
-            ReflectionTestUtils.setField(request, "size", size);
-        }
-        if (gender != null) {
-            ReflectionTestUtils.setField(request, "gender", gender);
-        }
-        return request;
+        option2 = new ProductOption(Gender.WOMEN, Size.SIZE_240, Color.WHITE, 30, product);
+        ReflectionTestUtils.setField(option2, "optionId", 2L);
+
+        // 상품에 옵션 추가
+        product.getProductOptions().addAll(Arrays.asList(option1, option2));
     }
 
     @Test
-    @DisplayName("정상적인 상품 옵션 수정 성공")
-    void updateProductOption_Success() {
+    @DisplayName("판매자가 자신의 상품 옵션 조회 성공")
+    void getProductOptions_Success() {
         // given
-        Long optionId = 1L;
-
         given(userDetails.getUsername()).willReturn("seller@test.com");
         given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
-        given(productOptionRepository.findByOptionId(optionId)).willReturn(Optional.of(productOption));
+        given(productRepository.findByProductId(1L)).willReturn(Optional.of(product));
+        given(storeRepository.findBySellerId(1L)).willReturn(Optional.of(store));
 
         // when
-        productOptionService.updateProductOption(optionId, request, userDetails);
+        List<ProductOptionInfo> result = productOptionService.getProductOptions(1L, userDetails);
 
         // then
-        verify(productOption, times(1)).updateStock(50);
-        verify(productOption, times(1)).updateColor(Color.BLACK);
-        verify(productOption, times(1)).updateSize(Size.SIZE_245);
-        verify(productOption, times(1)).updateGender(Gender.UNISEX);
-        verify(productOptionRepository, times(1)).save(productOption);
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getOptionId()).isEqualTo(1L);
+        assertThat(result.get(0).getGender()).isEqualTo(Gender.UNISEX);
+        assertThat(result.get(0).getSize()).isEqualTo(Size.SIZE_250);
+        assertThat(result.get(0).getColor()).isEqualTo(Color.BLACK);
+        assertThat(result.get(0).getStock()).isEqualTo(50);
+
+        assertThat(result.get(1).getOptionId()).isEqualTo(2L);
+        assertThat(result.get(1).getGender()).isEqualTo(Gender.WOMEN);
+        assertThat(result.get(1).getSize()).isEqualTo(Size.SIZE_240);
+        assertThat(result.get(1).getColor()).isEqualTo(Color.WHITE);
+        assertThat(result.get(1).getStock()).isEqualTo(30);
     }
 
     @Test
-    @DisplayName("일반 사용자의 상품 옵션 수정 시도 시 권한 에러")
-    void updateProductOption_Forbidden_NotSeller() {
+    @DisplayName("비로그인 사용자 접근 시 예외 발생")
+    void getProductOptions_Fail_UserNotFound() {
         // given
-        Long optionId = 1L;
-
-        given(userDetails.getUsername()).willReturn("buyer@test.com");
-        given(userRepository.findByLoginId("buyer@test.com")).willReturn(Optional.of(buyer));
+        given(userDetails.getUsername()).willReturn("nonexistent@test.com");
+        given(userRepository.findByLoginId("nonexistent@test.com")).willReturn(Optional.empty());
 
         // when & then
-        ProductException exception = assertThrows(ProductException.class, () -> {
-            productOptionService.updateProductOption(optionId, request, userDetails);
-        });
+        assertThatThrownBy(() -> productOptionService.getProductOptions(1L, userDetails))
+                .isInstanceOf(ProductException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
 
-        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
-        verify(productOptionRepository, never()).save(any());
+        // 검증
+        verify(productRepository, never()).findByProductId(1L);
+        verify(storeRepository, never()).findBySellerId(1L);
     }
 
     @Test
-    @DisplayName("다른 판매자 상품 옵션 수정 시도 시 권한 에러")
-    void updateProductOption_Forbidden_NotOwner() {
+    @DisplayName("일반 사용자(USER 권한) 접근 시 예외 발생")
+    void getProductOptions_Fail_NotSeller() {
         // given
-        Long optionId = 1L;
-
-        // 다른 판매자 생성
-        User otherSeller = new User("other@test.com", "password123", "other@test.com", UserRole.SELLER);
-        ReflectionTestUtils.setField(otherSeller, "id", 99L);
-
-        given(userDetails.getUsername()).willReturn("other@test.com");
-        given(userRepository.findByLoginId("other@test.com")).willReturn(Optional.of(otherSeller));
-        given(productOptionRepository.findByOptionId(optionId)).willReturn(Optional.of(productOption));
+        given(userDetails.getUsername()).willReturn("user@test.com");
+        given(userRepository.findByLoginId("user@test.com")).willReturn(Optional.of(normalUser));
 
         // when & then
-        ProductException exception = assertThrows(ProductException.class, () -> {
-            productOptionService.updateProductOption(optionId, request, userDetails);
-        });
+        assertThatThrownBy(() -> productOptionService.getProductOptions(1L, userDetails))
+                .isInstanceOf(ProductException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN);
 
-        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
+        // 검증
+        verify(productRepository, never()).findByProductId(1L);
+        verify(storeRepository, never()).findBySellerId(2L);
     }
 
     @Test
-    @DisplayName("존재하지 않는 상품 옵션 수정 시도 시 에러")
-    void updateProductOption_OptionNotFound() {
+    @DisplayName("존재하지 않는 상품 조회 시 예외 발생")
+    void getProductOptions_Fail_ProductNotFound() {
         // given
-        Long notExistOptionId = 999L;
+        given(userDetails.getUsername()).willReturn("seller@test.com");
+        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(productRepository.findByProductId(999L)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> productOptionService.getProductOptions(999L, userDetails))
+                .isInstanceOf(ProductException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PRODUCT_NOT_FOUND);
+
+        // 검증
+        verify(storeRepository, never()).findBySellerId(1L);
+    }
+
+    @Test
+    @DisplayName("판매자 가게 없음 시 예외 발생")
+    void getProductOptions_Fail_StoreNotFound() {
+        // given
+        given(userDetails.getUsername()).willReturn("seller@test.com");
+        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(productRepository.findByProductId(1L)).willReturn(Optional.of(product));
+        given(storeRepository.findBySellerId(1L)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> productOptionService.getProductOptions(1L, userDetails))
+                .isInstanceOf(ProductException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.STORE_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("다른 판매자의 상품 접근 시 예외 발생")
+    void getProductOptions_Fail_NotProductOwner() {
+        // given
+        // 다른 판매자의 상품 설정
+        Product otherProduct = Product.builder()
+                .name("다른 상품")
+                .price(new BigDecimal("30000"))
+                .store(otherStore)  // 다른 가게의 상품
+                .build();
+        ReflectionTestUtils.setField(otherProduct, "productId", 2L);
 
         given(userDetails.getUsername()).willReturn("seller@test.com");
         given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
-        given(productOptionRepository.findByOptionId(notExistOptionId)).willReturn(Optional.empty());
+        given(productRepository.findByProductId(2L)).willReturn(Optional.of(otherProduct));
+        given(storeRepository.findBySellerId(1L)).willReturn(Optional.of(store));
 
         // when & then
-        ProductException exception = assertThrows(ProductException.class, () -> {
-            productOptionService.updateProductOption(notExistOptionId, request, userDetails);
-        });
-
-        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_OPTION_NOT_FOUND);
+        assertThatThrownBy(() -> productOptionService.getProductOptions(2L, userDetails))
+                .isInstanceOf(ProductException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PRODUCT_NOT_BELONG_TO_STORE);
     }
 
     @Test
-    @DisplayName("존재하지 않는 사용자로 상품 옵션 수정 시도 시 에러")
-    void updateProductOption_UserNotFound() {
+    @DisplayName("상품에 옵션이 없는 경우 빈 리스트 반환")
+    void getProductOptions_Success_EmptyOptions() {
         // given
-        Long optionId = 1L;
-
-        given(userDetails.getUsername()).willReturn("notexist@test.com");
-        given(userRepository.findByLoginId("notexist@test.com")).willReturn(Optional.empty());
-
-        // when & then
-        ProductException exception = assertThrows(ProductException.class, () -> {
-            productOptionService.updateProductOption(optionId, request, userDetails);
-        });
-
-        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
-    }
-
-    @Test
-    @DisplayName("재고만 수정하는 경우 성공")
-    void updateProductOption_OnlyStock() {
-        // given
-        Long optionId = 1L;
-
-        ProductOptionUpdateRequest stockOnlyRequest = createUpdateRequest(100, null, null, null);
+        Product productWithoutOptions = Product.builder()
+                .name("옵션 없는 상품")
+                .price(new BigDecimal("20000"))
+                .store(store)
+                .build();
+        ReflectionTestUtils.setField(productWithoutOptions, "productId", 3L);
 
         given(userDetails.getUsername()).willReturn("seller@test.com");
         given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
-        given(productOptionRepository.findByOptionId(optionId)).willReturn(Optional.of(productOption));
+        given(productRepository.findByProductId(3L)).willReturn(Optional.of(productWithoutOptions));
+        given(storeRepository.findBySellerId(1L)).willReturn(Optional.of(store));
 
         // when
-        productOptionService.updateProductOption(optionId, stockOnlyRequest, userDetails);
+        List<ProductOptionInfo> result = productOptionService.getProductOptions(3L, userDetails);
 
         // then
-        verify(productOption, times(1)).updateStock(100);
-        verify(productOption, never()).updateColor(any());
-        verify(productOption, never()).updateSize(any());
-        verify(productOption, never()).updateGender(any());
-        verify(productOptionRepository, times(1)).save(productOption);
-    }
-
-    @Test
-    @DisplayName("잘못된 색상 값으로 수정 시도 시 에러")
-    void updateProductOption_InvalidColor() {
-        // given
-        Long optionId = 1L;
-
-        ProductOptionUpdateRequest invalidRequest = createUpdateRequest(50, "RAINBOW", null, null);
-
-        given(userDetails.getUsername()).willReturn("seller@test.com");
-        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
-        given(productOptionRepository.findByOptionId(optionId)).willReturn(Optional.of(productOption));
-
-        // when & then
-        ProductException exception = assertThrows(ProductException.class, () -> {
-            productOptionService.updateProductOption(optionId, invalidRequest, userDetails);
-        });
-
-        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE);
-    }
-
-    @Test
-    @DisplayName("빈 문자열 필드는 업데이트하지 않음")
-    void updateProductOption_EmptyStringFieldsIgnored() {
-        // given
-        Long optionId = 1L;
-
-        ProductOptionUpdateRequest emptyStringRequest = createUpdateRequest(50, "", "   ", null);
-
-        given(userDetails.getUsername()).willReturn("seller@test.com");
-        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
-        given(productOptionRepository.findByOptionId(optionId)).willReturn(Optional.of(productOption));
-
-        // when
-        productOptionService.updateProductOption(optionId, emptyStringRequest, userDetails);
-
-        // then
-        verify(productOption, times(1)).updateStock(50);
-        verify(productOption, never()).updateColor(any());
-        verify(productOption, never()).updateSize(any());
-        verify(productOptionRepository, times(1)).save(productOption);
+        assertThat(result).isEmpty();
     }
 }
