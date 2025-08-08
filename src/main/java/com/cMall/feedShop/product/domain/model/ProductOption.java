@@ -63,9 +63,7 @@ public class ProductOption {
     public void decreaseStock(Integer quantity) {
         validateQuantityForDecrease(quantity);
 
-        if (!hasEnoughStock(quantity)) {
-            throw new ProductException(ErrorCode.OUT_OF_STOCK, "재고가 부족합니다.");
-        }
+        hasEnoughStock(quantity);
 
         this.stock -= quantity;
     }
@@ -121,7 +119,9 @@ public class ProductOption {
     }
 
     // 재고가 충분한지 확인
-    private boolean hasEnoughStock(Integer quantity) {
-        return this.stock != null && this.stock >= quantity;
+    private void hasEnoughStock(Integer quantity) {
+        if (this.stock == null || this.stock < quantity) {
+            throw new ProductException(ErrorCode.OUT_OF_STOCK, "재고가 부족합니다.");
+        }
     }
 }
