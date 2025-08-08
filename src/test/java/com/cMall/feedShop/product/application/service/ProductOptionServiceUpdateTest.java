@@ -40,7 +40,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)  // UnnecessaryStubbingException 방지
 @DisplayName("상품 옵션 서비스 테스트")
-class ProductOptionServiceTest {
+class ProductOptionServiceUpdateTest {
 
     @Mock
     private UserRepository userRepository;
