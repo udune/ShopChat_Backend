@@ -1,13 +1,16 @@
 package com.cMall.feedShop.product.application.service;
 
 import com.cMall.feedShop.common.exception.ErrorCode;
+import com.cMall.feedShop.product.application.dto.response.info.ProductOptionInfo;
+import com.cMall.feedShop.product.domain.enums.Color;
+import com.cMall.feedShop.product.domain.enums.Gender;
+import com.cMall.feedShop.product.domain.enums.Size;
 import com.cMall.feedShop.product.domain.exception.ProductException;
-import com.cMall.feedShop.product.domain.model.Category;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.model.ProductOption;
-import com.cMall.feedShop.product.domain.repository.ProductOptionRepository;
-import com.cMall.feedShop.product.domain.enums.*;
+import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import com.cMall.feedShop.store.domain.model.Store;
+import com.cMall.feedShop.store.domain.repository.StoreRepository;
 import com.cMall.feedShop.user.domain.enums.UserRole;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
@@ -22,304 +25,222 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
-/**
- * ProductOptionService의 상품 옵션 삭제 기능을 테스트하는 클래스
- *
- * 테스트 목표:
- * 1. 정상적인 상품 옵션 삭제 성공 케이스
- * 2. 다양한 실패 케이스들 (권한 없음, 데이터 없음 등)
- *
- * 초등학생도 이해할 수 있도록 자세한 주석을 달았어요!
- */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("상품 옵션 삭제 서비스 테스트")
+@DisplayName("ProductOptionService 테스트")
 class ProductOptionServiceTest {
 
-    // ========== 가짜 객체들 (실제 데이터베이스 없이 테스트하기 위해) ==========
     @Mock
-    private UserRepository userRepository; // 사용자 정보 저장소
+    private ProductRepository productRepository;
 
     @Mock
-    private ProductOptionRepository productOptionRepository; // 상품 옵션 저장소
+    private UserRepository userRepository;
 
     @Mock
-    private UserDetails userDetails; // 로그인한 사용자 정보
+    private StoreRepository storeRepository;
 
-    // ========== 테스트할 실제 서비스 ==========
+    @Mock
+    private UserDetails userDetails;
+
     @InjectMocks
     private ProductOptionService productOptionService;
 
-    // ========== 테스트에서 사용할 데이터들 ==========
-    private User seller; // 판매자 사용자
-    private User normalUser; // 일반 사용자
-    private Store store; // 스토어 (가게)
-    private Category category; // 상품 카테고리
-    private Product product; // 상품
-    private ProductOption productOption; // 상품 옵션
+    private User seller;
+    private User normalUser;
+    private Store store;
+    private Store otherStore;
+    private Product product;
+    private ProductOption option1;
+    private ProductOption option2;
 
-    private final String LOGIN_ID = "seller123"; // 로그인 아이디
-    private final Long OPTION_ID = 1L; // 상품 옵션 ID
-
-    /**
-     * 각 테스트 실행 전에 공통으로 사용할 테스트 데이터를 준비합니다.
-     * 이 메서드는 각 @Test 메서드 실행 전에 자동으로 호출됩니다.
-     */
     @BeforeEach
     void setUp() {
-        // 테스트 데이터 준비
-        setupTestData();
-
-        // 로그인 사용자 정보 설정
-        setupUserDetails();
-    }
-
-    /**
-     * 테스트에 필요한 데이터들을 만드는 메서드
-     * 판매자, 스토어, 상품, 상품옵션 등을 준비합니다.
-     */
-    private void setupTestData() {
-        // 1. 판매자 사용자 생성
-        seller = new User(LOGIN_ID, "password123", "seller@test.com", UserRole.SELLER);
+        // 판매자 사용자 생성 - 생성자 사용
+        seller = new User("seller@test.com", "password", "seller@test.com", UserRole.SELLER);
         ReflectionTestUtils.setField(seller, "id", 1L);
 
-        // 2. 일반 사용자 생성 (권한 테스트용)
-        normalUser = new User("user123", "password123", "user@test.com", UserRole.USER);
+        // 일반 사용자 생성 - 생성자 사용
+        normalUser = new User("user@test.com", "password", "user@test.com", UserRole.USER);
         ReflectionTestUtils.setField(normalUser, "id", 2L);
 
-        // 3. 스토어(가게) 생성
+        // 판매자의 가게 생성
         store = Store.builder()
                 .storeName("테스트 스토어")
-                .sellerId(1L) // 판매자 ID와 연결
+                .sellerId(1L)
                 .build();
         ReflectionTestUtils.setField(store, "storeId", 1L);
 
-        // 4. 카테고리 생성
-        category = new Category(CategoryType.SNEAKERS, "운동화");
-        ReflectionTestUtils.setField(category, "categoryId", 1L);
+        // 다른 판매자의 가게 생성
+        otherStore = Store.builder()
+                .storeName("다른 스토어")
+                .sellerId(3L)
+                .build();
+        ReflectionTestUtils.setField(otherStore, "storeId", 2L);
 
-        // 5. 상품 생성
+        // 상품 생성
         product = Product.builder()
-                .name("테스트 신발")
+                .name("테스트 상품")
                 .price(new BigDecimal("50000"))
-                .description("테스트용 신발입니다")
-                .discountType(DiscountType.NONE)
-                .store(store) // 위에서 만든 스토어와 연결
-                .category(category) // 위에서 만든 카테고리와 연결
+                .store(store)
                 .build();
         ReflectionTestUtils.setField(product, "productId", 1L);
 
-        // 6. 상품 옵션 생성
-        productOption = new ProductOption(
-                Gender.UNISEX, // 성별
-                Size.SIZE_250, // 사이즈
-                Color.WHITE,   // 색깔
-                100,           // 재고 수량
-                product        // 위에서 만든 상품과 연결
-        );
-        ReflectionTestUtils.setField(productOption, "optionId", OPTION_ID);
+        // 상품 옵션 생성
+        option1 = new ProductOption(Gender.UNISEX, Size.SIZE_250, Color.BLACK, 50, product);
+        ReflectionTestUtils.setField(option1, "optionId", 1L);
+
+        option2 = new ProductOption(Gender.WOMEN, Size.SIZE_240, Color.WHITE, 30, product);
+        ReflectionTestUtils.setField(option2, "optionId", 2L);
+
+        // 상품에 옵션 추가
+        product.getProductOptions().addAll(Arrays.asList(option1, option2));
     }
 
-    /**
-     * 로그인한 사용자 정보를 설정하는 메서드
-     */
-    private void setupUserDetails() {
-        // 로그인한 사용자의 아이디를 반환하도록 설정
-        given(userDetails.getUsername()).willReturn(LOGIN_ID);
-    }
-
-    // ========== 성공 케이스 테스트 ==========
-
-    /**
-     * 테스트 1: 정상적으로 상품 옵션을 삭제하는 경우
-     *
-     * 시나리오:
-     * - 판매자가 로그인함
-     * - 자신의 스토어에 등록된 상품의 옵션을 삭제함
-     * - 성공적으로 삭제됨
-     */
     @Test
-    @DisplayName("정상적인 상품 옵션 삭제 - 성공")
-    void deleteProductOption_Success() {
-        // given - 테스트 조건 준비
-
-        // 1. 로그인한 사용자를 찾을 때 판매자를 반환
-        given(userRepository.findByLoginId(LOGIN_ID))
-                .willReturn(Optional.of(seller));
-
-        // 2. 상품 옵션을 찾을 때 위에서 만든 옵션을 반환
-        given(productOptionRepository.findByOptionId(OPTION_ID))
-                .willReturn(Optional.of(productOption));
-
-        // when - 실제 테스트 실행
-        productOptionService.deleteProductOption(OPTION_ID, userDetails);
-
-        // then - 결과 검증
-        // 1. 사용자를 제대로 찾았는지 확인
-        verify(userRepository, times(1)).findByLoginId(LOGIN_ID);
-
-        // 2. 상품 옵션을 제대로 찾았는지 확인
-        verify(productOptionRepository, times(1)).findByOptionId(OPTION_ID);
-
-        // 3. 상품 옵션이 실제로 삭제되었는지 확인
-        verify(productOptionRepository, times(1)).delete(productOption);
-    }
-
-    // ========== 실패 케이스 테스트들 ==========
-
-    /**
-     * 테스트 2: 존재하지 않는 사용자인 경우
-     *
-     * 시나리오:
-     * - 잘못된 로그인 ID로 요청
-     * - 사용자를 찾을 수 없어서 실패
-     */
-    @Test
-    @DisplayName("존재하지 않는 사용자 - 실패")
-    void deleteProductOption_UserNotFound() {
-        // given - 사용자를 찾을 수 없도록 설정
-        given(userRepository.findByLoginId(LOGIN_ID))
-                .willReturn(Optional.empty());
-
-        // when & then - 예외가 발생하는지 확인
-        ProductException exception = assertThrows(
-                ProductException.class,
-                () -> productOptionService.deleteProductOption(OPTION_ID, userDetails)
-        );
-
-        // 올바른 에러 코드가 나오는지 확인
-        assert(exception.getErrorCode().equals(ErrorCode.USER_NOT_FOUND));
-
-        // 상품 옵션 삭제가 호출되지 않았는지 확인
-        verify(productOptionRepository, never()).delete(any());
-    }
-
-    /**
-     * 테스트 3: 판매자가 아닌 일반 사용자인 경우
-     *
-     * 시나리오:
-     * - 일반 사용자가 상품 옵션 삭제 시도
-     * - 권한이 없어서 실패
-     */
-    @Test
-    @DisplayName("판매자 권한 없음 - 실패")
-    void deleteProductOption_NotSeller() {
-        // given - 일반 사용자를 반환하도록 설정
-        given(userRepository.findByLoginId(LOGIN_ID))
-                .willReturn(Optional.of(normalUser));
-
-        // when & then - 권한 예외가 발생하는지 확인
-        ProductException exception = assertThrows(
-                ProductException.class,
-                () -> productOptionService.deleteProductOption(OPTION_ID, userDetails)
-        );
-
-        // 권한 오류 코드가 나오는지 확인
-        assert(exception.getErrorCode().equals(ErrorCode.FORBIDDEN));
-
-        // 상품 옵션 조회 및 삭제가 호출되지 않았는지 확인
-        verify(productOptionRepository, never()).findByOptionId(any());
-        verify(productOptionRepository, never()).delete(any());
-    }
-
-    /**
-     * 테스트 4: 존재하지 않는 상품 옵션인 경우
-     *
-     * 시나리오:
-     * - 판매자가 존재하지 않는 옵션 ID로 삭제 시도
-     * - 옵션을 찾을 수 없어서 실패
-     */
-    @Test
-    @DisplayName("존재하지 않는 상품 옵션 - 실패")
-    void deleteProductOption_OptionNotFound() {
+    @DisplayName("판매자가 자신의 상품 옵션 조회 성공")
+    void getProductOptions_Success() {
         // given
-        // 1. 판매자 사용자는 정상적으로 찾아짐
-        given(userRepository.findByLoginId(LOGIN_ID))
-                .willReturn(Optional.of(seller));
+        given(userDetails.getUsername()).willReturn("seller@test.com");
+        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(productRepository.findByProductId(1L)).willReturn(Optional.of(product));
+        given(storeRepository.findBySellerId(1L)).willReturn(Optional.of(store));
 
-        // 2. 상품 옵션은 찾을 수 없음
-        given(productOptionRepository.findByOptionId(OPTION_ID))
-                .willReturn(Optional.empty());
+        // when
+        List<ProductOptionInfo> result = productOptionService.getProductOptions(1L, userDetails);
 
-        // when & then - 상품 옵션을 찾을 수 없다는 예외가 발생하는지 확인
-        ProductException exception = assertThrows(
-                ProductException.class,
-                () -> productOptionService.deleteProductOption(OPTION_ID, userDetails)
-        );
+        // then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getOptionId()).isEqualTo(1L);
+        assertThat(result.get(0).getGender()).isEqualTo(Gender.UNISEX);
+        assertThat(result.get(0).getSize()).isEqualTo(Size.SIZE_250);
+        assertThat(result.get(0).getColor()).isEqualTo(Color.BLACK);
+        assertThat(result.get(0).getStock()).isEqualTo(50);
 
-        // 올바른 에러 코드가 나오는지 확인
-        assert(exception.getErrorCode().equals(ErrorCode.PRODUCT_OPTION_NOT_FOUND));
-
-        // 삭제가 호출되지 않았는지 확인
-        verify(productOptionRepository, never()).delete(any());
+        assertThat(result.get(1).getOptionId()).isEqualTo(2L);
+        assertThat(result.get(1).getGender()).isEqualTo(Gender.WOMEN);
+        assertThat(result.get(1).getSize()).isEqualTo(Size.SIZE_240);
+        assertThat(result.get(1).getColor()).isEqualTo(Color.WHITE);
+        assertThat(result.get(1).getStock()).isEqualTo(30);
     }
 
-    /**
-     * 테스트 5: 다른 판매자의 상품 옵션을 삭제하려는 경우
-     *
-     * 시나리오:
-     * - 판매자 A가 판매자 B의 상품 옵션을 삭제 시도
-     * - 소유권이 없어서 실패
-     */
     @Test
-    @DisplayName("상품 옵션 소유권 없음 - 실패")
-    void deleteProductOption_NoPermission() {
+    @DisplayName("비로그인 사용자 접근 시 예외 발생")
+    void getProductOptions_Fail_UserNotFound() {
         // given
-        // 1. 다른 판매자 생성 (ID가 다름)
-        User otherSeller = new User("other_seller", "password", "other@test.com", UserRole.SELLER);
-        ReflectionTestUtils.setField(otherSeller, "id", 999L); // 다른 ID
+        given(userDetails.getUsername()).willReturn("nonexistent@test.com");
+        given(userRepository.findByLoginId("nonexistent@test.com")).willReturn(Optional.empty());
 
-        // 2. 현재 로그인한 사용자는 다른 판매자
-        given(userRepository.findByLoginId(LOGIN_ID))
-                .willReturn(Optional.of(otherSeller));
+        // when & then
+        assertThatThrownBy(() -> productOptionService.getProductOptions(1L, userDetails))
+                .isInstanceOf(ProductException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
 
-        // 3. 상품 옵션은 원래 판매자(ID=1L)의 것
-        given(productOptionRepository.findByOptionId(OPTION_ID))
-                .willReturn(Optional.of(productOption));
-
-        // when & then - 권한 예외가 발생하는지 확인
-        ProductException exception = assertThrows(
-                ProductException.class,
-                () -> productOptionService.deleteProductOption(OPTION_ID, userDetails)
-        );
-
-        // 권한 오류 코드와 메시지가 올바른지 확인
-        assert(exception.getErrorCode().equals(ErrorCode.FORBIDDEN));
-        assert(exception.getMessage().contains("해당 상품 옵션에 대한 권한이 없습니다"));
-
-        // 삭제가 호출되지 않았는지 확인
-        verify(productOptionRepository, never()).delete(any());
+        // 검증
+        verify(productRepository, never()).findByProductId(1L);
+        verify(storeRepository, never()).findBySellerId(1L);
     }
 
-    // ========== 경계값 테스트 ==========
-
-    /**
-     * 테스트 6: null 값 처리 테스트
-     *
-     * 시나리오:
-     * - null 옵션 ID나 null 사용자 정보로 요청
-     * - 적절하게 예외 처리되는지 확인
-     */
     @Test
-    @DisplayName("null 옵션 ID - 실패")
-    void deleteProductOption_NullOptionId() {
-        // given - 판매자는 정상적으로 찾아짐
-        given(userRepository.findByLoginId(LOGIN_ID))
-                .willReturn(Optional.of(seller));
+    @DisplayName("일반 사용자(USER 권한) 접근 시 예외 발생")
+    void getProductOptions_Fail_NotSeller() {
+        // given
+        given(userDetails.getUsername()).willReturn("user@test.com");
+        given(userRepository.findByLoginId("user@test.com")).willReturn(Optional.of(normalUser));
 
-        // when & then - null ID로 요청했을 때 예외 발생
-        assertThrows(
-                Exception.class, // ProductException 또는 다른 예외
-                () -> productOptionService.deleteProductOption(null, userDetails)
-        );
+        // when & then
+        assertThatThrownBy(() -> productOptionService.getProductOptions(1L, userDetails))
+                .isInstanceOf(ProductException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN);
 
-        // 삭제가 호출되지 않았는지 확인
-        verify(productOptionRepository, never()).delete(any());
+        // 검증
+        verify(productRepository, never()).findByProductId(1L);
+        verify(storeRepository, never()).findBySellerId(2L);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 상품 조회 시 예외 발생")
+    void getProductOptions_Fail_ProductNotFound() {
+        // given
+        given(userDetails.getUsername()).willReturn("seller@test.com");
+        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(productRepository.findByProductId(999L)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> productOptionService.getProductOptions(999L, userDetails))
+                .isInstanceOf(ProductException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PRODUCT_NOT_FOUND);
+
+        // 검증
+        verify(storeRepository, never()).findBySellerId(1L);
+    }
+
+    @Test
+    @DisplayName("판매자 가게 없음 시 예외 발생")
+    void getProductOptions_Fail_StoreNotFound() {
+        // given
+        given(userDetails.getUsername()).willReturn("seller@test.com");
+        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(productRepository.findByProductId(1L)).willReturn(Optional.of(product));
+        given(storeRepository.findBySellerId(1L)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> productOptionService.getProductOptions(1L, userDetails))
+                .isInstanceOf(ProductException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.STORE_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("다른 판매자의 상품 접근 시 예외 발생")
+    void getProductOptions_Fail_NotProductOwner() {
+        // given
+        // 다른 판매자의 상품 설정
+        Product otherProduct = Product.builder()
+                .name("다른 상품")
+                .price(new BigDecimal("30000"))
+                .store(otherStore)  // 다른 가게의 상품
+                .build();
+        ReflectionTestUtils.setField(otherProduct, "productId", 2L);
+
+        given(userDetails.getUsername()).willReturn("seller@test.com");
+        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(productRepository.findByProductId(2L)).willReturn(Optional.of(otherProduct));
+        given(storeRepository.findBySellerId(1L)).willReturn(Optional.of(store));
+
+        // when & then
+        assertThatThrownBy(() -> productOptionService.getProductOptions(2L, userDetails))
+                .isInstanceOf(ProductException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PRODUCT_NOT_BELONG_TO_STORE);
+    }
+
+    @Test
+    @DisplayName("상품에 옵션이 없는 경우 빈 리스트 반환")
+    void getProductOptions_Success_EmptyOptions() {
+        // given
+        Product productWithoutOptions = Product.builder()
+                .name("옵션 없는 상품")
+                .price(new BigDecimal("20000"))
+                .store(store)
+                .build();
+        ReflectionTestUtils.setField(productWithoutOptions, "productId", 3L);
+
+        given(userDetails.getUsername()).willReturn("seller@test.com");
+        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(productRepository.findByProductId(3L)).willReturn(Optional.of(productWithoutOptions));
+        given(storeRepository.findBySellerId(1L)).willReturn(Optional.of(store));
+
+        // when
+        List<ProductOptionInfo> result = productOptionService.getProductOptions(3L, userDetails);
+
+        // then
+        assertThat(result).isEmpty();
     }
 }
