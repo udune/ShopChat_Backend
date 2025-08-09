@@ -32,14 +32,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import static com.cMall.feedShop.order.application.constants.OrderConstants.*;
 
 @Service
 @RequiredArgsConstructor
@@ -349,16 +346,16 @@ public class OrderService {
     // 적립 포인트 (총 구매금액 1만원 당 50점)
     private OrderCalculation calculateCartOrderAmount(List<CartItem> cartItems, Map<Long, ProductOption> optionMap, Integer usedPoints) {
         // 총 상품 금액 계산
-        BigDecimal totalAmount = calculateTotalAmount(cartItems, optionMap);
+        BigDecimal totalAmount = calculateCartTotalAmount(cartItems, optionMap);
 
         // 실제 사용 가능한 포인트 계산
-        Integer actualUsedPoints = calculateActualUsedPoints(totalAmount, usedPoints);
+        Integer actualUsedPoints = orderCommonService.calculateActualUsedPoints(totalAmount, usedPoints);
 
         // 포인트 차감 후 최종 금액 계산
-        BigDecimal finalAmount = calculateFinalAmount(totalAmount, actualUsedPoints);
+        BigDecimal finalAmount = orderCommonService.calculateFinalAmount(totalAmount, actualUsedPoints);
 
         // 최종 금액을 기준으로 적립 포인트를 계산한다. (총 구매금액 1만원 당 50점)
-        Integer earnedPoints = calculateEarnedPoints(finalAmount);
+        Integer earnedPoints = orderCommonService.calculateEarnedPoints(finalAmount);
 
         // OrderCalculation 객체를 생성하여 반환한다.
         return OrderCalculation.builder()
@@ -370,7 +367,7 @@ public class OrderService {
     }
 
     // 총 금액을 계산한다.
-    private BigDecimal calculateTotalAmount(List<CartItem> cartItems, Map<Long, ProductOption> optionMap) {
+    private BigDecimal calculateCartTotalAmount(List<CartItem> cartItems, Map<Long, ProductOption> optionMap) {
         return cartItems.stream()
                 .map(cartItem -> {
                     // 장바구니 아이템에서 옵션 ID로 상품을 조회한다.
@@ -389,42 +386,6 @@ public class OrderService {
                 })
                 // 수량이 곱해진 할인된 가격을 더한다.
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    // 사용 가능한 포인트 계산
-    private Integer calculateActualUsedPoints(BigDecimal totalAmount, Integer requestedPoints) {
-        if (requestedPoints == null || requestedPoints <= 0) {
-            return 0;
-        }
-
-        BigDecimal maxPointUsage = totalAmount.multiply(POINT_USAGE_RATE)
-                .setScale(0, RoundingMode.DOWN);
-
-        BigDecimal requestedPointAmount = BigDecimal.valueOf(requestedPoints);
-
-        return requestedPointAmount.compareTo(maxPointUsage) <= 0
-                ? requestedPoints
-                : maxPointUsage.intValue();
-    }
-
-    // 포인트 차감 후 최종 금액 계산
-    private BigDecimal calculateFinalAmount(BigDecimal totalAmount, Integer usedPoints) {
-        BigDecimal pointDeduction = BigDecimal.valueOf(usedPoints);
-        BigDecimal finalAmount = totalAmount.subtract(pointDeduction);
-
-        return finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount;
-    }
-
-    // 구매 후 얻을 포인트를 계산한다.
-    private Integer calculateEarnedPoints(BigDecimal finalAmount) {
-        if (finalAmount == null || finalAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            return 0;
-        }
-
-        BigDecimal units = finalAmount.divide(POINT_REWARD_THRESHOLD, 0, RoundingMode.DOWN);
-
-        // 10,000원 단위로 50 포인트를 적립한다.
-        return units.multiply(POINT_REWARD_AMOUNT).intValue();
     }
 
     // 주문을 생성하고 저장한다.

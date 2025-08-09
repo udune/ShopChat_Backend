@@ -12,6 +12,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
+import static com.cMall.feedShop.order.application.constants.OrderConstants.*;
+
 /**
  * 주문 관련 공통 서비스
  * - 사용자 검증, 포인트 사용 및 적립 처리 등을 담당
@@ -106,5 +111,41 @@ public class OrderCommonService {
                         .user(user)
                         .currentPoints(0)
                         .build());
+    }
+
+    // 사용 가능한 포인트 계산
+    public Integer calculateActualUsedPoints(BigDecimal totalAmount, Integer requestedPoints) {
+        if (requestedPoints == null || requestedPoints <= 0) {
+            return 0;
+        }
+
+        BigDecimal maxPointUsage = totalAmount.multiply(POINT_USAGE_RATE)
+                .setScale(0, RoundingMode.DOWN);
+
+        BigDecimal requestedPointAmount = BigDecimal.valueOf(requestedPoints);
+
+        return requestedPointAmount.compareTo(maxPointUsage) <= 0
+                ? requestedPoints
+                : maxPointUsage.intValue();
+    }
+
+    // 포인트 차감 후 최종 금액 계산
+    public BigDecimal calculateFinalAmount(BigDecimal totalAmount, Integer usedPoints) {
+        BigDecimal pointDeduction = BigDecimal.valueOf(usedPoints);
+        BigDecimal finalAmount = totalAmount.subtract(pointDeduction);
+
+        return finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount;
+    }
+
+    // 구매 후 얻을 포인트를 계산한다.
+    public Integer calculateEarnedPoints(BigDecimal finalAmount) {
+        if (finalAmount == null || finalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return 0;
+        }
+
+        BigDecimal units = finalAmount.divide(POINT_REWARD_THRESHOLD, 0, RoundingMode.DOWN);
+
+        // 10,000원 단위로 50 포인트를 적립한다.
+        return units.multiply(POINT_REWARD_AMOUNT).intValue();
     }
 }

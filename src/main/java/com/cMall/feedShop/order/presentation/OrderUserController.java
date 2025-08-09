@@ -60,7 +60,7 @@ public class OrderUserController {
             @Valid @RequestBody DirectOrderCreateRequest request,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        OrderCreateResponse data = directOrderService.createOrder(request, userDetails);
+        OrderCreateResponse data = directOrderService.createDirectOrder(request, userDetails);
         return ApiResponse.success(data);
     }
 
