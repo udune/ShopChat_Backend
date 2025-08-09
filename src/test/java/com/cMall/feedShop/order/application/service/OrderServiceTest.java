@@ -35,6 +35,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
@@ -74,10 +75,6 @@ class OrderServiceTest {
     private OrderCalculation testCalculation; // 테스트용 주문 계산 결과
     private Order testOrder; // 테스트용 주문
 
-    /**
-     * 각 테스트 실행 전에 공통 테스트 데이터를 준비합니다
-     * 초등학생도 이해할 수 있도록: 시험 보기 전에 연필과 지우개를 준비하는 것과 같아요
-     */
     @BeforeEach
     void setUp() {
         // 1. 테스트용 사용자 생성
@@ -104,7 +101,6 @@ class OrderServiceTest {
 
     /**
      * 테스트 1: 정상적인 주문 생성
-     * 초등학생도 이해할 수 있도록: 장바구니에 있는 상품들로 주문이 성공하는지 확인하는 테스트
      */
     @Test
     @DisplayName("정상적인 주문 생성 성공")
@@ -168,7 +164,6 @@ class OrderServiceTest {
 
     /**
      * 테스트 2: 빈 장바구니로 주문 시 예외 발생
-     * 초등학생도 이해할 수 있도록: 장바구니가 비어있으면 주문할 수 없다는 테스트
      */
     @Test
     @DisplayName("빈 장바구니로 주문 시 예외 발생")
@@ -190,7 +185,6 @@ class OrderServiceTest {
 
     /**
      * 테스트 3: 주문 목록 조회
-     * 초등학생도 이해할 수 있도록: 내가 주문한 목록을 확인하는 테스트
      */
     @Test
     @DisplayName("주문 목록 조회 성공")
@@ -217,7 +211,6 @@ class OrderServiceTest {
 
     /**
      * 테스트 4: 주문 상세 조회
-     * 초등학생도 이해할 수 있도록: 특정 주문의 자세한 내용을 확인하는 테스트
      */
     @Test
     @DisplayName("주문 상세 조회 성공")
@@ -245,7 +238,6 @@ class OrderServiceTest {
 
     /**
      * 테스트 5: 존재하지 않는 주문 조회 시 예외 발생
-     * 초등학생도 이해할 수 있도록: 없는 주문을 찾으려고 하면 에러가 나는 테스트
      */
     @Test
     @DisplayName("존재하지 않는 주문 조회 시 예외 발생")
@@ -266,13 +258,186 @@ class OrderServiceTest {
         verify(orderRepository).findByOrderIdAndUser(orderId, testUser);
     }
 
+    /**
+     * 테스트 6: 선택된 장바구니 아이템이 없을 때 예외 발생
+     */
+    @Test
+    @DisplayName("선택된 장바구니 아이템이 없을 때 예외 발생")
+    void createOrder_NoSelectedItems_ThrowsException() {
+        // Given: 모든 장바구니 아이템이 선택되지 않음
+        List<CartItem> unselectedItems = createUnselectedCartItems();
+
+        given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
+        given(cartItemRepository.findByUserIdWithCart(1L)).willReturn(unselectedItems);
+
+        // When & Then
+        assertThatThrownBy(() -> orderService.createOrder(testRequest, userDetails))
+                .isInstanceOf(OrderException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_CART_EMPTY);
+
+        verify(orderCommonService).validateUser(userDetails);
+        verify(cartItemRepository).findByUserIdWithCart(1L);
+    }
+
+    /**
+     * 테스트 7: 주문 수량이 최대 허용량을 초과할 때 예외 발생
+     */
+    @Test
+    @DisplayName("주문 수량이 최대 허용량을 초과할 때 예외 발생")
+    void createOrder_ExcessiveQuantity_ThrowsException() {
+        // Given: 최대 수량을 초과하는 장바구니 아이템
+        List<CartItem> excessiveQuantityItems = createExcessiveQuantityCartItems();
+
+        given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
+        given(cartItemRepository.findByUserIdWithCart(1L)).willReturn(excessiveQuantityItems);
+
+        // When & Then
+        assertThatThrownBy(() -> orderService.createOrder(testRequest, userDetails))
+                .isInstanceOf(OrderException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_ORDER_QUANTITY);
+    }
+
+    /**
+     * 테스트 8: 사용자 검증 실패 시 예외 발생
+     */
+    @Test
+    @DisplayName("사용자 검증 실패 시 예외 발생")
+    void createOrder_InvalidUser_ThrowsException() {
+        // Given: 유효하지 않은 사용자
+        given(orderCommonService.validateUser(userDetails))
+                .willThrow(new OrderException(ErrorCode.USER_NOT_FOUND));
+
+        // When & Then
+        assertThatThrownBy(() -> orderService.createOrder(testRequest, userDetails))
+                .isInstanceOf(OrderException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
+
+        verify(orderCommonService).validateUser(userDetails);
+    }
+
+    /**
+     * 테스트 9: 포인트 부족 시 예외 발생
+     */
+    @Test
+    @DisplayName("포인트 부족 시 예외 발생")
+    void createOrder_InsufficientPoints_ThrowsException() {
+        // Given: 포인트가 부족한 상황
+        List<CartItem> cartItems = createTestCartItems();
+        OrderCalculation calculation = createTestOrderCalculation();
+
+        given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
+        given(cartItemRepository.findByUserIdWithCart(1L)).willReturn(cartItems);
+        given(orderCommonService.getValidProductOptions(any())).willReturn(Map.of(1L, testProductOption));
+        given(orderCommonService.getProductImages(any())).willReturn(Map.of(1L, testProductImage));
+        given(orderCommonService.calculateOrderAmount(any(), any(), anyInt())).willReturn(calculation);
+
+        // 포인트 부족으로 예외 발생
+        willThrow(new OrderException(ErrorCode.INVALID_POINT))
+                .given(orderCommonService).validatePointUsage(any(), anyInt());
+
+        // When & Then
+        assertThatThrownBy(() -> orderService.createOrder(testRequest, userDetails))
+                .isInstanceOf(OrderException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_POINT);
+    }
+
+    /**
+     * 테스트 10: 상품 옵션을 찾을 수 없을 때 예외 발생
+     */
+    @Test
+    @DisplayName("상품 옵션을 찾을 수 없을 때 예외 발생")
+    void createOrder_ProductOptionNotFound_ThrowsException() {
+        // Given: 존재하지 않는 상품 옵션
+        List<CartItem> cartItems = createTestCartItems();
+
+        given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
+        given(cartItemRepository.findByUserIdWithCart(1L)).willReturn(cartItems);
+        given(orderCommonService.getValidProductOptions(any()))
+                .willThrow(new OrderException(ErrorCode.PRODUCT_OPTION_NOT_FOUND));
+
+        // When & Then
+        assertThatThrownBy(() -> orderService.createOrder(testRequest, userDetails))
+                .isInstanceOf(OrderException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PRODUCT_OPTION_NOT_FOUND);
+    }
+
+    /**
+     * 테스트 11: 재고 부족 시 예외 발생
+     */
+    @Test
+    @DisplayName("재고 부족 시 예외 발생")
+    void createOrder_InsufficientStock_ThrowsException() {
+        // Given: 재고 부족 상황
+        List<CartItem> cartItems = createTestCartItems();
+
+        given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
+        given(cartItemRepository.findByUserIdWithCart(1L)).willReturn(cartItems);
+        given(orderCommonService.getValidProductOptions(any())).willReturn(Map.of(1L, testProductOption));
+        given(orderCommonService.getProductImages(any())).willReturn(Map.of(1L, testProductImage));
+        given(orderCommonService.calculateOrderAmount(any(), any(), anyInt())).willReturn(testCalculation);
+        willDoNothing().given(orderCommonService).validatePointUsage(any(), anyInt());
+        given(orderCommonService.createAndSaveOrder(any(), any(), any(), any(), any(), any())).willReturn(testOrder);
+
+        // 재고 부족으로 예외 발생
+        willThrow(new OrderException(ErrorCode.OUT_OF_STOCK))
+                .given(orderCommonService).processPostOrder(any(), any(), any(), any());
+
+        // When & Then
+        assertThatThrownBy(() -> orderService.createOrder(testRequest, userDetails))
+                .isInstanceOf(OrderException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.OUT_OF_STOCK);
+    }
+
+    // ========================================
+    // 주문 목록 조회 추가 테스트들
+    // ========================================
+
+    /**
+     * 테스트 12: 페이지 번호가 음수일 때 0으로 보정
+     */
+    @Test
+    @DisplayName("페이지 번호가 음수일 때 0으로 보정")
+    void getOrderListForUser_NegativePage_CorrectedToZero() {
+        // Given: 음수 페이지
+        Page<Order> emptyPage = new PageImpl<>(Collections.emptyList());
+        given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
+        given(orderRepository.findByUserOrderByCreatedAtDesc(eq(testUser), any(Pageable.class)))
+                .willReturn(emptyPage);
+
+        // When
+        OrderPageResponse response = orderService.getOrderListForUser(-5, 10, null, userDetails);
+
+        // Then: 페이지가 0으로 보정되었는지 확인
+        assertThat(response).isNotNull();
+        verify(orderRepository).findByUserOrderByCreatedAtDesc(eq(testUser), eq(PageRequest.of(0, 10)));
+    }
+
+    /**
+     * 테스트 13: 페이지 크기가 범위를 벗어날 때 기본값으로 보정
+     */
+    @Test
+    @DisplayName("페이지 크기가 범위를 벗어날 때 기본값으로 보정")
+    void getOrderListForUser_InvalidSize_CorrectedToDefault() {
+        // Given: 잘못된 페이지 크기
+        Page<Order> emptyPage = new PageImpl<>(Collections.emptyList());
+        given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
+        given(orderRepository.findByUserOrderByCreatedAtDesc(eq(testUser), any(Pageable.class)))
+                .willReturn(emptyPage);
+
+        // When: 크기가 101 (최대 100 초과)
+        OrderPageResponse response = orderService.getOrderListForUser(0, 101, null, userDetails);
+
+        // Then: 크기가 10으로 보정되었는지 확인
+        assertThat(response).isNotNull();
+        verify(orderRepository).findByUserOrderByCreatedAtDesc(eq(testUser), eq(PageRequest.of(0, 10)));
+    }
+
     // ========================================
     // 테스트 데이터 생성 메서드들 (Helper Methods)
     // ========================================
 
     /**
      * 테스트용 사용자 생성
-     * 초등학생도 이해할 수 있도록: 홍길동이라는 가상의 고객을 만드는 메서드
      */
     private User createTestUser() {
         User user = new User("testUser", "password123", "test@test.com", UserRole.USER);
@@ -282,7 +447,6 @@ class OrderServiceTest {
 
     /**
      * 테스트용 상품 옵션 생성
-     * 초등학생도 이해할 수 있도록: 250사이즈 흰색 운동화 옵션을 만드는 메서드
      */
     private ProductOption createTestProductOption() {
         // 먼저 상품을 생성
@@ -302,7 +466,6 @@ class OrderServiceTest {
 
     /**
      * 테스트용 상품 이미지 생성
-     * 초등학생도 이해할 수 있도록: 운동화 사진을 만드는 메서드
      */
     private ProductImage createTestProductImage() {
         Product product = testProductOption.getProduct(); // 위에서 만든 상품 사용
@@ -313,7 +476,6 @@ class OrderServiceTest {
 
     /**
      * 테스트용 장바구니 아이템들 생성
-     * 초등학생도 이해할 수 있도록: 장바구니에 담긴 상품들을 만드는 메서드
      */
     private List<CartItem> createTestCartItems() {
         // 장바구니 생성
@@ -329,7 +491,6 @@ class OrderServiceTest {
 
     /**
      * 테스트용 주문 요청 생성
-     * 초등학생도 이해할 수 있도록: 주문서를 작성하는 것처럼 배송지, 결제 정보를 채우는 메서드
      */
     private OrderCreateRequest createTestOrderRequest() {
         OrderCreateRequest request = new OrderCreateRequest();
@@ -350,7 +511,6 @@ class OrderServiceTest {
 
     /**
      * 테스트용 주문 계산 결과 생성
-     * 초등학생도 이해할 수 있도록: 주문 금액을 계산한 결과를 만드는 메서드
      */
     private OrderCalculation createTestOrderCalculation() {
         return OrderCalculation.builder()
@@ -363,7 +523,6 @@ class OrderServiceTest {
 
     /**
      * 테스트용 주문 생성
-     * 초등학생도 이해할 수 있도록: 최종 완성된 주문서를 만드는 메서드
      */
     private Order createTestOrder() {
         Order order = Order.builder()
@@ -391,7 +550,6 @@ class OrderServiceTest {
 
     /**
      * 테스트용 주문 목록 생성 (2개)
-     * 초등학생도 이해할 수 있도록: 여러 개의 주문을 만드는 메서드
      */
     private List<Order> createMockOrders() {
         // 첫 번째 주문
@@ -421,7 +579,6 @@ class OrderServiceTest {
 
     /**
      * 테스트용 상세 주문 생성 (주문 아이템 포함)
-     * 초등학생도 이해할 수 있도록: 자세한 정보가 포함된 주문을 만드는 메서드
      */
     private Order createDetailOrder() {
         Order order = createTestOrder(); // 기본 주문 생성
@@ -441,5 +598,30 @@ class OrderServiceTest {
         order.addOrderItem(orderItem);
 
         return order;
+    }
+
+    private List<CartItem> createUnselectedCartItems() {
+        CartItem item = new CartItem();
+        ReflectionTestUtils.setField(item, "selected", false); // 선택되지 않음
+        ReflectionTestUtils.setField(item, "quantity", 2);
+        return List.of(item);
+    }
+
+    private List<CartItem> createExcessiveQuantityCartItems() {
+        CartItem item = new CartItem();
+        ReflectionTestUtils.setField(item, "quantity", 1000); // 최대 수량 초과
+        ReflectionTestUtils.setField(item, "selected", true);
+        ReflectionTestUtils.setField(item, "optionId", testProductOption.getOptionId());
+        return List.of(item);
+    }
+
+    private List<Order> createOrdersWithStatus(OrderStatus status) {
+        Order order = new Order();
+        ReflectionTestUtils.setField(order, "status", status);
+        ReflectionTestUtils.setField(order, "orderId", 1L);
+        ReflectionTestUtils.setField(order, "user", testUser);
+        ReflectionTestUtils.setField(order, "totalPrice", BigDecimal.valueOf(50000));
+        ReflectionTestUtils.setField(order, "createdAt", LocalDateTime.now());
+        return List.of(order);
     }
 }

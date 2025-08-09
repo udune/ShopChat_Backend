@@ -27,10 +27,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -67,7 +64,6 @@ class DirectOrderServiceTest {
 
     /**
      * 각 테스트 실행 전에 공통 테스트 데이터를 준비합니다
-     * 초등학생도 이해할 수 있도록: 시험 보기 전에 연필과 지우개를 준비하는 것과 같아요
      */
     @BeforeEach
     void setUp() {
@@ -95,7 +91,6 @@ class DirectOrderServiceTest {
 
     /**
      * 테스트 1: 정상적인 직접 주문 생성
-     * 초등학생도 이해할 수 있도록: 모든 조건이 완벽할 때 주문이 성공하는지 확인하는 테스트
      */
     @Test
     @DisplayName("정상적인 직접 주문 생성 성공")
@@ -153,7 +148,6 @@ class DirectOrderServiceTest {
 
     /**
      * 테스트 2: 빈 주문 아이템으로 주문 시 예외 발생
-     * 초등학생도 이해할 수 있도록: 장바구니가 비어있는 상태로 주문하면 안 된다는 테스트
      */
     @Test
     @DisplayName("빈 주문 아이템으로 주문 시 예외 발생")
@@ -174,7 +168,6 @@ class DirectOrderServiceTest {
 
     /**
      * 테스트 3: 포인트 사용 주문
-     * 초등학생도 이해할 수 있도록: 적립금을 사용해서 주문하는 테스트
      */
     @Test
     @DisplayName("포인트 사용 주문 성공")
@@ -211,13 +204,192 @@ class DirectOrderServiceTest {
         verify(orderCommonService).calculateOrderAmount(any(), any(), eq(1000)); // 포인트 포함 계산
     }
 
+    /**
+     * 테스트 4: null 주문 아이템으로 주문 시 예외 발생
+     */
+    @Test
+    @DisplayName("null 주문 아이템으로 주문 시 예외 발생")
+    void createDirectOrder_NullItems_ThrowsException() {
+        // Given: null 아이템 리스트
+        DirectOrderCreateRequest nullItemsRequest = new DirectOrderCreateRequest();
+        ReflectionTestUtils.setField(nullItemsRequest, "items", new ArrayList<>());
+
+        given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
+
+        // When & Then
+        assertThatThrownBy(() -> directOrderService.createDirectOrder(nullItemsRequest, userDetails))
+                .isInstanceOf(OrderException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_ITEM_NOT_FOUND);
+    }
+
+    /**
+     * 테스트 5: 주문 아이템 수량이 0 이하일 때 예외 발생
+     */
+    @Test
+    @DisplayName("주문 아이템 수량이 0 이하일 때 예외 발생")
+    void createDirectOrder_ZeroQuantity_ThrowsException() {
+        // Given: 수량이 0인 아이템
+        OrderItemRequest zeroQuantityItem = new OrderItemRequest();
+        ReflectionTestUtils.setField(zeroQuantityItem, "optionId", 1L);
+        ReflectionTestUtils.setField(zeroQuantityItem, "quantity", 0);
+
+        DirectOrderCreateRequest request = new DirectOrderCreateRequest();
+        ReflectionTestUtils.setField(request, "items", List.of(zeroQuantityItem));
+
+        given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
+
+        // When & Then
+        assertThatThrownBy(() -> directOrderService.createDirectOrder(request, userDetails))
+                .isInstanceOf(OrderException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_ORDER_QUANTITY);
+    }
+
+    /**
+     * 테스트 6: 주문 아이템 수량이 최대치를 초과할 때 예외 발생
+     */
+    @Test
+    @DisplayName("주문 아이템 수량이 최대치를 초과할 때 예외 발생")
+    void createDirectOrder_ExcessiveQuantity_ThrowsException() {
+        // Given: 최대 수량을 초과하는 아이템
+        OrderItemRequest excessiveItem = new OrderItemRequest();
+        ReflectionTestUtils.setField(excessiveItem, "optionId", 1L);
+        ReflectionTestUtils.setField(excessiveItem, "quantity", 1000); // MAX_ORDER_QUANTITY 초과
+
+        DirectOrderCreateRequest request = new DirectOrderCreateRequest();
+        ReflectionTestUtils.setField(request, "items", List.of(excessiveItem));
+
+        given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
+
+        // When & Then
+        assertThatThrownBy(() -> directOrderService.createDirectOrder(request, userDetails))
+                .isInstanceOf(OrderException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_ORDER_QUANTITY);
+    }
+
+    /**
+     * 테스트 7: 상품 옵션을 찾을 수 없을 때 예외 발생
+     */
+    @Test
+    @DisplayName("상품 옵션을 찾을 수 없을 때 예외 발생")
+    void createDirectOrder_ProductOptionNotFound_ThrowsException() {
+        // Given: 존재하지 않는 상품 옵션
+        given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
+        given(orderCommonService.getValidProductOptions(any()))
+                .willThrow(new OrderException(ErrorCode.PRODUCT_OPTION_NOT_FOUND));
+
+        // When & Then
+        assertThatThrownBy(() -> directOrderService.createDirectOrder(testRequest, userDetails))
+                .isInstanceOf(OrderException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PRODUCT_OPTION_NOT_FOUND);
+    }
+
+    /**
+     * 테스트 8: 재고 부족 시 예외 발생
+     */
+    @Test
+    @DisplayName("재고 부족 시 예외 발생")
+    void createDirectOrder_InsufficientStock_ThrowsException() {
+        // Given: 재고 부족 상황
+        given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
+        given(orderCommonService.getValidProductOptions(any())).willReturn(Map.of(1L, testProductOption));
+        given(orderCommonService.getProductImages(any())).willReturn(Map.of(1L, testProductImage));
+        given(orderCommonService.calculateOrderAmount(any(), any(), anyInt())).willReturn(testCalculation);
+        willDoNothing().given(orderCommonService).validatePointUsage(any(), anyInt());
+        given(orderCommonService.createAndSaveOrder(any(), any(), any(), any(), any(), any())).willReturn(testOrder);
+
+        // 재고 부족으로 예외 발생
+        willThrow(new OrderException(ErrorCode.OUT_OF_STOCK))
+                .given(orderCommonService).processPostOrder(any(), any(), any(), any());
+
+        // When & Then
+        assertThatThrownBy(() -> directOrderService.createDirectOrder(testRequest, userDetails))
+                .isInstanceOf(OrderException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.OUT_OF_STOCK);
+    }
+
+    /**
+     * 테스트 9: 포인트 부족 시 예외 발생
+     */
+    @Test
+    @DisplayName("포인트 부족 시 예외 발생")
+    void createDirectOrder_InsufficientPoints_ThrowsException() {
+        // Given: 포인트 부족 상황
+        given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
+        given(orderCommonService.getValidProductOptions(any())).willReturn(Map.of(1L, testProductOption));
+        given(orderCommonService.getProductImages(any())).willReturn(Map.of(1L, testProductImage));
+        given(orderCommonService.calculateOrderAmount(any(), any(), anyInt())).willReturn(testCalculation);
+
+        // 포인트 부족으로 예외 발생
+        willThrow(new OrderException(ErrorCode.INVALID_POINT))
+                .given(orderCommonService).validatePointUsage(any(), anyInt());
+
+        // When & Then
+        assertThatThrownBy(() -> directOrderService.createDirectOrder(testRequest, userDetails))
+                .isInstanceOf(OrderException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_POINT);
+    }
+
+    /**
+     * 테스트 10: 사용자 검증 실패 시 예외 발생
+     */
+    @Test
+    @DisplayName("사용자 검증 실패 시 예외 발생")
+    void createDirectOrder_InvalidUser_ThrowsException() {
+        // Given: 유효하지 않은 사용자
+        given(orderCommonService.validateUser(userDetails))
+                .willThrow(new OrderException(ErrorCode.USER_NOT_FOUND));
+
+        // When & Then
+        assertThatThrownBy(() -> directOrderService.createDirectOrder(testRequest, userDetails))
+                .isInstanceOf(OrderException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
+
+        verify(orderCommonService).validateUser(userDetails);
+    }
+
+    /**
+     * 테스트 11: 중복 상품 옵션으로 주문 시 수량 합산 처리
+     */
+    @Test
+    @DisplayName("중복 상품 옵션으로 주문 시 정상 처리")
+    void createDirectOrder_DuplicateOptions_Success() {
+        // Given: 같은 상품 옵션을 여러 번 추가
+        OrderItemRequest item1 = new OrderItemRequest();
+        ReflectionTestUtils.setField(item1, "optionId", 1L);
+        ReflectionTestUtils.setField(item1, "quantity", 2);
+
+        OrderItemRequest item2 = new OrderItemRequest();
+        ReflectionTestUtils.setField(item2, "optionId", 1L); // 같은 옵션
+        ReflectionTestUtils.setField(item2, "quantity", 3);
+
+        DirectOrderCreateRequest request = new DirectOrderCreateRequest();
+        ReflectionTestUtils.setField(request, "items", List.of(item1, item2));
+        ReflectionTestUtils.setField(request, "deliveryAddress", "서울시 강남구");
+        ReflectionTestUtils.setField(request, "usedPoints", 0);
+
+        // Mock 설정
+        given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
+        given(orderCommonService.getValidProductOptions(any())).willReturn(Map.of(1L, testProductOption));
+        given(orderCommonService.getProductImages(any())).willReturn(Map.of(1L, testProductImage));
+        given(orderCommonService.calculateOrderAmount(any(), any(), anyInt())).willReturn(testCalculation);
+        willDoNothing().given(orderCommonService).validatePointUsage(any(), anyInt());
+        given(orderCommonService.createAndSaveOrder(any(), any(), any(), any(), any(), any())).willReturn(testOrder);
+        willDoNothing().given(orderCommonService).processPostOrder(any(), any(), any(), any());
+
+        // When
+        OrderCreateResponse response = directOrderService.createDirectOrder(request, userDetails);
+
+        // Then: 성공적으로 처리됨
+        assertThat(response).isNotNull();
+        assertThat(response.getOrderId()).isEqualTo(1L);
+    }
+
     // ========================================
     // 테스트 데이터 생성 메서드들 (Helper Methods)
     // ========================================
 
     /**
      * 테스트용 사용자 생성
-     * 초등학생도 이해할 수 있도록: 홍길동이라는 가상의 고객을 만드는 메서드
      */
     private User createTestUser() {
         User user = new User("testUser", "password123", "test@test.com", UserRole.USER);
@@ -227,7 +399,6 @@ class DirectOrderServiceTest {
 
     /**
      * 테스트용 주문 아이템 생성
-     * 초등학생도 이해할 수 있도록: 운동화 2켤레를 주문하는 내용을 만드는 메서드
      */
     private OrderItemRequest createTestOrderItem() {
         OrderItemRequest item = new OrderItemRequest();
@@ -238,7 +409,6 @@ class DirectOrderServiceTest {
 
     /**
      * 테스트용 직접 주문 요청 생성
-     * 초등학생도 이해할 수 있도록: 주문서를 작성하는 것처럼 배송지, 결제 정보를 채우는 메서드
      */
     private DirectOrderCreateRequest createTestDirectOrderRequest() {
         DirectOrderCreateRequest request = new DirectOrderCreateRequest();
@@ -260,7 +430,6 @@ class DirectOrderServiceTest {
 
     /**
      * 빈 주문 아이템을 가진 요청 생성
-     * 초등학생도 이해할 수 있도록: 아무것도 선택하지 않고 주문하는 잘못된 경우를 만드는 메서드
      */
     private DirectOrderCreateRequest createEmptyDirectOrderRequest() {
         DirectOrderCreateRequest request = new DirectOrderCreateRequest();
@@ -270,7 +439,6 @@ class DirectOrderServiceTest {
 
     /**
      * 포인트 사용 주문 요청 생성
-     * 초등학생도 이해할 수 있도록: 적립금 1000원을 사용해서 주문하는 경우를 만드는 메서드
      */
     private DirectOrderCreateRequest createDirectOrderRequestWithPoints() {
         DirectOrderCreateRequest request = createTestDirectOrderRequest();
@@ -280,7 +448,6 @@ class DirectOrderServiceTest {
 
     /**
      * 테스트용 상품 옵션 생성
-     * 초등학생도 이해할 수 있도록: 250사이즈 흰색 운동화 옵션을 만드는 메서드
      */
     private ProductOption createTestProductOption() {
         // 먼저 상품을 생성
@@ -300,7 +467,6 @@ class DirectOrderServiceTest {
 
     /**
      * 테스트용 상품 이미지 생성
-     * 초등학생도 이해할 수 있도록: 운동화 사진을 만드는 메서드
      */
     private ProductImage createTestProductImage() {
         Product product = testProductOption.getProduct(); // 위에서 만든 상품 사용
@@ -311,7 +477,6 @@ class DirectOrderServiceTest {
 
     /**
      * 테스트용 주문 계산 결과 생성
-     * 초등학생도 이해할 수 있도록: 주문 금액을 계산한 결과를 만드는 메서드
      */
     private OrderCalculation createTestOrderCalculation() {
         return OrderCalculation.builder()
@@ -324,7 +489,6 @@ class DirectOrderServiceTest {
 
     /**
      * 테스트용 주문 생성
-     * 초등학생도 이해할 수 있도록: 최종 완성된 주문서를 만드는 메서드
      */
     private Order createTestOrder() {
         Order order = Order.builder()
