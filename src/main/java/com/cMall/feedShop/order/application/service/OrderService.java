@@ -77,10 +77,10 @@ public class OrderService {
         orderCommonService.validatePointUsage(currentUser, calculation.getActualUsedPoints());
 
         // 6. 주문 및 주문 아이템 생성
-        Order order = createAndSaveOrder(currentUser, request, calculation, selectedCartItems, optionMap, imageMap);
+        Order order = createAndSaveCartOrder(currentUser, request, calculation, selectedCartItems, optionMap, imageMap);
 
         // 7. 재고 차감
-        processPostOrder(currentUser, selectedCartItems, optionMap, calculation);
+        processPostCartOrder(currentUser, selectedCartItems, optionMap, calculation);
 
         // 8. 주문 생성 응답 반환
         return OrderCreateResponse.from(order);
@@ -128,8 +128,8 @@ public class OrderService {
      */
     @Transactional(readOnly = true)
     public OrderPageResponse getOrderListForSeller(int page, int size, String status, UserDetails userDetails) {
-        // 1. 현재 사용자 조회를 하고 사용자 권한을 검증
-        User currentUser = getCurrentUserAndValidateSellerPermission(userDetails);
+        // 1. 현재 사용자 조회를 하고 판매자 권한을 검증
+        User currentUser = validateSeller(userDetails);
 
         // 2. 페이지 파라미터 검증
         if (page < 0) {
@@ -210,7 +210,7 @@ public class OrderService {
     @Transactional
     public OrderStatusUpdateResponse updateOrderStatus(Long orderId, OrderStatusUpdateRequest request, UserDetails userDetails) {
         // 1. 판매자 권한 검증
-        User seller = getCurrentUserAndValidateSellerPermission(userDetails);
+        User seller = validateSeller(userDetails);
 
         // 2. 주문 조회 및 권한 검증
         Order order = orderRepository.findByOrderIdAndSellerId(orderId, seller.getId())
@@ -256,7 +256,7 @@ public class OrderService {
      * @param userDetails 현재 로그인된 사용자 정보
      * @return 검증된 사용자 정보
      */
-    private User getCurrentUserAndValidateSellerPermission(UserDetails userDetails) {
+    private User validateSeller(UserDetails userDetails) {
         String loginId = userDetails.getUsername();
         User user = userRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
@@ -325,13 +325,13 @@ public class OrderService {
                 .collect(Collectors.toMap(ProductOption::getOptionId, Function.identity()));
 
         // 재고 검증
-        validateStock(cartItems, optionMap);
+        validateCartStock(cartItems, optionMap);
 
         return optionMap;
     }
 
     // 재고를 확인한다.
-    private void validateStock(List<CartItem> cartItems, Map<Long, ProductOption> optionMap) {
+    private void validateCartStock(List<CartItem> cartItems, Map<Long, ProductOption> optionMap) {
         for (CartItem cartItem : cartItems) {
             ProductOption option = optionMap.get(cartItem.getOptionId());
             if (!option.isInStock() || option.getStock() < cartItem.getQuantity()) {
@@ -389,20 +389,20 @@ public class OrderService {
     }
 
     // 주문을 생성하고 저장한다.
-    private Order createAndSaveOrder(User user, OrderCreateRequest request, OrderCalculation calculation,
-                                     List<CartItem> cartItems, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
+    private Order createAndSaveCartOrder(User user, OrderCreateRequest request, OrderCalculation calculation,
+                                         List<CartItem> cartItems, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
         // 주문 Entity 생성
-        Order order = createOrderEntity(user, request, calculation);
+        Order order = createCartOrderEntity(user, request, calculation);
 
         // 주문 아이템 생성
-        createOrderItems(order, cartItems, optionMap, imageMap);
+        createCartOrderItems(order, cartItems, optionMap, imageMap);
 
         // 주문 DB 저장
         return orderRepository.save(order);
     }
 
     // 주문 Entity 생성
-    private Order createOrderEntity(User user, OrderCreateRequest request, OrderCalculation calculation) {
+    private Order createCartOrderEntity(User user, OrderCreateRequest request, OrderCalculation calculation) {
         BigDecimal finalPrice = calculation.getFinalAmount().add(request.getDeliveryFee());
 
         return Order.builder()
@@ -427,7 +427,7 @@ public class OrderService {
     }
 
     // 장바구니 아이템을 주문의 주문 아이템 Entity로 만든다.
-    private void createOrderItems(Order order, List<CartItem> cartItems, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
+    private void createCartOrderItems(Order order, List<CartItem> cartItems, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
         for (CartItem cartItem : cartItems) {
             ProductOption option = optionMap.get(cartItem.getOptionId());
             ProductImage image = imageMap.get(cartItem.getImageId());
@@ -463,9 +463,9 @@ public class OrderService {
      * @param optionMap 상품 옵션 맵
      * @param calculation 주문 금액 계산 정보
      */
-    private void processPostOrder(User user, List<CartItem> cartItems, Map<Long, ProductOption> optionMap, OrderCalculation calculation) {
+    private void processPostCartOrder(User user, List<CartItem> cartItems, Map<Long, ProductOption> optionMap, OrderCalculation calculation) {
         // 재고 차감
-        decreaseStock(cartItems, optionMap);
+        decreaseCartStock(cartItems, optionMap);
 
         // 포인트 처리
         orderCommonService.processUserPoints(user, calculation.getActualUsedPoints(), calculation.getEarnedPoints());
@@ -475,7 +475,7 @@ public class OrderService {
     }
 
     // 재고 차감
-    private void decreaseStock(List<CartItem> cartItems, Map<Long, ProductOption> optionMap) {
+    private void decreaseCartStock(List<CartItem> cartItems, Map<Long, ProductOption> optionMap) {
         // 모든 장바구니 아이템들의 option을 조회한다.
         // option의 stock 에서 장바구니 아이템의 quantity를 뺀다.
         List<ProductOption> optionsToUpdate = cartItems.stream()

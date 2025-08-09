@@ -54,7 +54,7 @@ public class DirectOrderService {
 
         // 2. 주문 아이템 목록을 조회
         List<OrderItemRequest> orderItemRequests = request.getItems();
-        validateOrderItems(orderItemRequests);
+        validateDirectOrderItems(orderItemRequests);
 
         // 3. 주문할 상품 정보를 조회하고 검증한다
         Map<Long, ProductOption> optionMap = validateDirectOrderProductOptions(orderItemRequests);
@@ -67,10 +67,10 @@ public class DirectOrderService {
         orderCommonService.validatePointUsage(currentUser, calculation.getActualUsedPoints());
 
         // 6. 주문 및 주문 아이템 생성
-        Order order = createAndSaveOrder(currentUser, request, calculation, orderItemRequests, optionMap, imageMap);
+        Order order = createAndSaveDirectOrder(currentUser, request, calculation, orderItemRequests, optionMap, imageMap);
 
         // 7. 재고 차감
-        processPostOrder(currentUser, orderItemRequests, optionMap, calculation);
+        processPostDirectOrder(currentUser, orderItemRequests, optionMap, calculation);
 
         // 8. 주문 생성 응답 반환
         return OrderCreateResponse.from(order);
@@ -93,12 +93,12 @@ public class DirectOrderService {
                 .collect(Collectors.toMap(ProductOption::getOptionId, Function.identity()));
 
         // 재고 검증
-        validateStock(items, optionMap);
+        validateDirectOrderStock(items, optionMap);
 
         return optionMap;
     }
 
-    private void validateOrderItems(List<OrderItemRequest> items) {
+    private void validateDirectOrderItems(List<OrderItemRequest> items) {
         if (items.isEmpty()) {
             throw new OrderException(ErrorCode.ORDER_ITEM_NOT_FOUND);
         }
@@ -126,7 +126,7 @@ public class DirectOrderService {
     }
 
     // 재고를 확인한다. (직접 주문용)
-    private void validateStock(List<OrderItemRequest> items, Map<Long, ProductOption> optionMap) {
+    private void validateDirectOrderStock(List<OrderItemRequest> items, Map<Long, ProductOption> optionMap) {
         for (OrderItemRequest item : items) {
             ProductOption option = optionMap.get(item.getOptionId());
             if (!option.isInStock() || option.getStock() < item.getQuantity()) {
@@ -182,20 +182,20 @@ public class DirectOrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private Order createAndSaveOrder(User user, DirectOrderCreateRequest request, OrderCalculation calculation,
-                                     List<OrderItemRequest> items, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
+    private Order createAndSaveDirectOrder(User user, DirectOrderCreateRequest request, OrderCalculation calculation,
+                                           List<OrderItemRequest> items, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
         // 주문 Entity 생성
-        Order order = createOrderEntity(user, request, calculation);
+        Order order = createDirectOrderEntity(user, request, calculation);
 
         // 주문 아이템 생성
-        createOrderItems(order, items, optionMap, imageMap);
+        createDirectOrderItems(order, items, optionMap, imageMap);
 
         // 주문 DB 저장
         return orderRepository.save(order);
     }
 
     // 주문 Entity 생성
-    private Order createOrderEntity(User user, DirectOrderCreateRequest request, OrderCalculation calculation) {
+    private Order createDirectOrderEntity(User user, DirectOrderCreateRequest request, OrderCalculation calculation) {
         BigDecimal finalPrice = calculation.getFinalAmount().add(request.getDeliveryFee());
 
         return Order.builder()
@@ -220,7 +220,7 @@ public class DirectOrderService {
     }
 
     // 주문의 주문 아이템 Entity로 만든다.
-    private void createOrderItems(Order order, List<OrderItemRequest> items, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
+    private void createDirectOrderItems(Order order, List<OrderItemRequest> items, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
         for (OrderItemRequest item : items) {
             ProductOption option = optionMap.get(item.getOptionId());
             Product product = option.getProduct();
@@ -249,16 +249,16 @@ public class DirectOrderService {
         }
     }
 
-    private void processPostOrder(User user, List<OrderItemRequest> items, Map<Long, ProductOption> optionMap, OrderCalculation calculation) {
+    private void processPostDirectOrder(User user, List<OrderItemRequest> items, Map<Long, ProductOption> optionMap, OrderCalculation calculation) {
         // 재고 차감
-        decreaseStock(items, optionMap);
+        decreaseDirectOrderStock(items, optionMap);
 
         // 포인트 처리
         orderCommonService.processUserPoints(user, calculation.getActualUsedPoints(), calculation.getEarnedPoints());
     }
 
     // 재고 차감
-    private void decreaseStock(List<OrderItemRequest> items, Map<Long, ProductOption> optionMap) {
+    private void decreaseDirectOrderStock(List<OrderItemRequest> items, Map<Long, ProductOption> optionMap) {
         // 모든 요청 주문 아이템들의 option을 조회한다.
         // option의 stock 에서 요청 주문 아이템의 quantity를 뺀다.
         List<ProductOption> optionsToUpdate = items.stream()
