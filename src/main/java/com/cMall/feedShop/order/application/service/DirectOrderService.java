@@ -59,28 +59,28 @@ public class DirectOrderService {
         List<OrderItemRequest> orderItemRequests = request.getItems();
         validateOrderItems(orderItemRequests);
 
-        // 2. 주문할 상품 정보를 조회하고 검증한다
-        Map<Long, ProductOption> optionMap = validateProductOptions(orderItemRequests);
-        Map<Long, ProductImage> imageMap = getProductImages(optionMap);
+        // 3. 주문할 상품 정보를 조회하고 검증한다
+        Map<Long, ProductOption> optionMap = validateDirectOrderProductOptions(orderItemRequests);
+        Map<Long, ProductImage> imageMap = getDirectProductImages(optionMap);
 
-        // 3. 주문 금액 계산
-        OrderCalculation calculation = calculateOrderAmount(orderItemRequests, optionMap, request.getUsedPoints());
+        // 4. 주문 금액 계산
+        OrderCalculation calculation = calculateDirectOrderAmount(orderItemRequests, optionMap, request.getUsedPoints());
 
-        // 4. 포인트 사용 가능 여부 확인
+        // 5. 포인트 사용 가능 여부 확인
         orderCommonService.validatePointUsage(currentUser, calculation.getActualUsedPoints());
 
-        // 5. 주문 및 주문 아이템 생성
+        // 6. 주문 및 주문 아이템 생성
         Order order = createAndSaveOrder(currentUser, request, calculation, orderItemRequests, optionMap, imageMap);
 
-        // 6. 재고 차감
+        // 7. 재고 차감
         processPostOrder(currentUser, orderItemRequests, optionMap, calculation);
 
-        // 7. 주문 생성 응답 반환
+        // 8. 주문 생성 응답 반환
         return OrderCreateResponse.from(order);
     }
 
     // 상품 옵션 조회 및 재고 확인 (직접 주문용)
-    private Map<Long, ProductOption> validateProductOptions(List<OrderItemRequest> items) {
+    private Map<Long, ProductOption> validateDirectOrderProductOptions(List<OrderItemRequest> items) {
         // 요청에서 옵션 ID를 추출하여 중복 제거
         Set<Long> optionIds = items.stream()
                 .map(OrderItemRequest::getOptionId)
@@ -107,7 +107,7 @@ public class DirectOrderService {
         }
     }
 
-    private Map<Long, ProductImage> getProductImages(Map<Long, ProductOption> optionMap) {
+    private Map<Long, ProductImage> getDirectProductImages(Map<Long, ProductOption> optionMap) {
         // 상품 옵션들에서 상품 ID만 추출하기
         Set<Long> productIds = optionMap.values().stream()
                 .map(option -> option.getProduct().getProductId())
@@ -142,7 +142,7 @@ public class DirectOrderService {
     // 포인트 주문 금액의 최대 10%까지만 사용 가능
     // 포인트 차감 (100 포인트 = 100 원)
     // 적립 포인트 (총 구매금액 1만원 당 50점)
-    private OrderCalculation calculateOrderAmount(List<OrderItemRequest> items, Map<Long, ProductOption> optionMap, Integer usedPoints) {
+    private OrderCalculation calculateDirectOrderAmount(List<OrderItemRequest> items, Map<Long, ProductOption> optionMap, Integer usedPoints) {
         // 총 상품 금액 계산
         BigDecimal totalAmount = calculateTotalAmount(items, optionMap);
 

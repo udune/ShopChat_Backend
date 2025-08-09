@@ -70,11 +70,11 @@ public class OrderService {
         validateCartItems(selectedCartItems);
 
         // 3. 상품 정보 조회 및 검증
-        Map<Long, ProductOption> optionMap = validateProductOptions(selectedCartItems);
-        Map<Long, ProductImage> imageMap = getProductImages(selectedCartItems);
+        Map<Long, ProductOption> optionMap = validateCartOrderProductOptions(selectedCartItems);
+        Map<Long, ProductImage> imageMap = getCartProductImages(selectedCartItems);
 
         // 4. 주문 금액 계산
-        OrderCalculation calculation = calculateOrderAmount(selectedCartItems, optionMap, request.getUsedPoints());
+        OrderCalculation calculation = calculateCartOrderAmount(selectedCartItems, optionMap, request.getUsedPoints());
 
         // 5. 포인트 사용 가능 여부 확인
         orderCommonService.validatePointUsage(currentUser, calculation.getActualUsedPoints());
@@ -301,7 +301,7 @@ public class OrderService {
      * @param cartItems 선택된 장바구니 아이템 리스트
      * @return 이미지 ID와 이미지 객체의 맵
      */
-    private Map<Long, ProductImage> getProductImages(List<CartItem> cartItems) {
+    private Map<Long, ProductImage> getCartProductImages(List<CartItem> cartItems) {
         // 장바구니 아이템에서 이미지 ID를 추출하여 중복 제거
         Set<Long> imageIds = cartItems.stream()
                 .map(CartItem::getImageId)
@@ -312,7 +312,7 @@ public class OrderService {
     }
 
     // 상품 옵션 검증
-    private Map<Long, ProductOption> validateProductOptions(List<CartItem> cartItems) {
+    private Map<Long, ProductOption> validateCartOrderProductOptions(List<CartItem> cartItems) {
         // 장바구니 아이템에서 옵션 ID를 추출하여 중복 제거
         Set<Long> optionIds = cartItems.stream()
                 .map(CartItem::getOptionId)
@@ -347,7 +347,7 @@ public class OrderService {
     // 포인트 주문 금액의 최대 10%까지만 사용 가능
     // 포인트 차감 (100 포인트 = 100 원)
     // 적립 포인트 (총 구매금액 1만원 당 50점)
-    private OrderCalculation calculateOrderAmount(List<CartItem> cartItems, Map<Long, ProductOption> optionMap, Integer usedPoints) {
+    private OrderCalculation calculateCartOrderAmount(List<CartItem> cartItems, Map<Long, ProductOption> optionMap, Integer usedPoints) {
         // 총 상품 금액 계산
         BigDecimal totalAmount = calculateTotalAmount(cartItems, optionMap);
 
