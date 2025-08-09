@@ -30,6 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 
+import static com.cMall.feedShop.order.application.constants.OrderConstants.MAX_ORDER_QUANTITY;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -282,6 +284,19 @@ public class OrderService {
     private void validateCartItems(List<CartItem> selectedCartItems) {
         if (selectedCartItems.isEmpty()) {
             throw new OrderException(ErrorCode.ORDER_CART_EMPTY);
+        }
+
+        // 각 아이템별 검증
+        for (CartItem item : selectedCartItems) {
+            // 수량 검증
+            if (item.getQuantity() <= 0 || item.getQuantity() > MAX_ORDER_QUANTITY) {
+                throw new OrderException(ErrorCode.INVALID_ORDER_QUANTITY);
+            }
+
+            // 옵션 ID 검증
+            if (item.getOptionId() == null || item.getOptionId() <= 0) {
+                throw new OrderException(ErrorCode.INVALID_OPTION_ID);
+            }
         }
     }
 }

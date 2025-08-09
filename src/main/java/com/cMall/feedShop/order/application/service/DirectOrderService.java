@@ -1,5 +1,6 @@
 package com.cMall.feedShop.order.application.service;
 
+import com.cMall.feedShop.cart.domain.model.CartItem;
 import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.order.application.adapter.OrderItemAdapter;
 import com.cMall.feedShop.order.application.adapter.OrderRequestAdapter;
@@ -19,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+
+import static com.cMall.feedShop.order.application.constants.OrderConstants.MAX_ORDER_QUANTITY;
 
 @Service
 @RequiredArgsConstructor
@@ -67,6 +70,19 @@ public class DirectOrderService {
     private void validateOrderItems(List<OrderItemRequest> items) {
         if (items.isEmpty()) {
             throw new OrderException(ErrorCode.ORDER_ITEM_NOT_FOUND);
+        }
+
+        // 각 아이템별 검증
+        for (OrderItemRequest item : items) {
+            // 수량 검증
+            if (item.getQuantity() <= 0 || item.getQuantity() > MAX_ORDER_QUANTITY) {
+                throw new OrderException(ErrorCode.INVALID_ORDER_QUANTITY);
+            }
+
+            // 옵션 ID 검증
+            if (item.getOptionId() == null || item.getOptionId() <= 0) {
+                throw new OrderException(ErrorCode.INVALID_OPTION_ID);
+            }
         }
     }
 }

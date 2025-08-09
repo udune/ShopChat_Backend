@@ -12,4 +12,7 @@ public class OrderConstants {
 
     // 포인트 사용 단위
     public static final int POINT_UNIT = 100;
+
+    // 최대 주문 수량
+    public static final int MAX_ORDER_QUANTITY = 50;
 }
