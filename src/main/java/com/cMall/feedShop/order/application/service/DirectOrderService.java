@@ -1,0 +1,377 @@
+package com.cMall.feedShop.order.application.service;
+
+import com.cMall.feedShop.common.exception.ErrorCode;
+import com.cMall.feedShop.order.application.calculator.OrderCalculation;
+import com.cMall.feedShop.order.application.dto.request.DirectOrderCreateRequest;
+import com.cMall.feedShop.order.application.dto.request.OrderItemRequest;
+import com.cMall.feedShop.order.application.dto.response.OrderCreateResponse;
+import com.cMall.feedShop.order.domain.enums.OrderStatus;
+import com.cMall.feedShop.order.domain.exception.OrderException;
+import com.cMall.feedShop.order.domain.model.Order;
+import com.cMall.feedShop.order.domain.model.OrderItem;
+import com.cMall.feedShop.order.domain.repository.OrderRepository;
+import com.cMall.feedShop.product.application.calculator.DiscountCalculator;
+import com.cMall.feedShop.product.domain.exception.ProductException;
+import com.cMall.feedShop.product.domain.model.Product;
+import com.cMall.feedShop.product.domain.model.ProductImage;
+import com.cMall.feedShop.product.domain.model.ProductOption;
+import com.cMall.feedShop.product.domain.repository.ProductImageRepository;
+import com.cMall.feedShop.product.domain.repository.ProductOptionRepository;
+import com.cMall.feedShop.user.domain.enums.UserRole;
+import com.cMall.feedShop.user.domain.exception.UserException;
+import com.cMall.feedShop.user.domain.model.User;
+import com.cMall.feedShop.user.domain.model.UserPoint;
+import com.cMall.feedShop.user.domain.repository.UserPointRepository;
+import com.cMall.feedShop.user.domain.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static com.cMall.feedShop.order.application.constants.OrderConstants.*;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class DirectOrderService {
+
+    private final UserRepository userRepository;
+    private final ProductOptionRepository productOptionRepository;
+    private final DiscountCalculator discountCalculator;
+    private final OrderRepository orderRepository;
+    private final UserPointRepository userPointRepository;
+    private final ProductImageRepository productImageRepository;
+
+    /**
+     * 직접 주문 생성 (장바구니 없이 상품을 직접 선택하여 주문)
+     * @param request 직접 주문 생성 요청 정보
+     * @param userDetails 현재 로그인된 사용자 정보
+     * @return 주문 생성 응답 정보
+     */
+    @Transactional
+    public OrderCreateResponse createOrder(DirectOrderCreateRequest request, UserDetails userDetails) {
+        // 1. 현재 사용자 조회를 하고 사용자 권한을 검증
+        User currentUser = validateUser(userDetails);
+
+        // 2. 주문 아이템 목록을 조회
+        List<OrderItemRequest> orderItemRequests = request.getItems();
+        validateOrderItems(orderItemRequests);
+
+        // 2. 주문할 상품 정보를 조회하고 검증한다
+        Map<Long, ProductOption> optionMap = validateProductOptions(orderItemRequests);
+        Map<Long, ProductImage> imageMap = getProductImages(optionMap);
+
+        // 3. 주문 금액 계산
+        OrderCalculation calculation = calculateOrderAmount(orderItemRequests, optionMap, request.getUsedPoints());
+
+        // 4. 포인트 사용 가능 여부 확인
+        validatePointUsage(currentUser, calculation.getActualUsedPoints());
+
+        // 5. 주문 및 주문 아이템 생성
+        Order order = createAndSaveOrder(currentUser, request, calculation, orderItemRequests, optionMap, imageMap);
+
+        // 6. 재고 차감
+        processPostOrder(currentUser, orderItemRequests, optionMap, calculation);
+
+        // 7. 주문 생성 응답 반환
+        return OrderCreateResponse.from(order);
+    }
+
+    // JWT 에서 현재 사용자 정보 조회
+    // 사용자 권한 검증
+    private User validateUser(UserDetails userDetails) {
+        User user = userRepository.findByLoginId(userDetails.getUsername())
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getRole() != UserRole.USER) {
+            throw new OrderException(ErrorCode.ORDER_FORBIDDEN);
+        }
+
+        return user;
+    }
+
+    // 상품 옵션 조회 및 재고 확인 (직접 주문용)
+    private Map<Long, ProductOption> validateProductOptions(List<OrderItemRequest> items) {
+        // 요청에서 옵션 ID를 추출하여 중복 제거
+        Set<Long> optionIds = items.stream()
+                .map(OrderItemRequest::getOptionId)
+                .collect(Collectors.toSet());
+
+        // DB 에서 옵션 ID로 상품 옵션을 조회한다.
+        List<ProductOption> options = productOptionRepository.findAllByOptionIdIn(optionIds);
+        if (options.size() != optionIds.size()) {
+            throw new ProductException(ErrorCode.PRODUCT_OPTION_NOT_FOUND);
+        }
+
+        Map<Long, ProductOption> optionMap = options.stream()
+                .collect(Collectors.toMap(ProductOption::getOptionId, Function.identity()));
+
+        // 재고 검증
+        validateStock(items, optionMap);
+
+        return optionMap;
+    }
+
+    private void validateOrderItems(List<OrderItemRequest> items) {
+        if (items.isEmpty()) {
+            throw new OrderException(ErrorCode.ORDER_ITEM_NOT_FOUND);
+        }
+    }
+
+    private Map<Long, ProductImage> getProductImages(Map<Long, ProductOption> optionMap) {
+        // 상품 옵션들에서 상품 ID만 추출하기
+        Set<Long> productIds = optionMap.values().stream()
+                .map(option -> option.getProduct().getProductId())
+                .collect(Collectors.toSet());
+
+        // 상품 ID 들로 메인 이미지들을 한 번에 조회
+        List<ProductImage> mainImages = productImageRepository.findMainImagesByProductIds(productIds);
+
+        // 메인 이미지가 없는 상품이 있다면 예외 발생
+        if (mainImages.size() != productIds.size()) {
+            throw new ProductException(ErrorCode.PRODUCT_IMAGE_NOT_FOUND);
+        }
+
+        // 조회한 이미지들을 상품 ID 를 키로 하는 맵으로 변환
+        return mainImages.stream()
+                .collect(Collectors.toMap(
+                        image -> image.getProduct().getProductId(),
+                        Function.identity()));
+    }
+
+    // 재고를 확인한다. (직접 주문용)
+    private void validateStock(List<OrderItemRequest> items, Map<Long, ProductOption> optionMap) {
+        for (OrderItemRequest item : items) {
+            ProductOption option = optionMap.get(item.getOptionId());
+            if (!option.isInStock() || option.getStock() < item.getQuantity()) {
+                throw new ProductException(ErrorCode.OUT_OF_STOCK);
+            }
+        }
+    }
+
+    // 주문 금액 계산
+    // 포인트 주문 금액의 최대 10%까지만 사용 가능
+    // 포인트 차감 (100 포인트 = 100 원)
+    // 적립 포인트 (총 구매금액 1만원 당 50점)
+    private OrderCalculation calculateOrderAmount(List<OrderItemRequest> items, Map<Long, ProductOption> optionMap, Integer usedPoints) {
+        // 총 상품 금액 계산
+        BigDecimal totalAmount = calculateTotalAmount(items, optionMap);
+
+        // 실제 사용 가능한 포인트 계산
+        Integer actualUsedPoints = calculateActualUsedPoints(totalAmount, usedPoints);
+
+        // 포인트 차감 후 최종 금액 계산
+        BigDecimal finalAmount = calculateFinalAmount(totalAmount, actualUsedPoints);
+
+        // 최종 금액을 기준으로 적립 포인트를 계산한다. (총 구매금액 1만원 당 50점)
+        Integer earnedPoints = calculateEarnedPoints(finalAmount);
+
+        // OrderCalculation 객체를 생성하여 반환한다.
+        return OrderCalculation.builder()
+                .totalAmount(totalAmount)
+                .finalAmount(finalAmount)
+                .actualUsedPoints(actualUsedPoints)
+                .earnedPoints(earnedPoints)
+                .build();
+    }
+
+    private BigDecimal calculateTotalAmount(List<OrderItemRequest> items, Map<Long, ProductOption> optionMap) {
+        return items.stream()
+                .map(item -> {
+                    // 장바구니 아이템에서 옵션 ID로 상품을 조회한다.
+                    ProductOption option = optionMap.get(item.getOptionId());
+                    Product product = option.getProduct();
+
+                    // 상품의 할인된 가격을 계산해서 알아낸다.
+                    BigDecimal discountPrice = discountCalculator.calculateDiscountPrice(
+                            product.getPrice(),
+                            product.getDiscountType(),
+                            product.getDiscountValue()
+                    );
+
+                    // 할인된 가격에 장바구니 아이템의 수량을 곱한다.
+                    return discountPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+                })
+                // 수량이 곱해진 할인된 가격을 더한다.
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    // 사용 가능한 포인트 계산
+    private Integer calculateActualUsedPoints(BigDecimal totalAmount, Integer requestedPoints) {
+        if (requestedPoints == null || requestedPoints <= 0) {
+            return 0;
+        }
+
+        BigDecimal maxPointUsage = totalAmount.multiply(POINT_USAGE_RATE)
+                .setScale(0, RoundingMode.DOWN);
+
+        BigDecimal requestedPointAmount = BigDecimal.valueOf(requestedPoints);
+
+        return requestedPointAmount.compareTo(maxPointUsage) <= 0
+                ? requestedPoints
+                : maxPointUsage.intValue();
+    }
+
+    // 포인트 차감 후 최종 금액 계산
+    private BigDecimal calculateFinalAmount(BigDecimal totalAmount, Integer usedPoints) {
+        BigDecimal pointDeduction = BigDecimal.valueOf(usedPoints);
+        BigDecimal finalAmount = totalAmount.subtract(pointDeduction);
+
+        return finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount;
+    }
+
+    // 구매 후 얻을 포인트를 계산한다.
+    private Integer calculateEarnedPoints(BigDecimal finalAmount) {
+        if (finalAmount == null || finalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return 0;
+        }
+
+        BigDecimal units = finalAmount.divide(POINT_REWARD_THRESHOLD, 0, RoundingMode.DOWN);
+
+        // 10,000원 단위로 50 포인트를 적립한다.
+        return units.multiply(POINT_REWARD_AMOUNT).intValue();
+    }
+
+    // 포인트가 유효한지 검증한다.
+    private void validatePointUsage(User user, Integer usedPoints) {
+        // 사용할 포인트 검증
+        if (usedPoints == null || usedPoints == 0) {
+            return;
+        }
+
+        // 유효값 및 100 포인트 단위 검증 (100 포인트 단위여야 한다)
+        if (usedPoints < 0 || usedPoints % 100 != 0) {
+            throw new OrderException(ErrorCode.INVALID_POINT);
+        }
+
+        // 사용자 포인트 검증
+        UserPoint userPoint = getUserPoint(user);
+        if (!userPoint.canUsePoints(usedPoints)) {
+            throw new OrderException(ErrorCode.OUT_OF_POINT);
+        }
+    }
+
+    private Order createAndSaveOrder(User user, DirectOrderCreateRequest request, OrderCalculation calculation,
+                                     List<OrderItemRequest> items, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
+        // 주문 Entity 생성
+        Order order = createOrderEntity(user, request, calculation);
+
+        // 주문 아이템 생성
+        createOrderItems(order, items, optionMap, imageMap);
+
+        // 주문 DB 저장
+        return orderRepository.save(order);
+    }
+
+    // 주문 Entity 생성
+    private Order createOrderEntity(User user, DirectOrderCreateRequest request, OrderCalculation calculation) {
+        BigDecimal finalPrice = calculation.getFinalAmount().add(request.getDeliveryFee());
+
+        return Order.builder()
+                .user(user)
+                .status(OrderStatus.ORDERED)
+                .totalPrice(calculation.getTotalAmount())
+                .finalPrice(finalPrice)
+                .deliveryFee(request.getDeliveryFee())
+                .usedPoints(calculation.getActualUsedPoints())
+                .earnedPoints(calculation.getEarnedPoints())
+                .deliveryAddress(request.getDeliveryAddress())
+                .deliveryDetailAddress(request.getDeliveryDetailAddress())
+                .postalCode(request.getPostalCode())
+                .recipientName(request.getRecipientName())
+                .recipientPhone(request.getRecipientPhone())
+                .deliveryMessage(request.getDeliveryMessage())
+                .paymentMethod(request.getPaymentMethod())
+                .cardNumber(request.getCardNumber())
+                .cardExpiry(request.getCardExpiry())
+                .cardCvc(request.getCardCvc())
+                .build();
+    }
+
+    // 주문의 주문 아이템 Entity로 만든다.
+    private void createOrderItems(Order order, List<OrderItemRequest> items, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
+        for (OrderItemRequest item : items) {
+            ProductOption option = optionMap.get(item.getOptionId());
+            Product product = option.getProduct();
+
+            ProductImage image = imageMap.get(product.getProductId());
+
+            // totalPrice : 상품의 원래 가격
+            BigDecimal totalPrice = product.getPrice();
+            // finalPrice : 상품의 할인된 최종 가격
+            BigDecimal finalPrice = discountCalculator.calculateDiscountPrice(
+                    totalPrice,
+                    product.getDiscountType(),
+                    product.getDiscountValue()
+            );
+
+            OrderItem orderItem = OrderItem.builder()
+                    .order(order)
+                    .productOption(option)
+                    .productImage(image)
+                    .quantity(item.getQuantity())
+                    .totalPrice(totalPrice)
+                    .finalPrice(finalPrice)
+                    .build();
+
+            order.addOrderItem(orderItem);
+        }
+    }
+
+    private void processPostOrder(User user, List<OrderItemRequest> items, Map<Long, ProductOption> optionMap, OrderCalculation calculation) {
+        // 재고 차감
+        decreaseStock(items, optionMap);
+
+        // 포인트 처리
+        processUserPoints(user, calculation.getActualUsedPoints(), calculation.getEarnedPoints());
+    }
+
+    // 재고 차감
+    private void decreaseStock(List<OrderItemRequest> items, Map<Long, ProductOption> optionMap) {
+        // 모든 요청 주문 아이템들의 option을 조회한다.
+        // option의 stock 에서 요청 주문 아이템의 quantity를 뺀다.
+        List<ProductOption> optionsToUpdate = items.stream()
+                .map(item -> {
+                    ProductOption option = optionMap.get(item.getOptionId());
+                    option.decreaseStock(item.getQuantity());
+                    return option;
+                }).toList();
+
+        productOptionRepository.saveAll(optionsToUpdate);
+    }
+
+    // UserPoint에 적립 및 사용
+    private void processUserPoints(User user, Integer usedPoints, Integer earnedPoints) {
+        // UserPoint를 조회한다.
+        UserPoint userPoint = getUserPoint(user);
+
+        // 포인트 사용
+        if (usedPoints != null && usedPoints > 0) {
+            userPoint.usePoints(usedPoints);
+        }
+
+        // 포인트 적립
+        if (earnedPoints != null && earnedPoints > 0) {
+            userPoint.earnPoints(earnedPoints);
+        }
+
+        // DB에 저장
+        userPointRepository.save(userPoint);
+    }
+
+    private UserPoint getUserPoint(User user) {
+        return userPointRepository.findByUser(user)
+                .orElse(UserPoint.builder()
+                        .user(user)
+                        .currentPoints(0)
+                        .build());
+    }
+}

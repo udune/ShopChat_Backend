@@ -41,20 +41,12 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.cMall.feedShop.order.application.constants.OrderConstants.*;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class OrderService {
-
-    // 구매 금액의 {POINT_USAGE_RATE}% 까지만 포인트 사용 가능
-    private static final BigDecimal POINT_USAGE_RATE = BigDecimal.valueOf(0.1);
-
-    // {POINT_REWARD_THRESHOLD}원 단위로 {POINT_REWARD_AMOUNT} 포인트를 적립
-    private static final BigDecimal POINT_REWARD_THRESHOLD = BigDecimal.valueOf(10000);
-    private static final BigDecimal POINT_REWARD_AMOUNT = BigDecimal.valueOf(50);
-
-    // 포인트 사용 단위
-    private static final int POINT_UNIT = 100;
 
     private final UserRepository userRepository;
     private final CartItemRepository cartItemRepository;
@@ -73,14 +65,14 @@ public class OrderService {
     @Transactional
     public OrderCreateResponse createOrder(OrderCreateRequest request, UserDetails userDetails) {
         // 1. 현재 사용자 조회를 하고 사용자 권한을 검증
-        User currentUser = getCurrentUserAndValidatePermission(userDetails);
+        User currentUser = validateUser(userDetails);
 
         // 2. 선택된 장바구니 아이템 조회 (selected = true 인 아이템들만)
         List<CartItem> selectedCartItems = getSelectedCartItems(currentUser.getId());
         validateCartItems(selectedCartItems);
 
         // 3. 상품 정보 조회 및 검증
-        Map<Long, ProductOption> optionMap = getAndValidateProductOptions(selectedCartItems);
+        Map<Long, ProductOption> optionMap = validateProductOptions(selectedCartItems);
         Map<Long, ProductImage> imageMap = getProductImages(selectedCartItems);
 
         // 4. 주문 금액 계산
@@ -110,7 +102,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public OrderPageResponse getOrderListForUser(int page, int size, String status, UserDetails userDetails) {
         // 1. 현재 사용자 조회를 하고 사용자 권한을 검증
-        User currentUser = getCurrentUserAndValidatePermission(userDetails);
+        User currentUser = validateUser(userDetails);
 
         // 2. 페이지 파라미터 검증
         if (page < 0) {
@@ -203,7 +195,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public OrderDetailResponse getOrderDetail(Long orderId, UserDetails userDetails) {
         // 1. 현재 사용자 조회 및 권한 검증
-        User currentUser = getCurrentUserAndValidatePermission(userDetails);
+        User currentUser = validateUser(userDetails);
 
         // 2. 주문 조회 및 권한 검증
         Order order = orderRepository.findByOrderIdAndUser(orderId, currentUser)
@@ -260,7 +252,7 @@ public class OrderService {
 
     // JWT 에서 현재 사용자 정보 조회
     // 사용자 권한 검증
-    private User getCurrentUserAndValidatePermission(UserDetails userDetails) {
+    private User validateUser(UserDetails userDetails) {
         User user = userRepository.findByLoginId(userDetails.getUsername())
                 .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
 
@@ -309,7 +301,7 @@ public class OrderService {
     }
 
     // 상품 옵션 조회 및 재고 확인
-    private Map<Long, ProductOption> getAndValidateProductOptions(List<CartItem> cartItems) {
+    private Map<Long, ProductOption> validateProductOptions(List<CartItem> cartItems) {
         // 장바구니 아이템에서 옵션 ID를 추출하여 중복 제거
         Set<Long> optionIds = cartItems.stream()
                 .map(CartItem::getOptionId)
@@ -394,7 +386,7 @@ public class OrderService {
         }
 
         BigDecimal maxPointUsage = totalAmount.multiply(POINT_USAGE_RATE)
-                .setScale(0, BigDecimal.ROUND_DOWN);
+                .setScale(0, RoundingMode.DOWN);
 
         BigDecimal requestedPointAmount = BigDecimal.valueOf(requestedPoints);
 
