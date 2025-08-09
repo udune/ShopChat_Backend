@@ -6,6 +6,7 @@ import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.order.application.adapter.OrderItemAdapter;
 import com.cMall.feedShop.order.application.adapter.OrderRequestAdapter;
 import com.cMall.feedShop.order.application.dto.request.OrderCreateRequest;
+import com.cMall.feedShop.order.application.dto.request.OrderItemRequest;
 import com.cMall.feedShop.order.application.dto.request.OrderStatusUpdateRequest;
 import com.cMall.feedShop.order.application.dto.response.*;
 import com.cMall.feedShop.order.application.calculator.OrderCalculation;
