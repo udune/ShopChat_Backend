@@ -127,10 +127,15 @@ public class DirectOrderService {
 
     // 재고를 확인한다. (직접 주문용)
     private void validateDirectOrderStock(List<OrderItemRequest> items, Map<Long, ProductOption> optionMap) {
+        // 각 주문 아이템마다 재고를 확인한다.
         for (OrderItemRequest item : items) {
+            // 주문 아이템에 해당하는 상품 옵션을 가져온다.
             ProductOption option = optionMap.get(item.getOptionId());
+            // 재고가 없거나 주문 수량보다 적은 경우
             if (!option.isInStock() || option.getStock() < item.getQuantity()) {
-                throw new ProductException(ErrorCode.OUT_OF_STOCK);
+                throw new ProductException(ErrorCode.OUT_OF_STOCK,
+                        String.format("상품 '%s'의 재고가 부족합니다. 현재 재고: %d, 요청 수량: %d",
+                                option.getProduct().getName(), option.getStock(), item.getQuantity()));
             }
         }
     }
