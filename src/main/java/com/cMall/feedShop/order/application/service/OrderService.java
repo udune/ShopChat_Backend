@@ -22,8 +22,6 @@ import com.cMall.feedShop.product.domain.repository.ProductOptionRepository;
 import com.cMall.feedShop.user.domain.enums.UserRole;
 import com.cMall.feedShop.user.domain.exception.UserException;
 import com.cMall.feedShop.user.domain.model.User;
-import com.cMall.feedShop.user.domain.model.UserPoint;
-import com.cMall.feedShop.user.domain.repository.UserPointRepository;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -53,7 +51,7 @@ public class OrderService {
     private final ProductOptionRepository productOptionRepository;
     private final DiscountCalculator discountCalculator;
     private final OrderRepository orderRepository;
-    private final UserPointRepository userPointRepository;
+    private final OrderCommonService orderCommonService;
     private final ProductImageRepository productImageRepository;
 
     /**
@@ -65,7 +63,7 @@ public class OrderService {
     @Transactional
     public OrderCreateResponse createOrder(OrderCreateRequest request, UserDetails userDetails) {
         // 1. 현재 사용자 조회를 하고 사용자 권한을 검증
-        User currentUser = validateUser(userDetails);
+        User currentUser = orderCommonService.validateUser(userDetails);
 
         // 2. 선택된 장바구니 아이템 조회 (selected = true 인 아이템들만)
         List<CartItem> selectedCartItems = getSelectedCartItems(currentUser.getId());
@@ -79,7 +77,7 @@ public class OrderService {
         OrderCalculation calculation = calculateOrderAmount(selectedCartItems, optionMap, request.getUsedPoints());
 
         // 5. 포인트 사용 가능 여부 확인
-        validatePointUsage(currentUser, calculation.getActualUsedPoints());
+        orderCommonService.validatePointUsage(currentUser, calculation.getActualUsedPoints());
 
         // 6. 주문 및 주문 아이템 생성
         Order order = createAndSaveOrder(currentUser, request, calculation, selectedCartItems, optionMap, imageMap);
@@ -102,7 +100,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public OrderPageResponse getOrderListForUser(int page, int size, String status, UserDetails userDetails) {
         // 1. 현재 사용자 조회를 하고 사용자 권한을 검증
-        User currentUser = validateUser(userDetails);
+        User currentUser = orderCommonService.validateUser(userDetails);
 
         // 2. 페이지 파라미터 검증
         if (page < 0) {
@@ -195,7 +193,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public OrderDetailResponse getOrderDetail(Long orderId, UserDetails userDetails) {
         // 1. 현재 사용자 조회 및 권한 검증
-        User currentUser = validateUser(userDetails);
+        User currentUser = orderCommonService.validateUser(userDetails);
 
         // 2. 주문 조회 및 권한 검증
         Order order = orderRepository.findByOrderIdAndUser(orderId, currentUser)
@@ -231,6 +229,12 @@ public class OrderService {
         return OrderStatusUpdateResponse.from(order);
     }
 
+    /**
+     * 주문 상태 변경 가능 여부 검증
+     * - 현재 상태와 변경할 상태를 비교하여 유효성 검증
+     * @param currentStatus 현재 주문 상태
+     * @param newStatus 변경할 주문 상태
+     */
     private void validateStatusUpdate(OrderStatus currentStatus, OrderStatus newStatus) {
         // 주문됨 -> 배송중, 취소로 변경 가능
         if (currentStatus == OrderStatus.ORDERED) {
@@ -250,20 +254,11 @@ public class OrderService {
         }
     }
 
-    // JWT 에서 현재 사용자 정보 조회
-    // 사용자 권한 검증
-    private User validateUser(UserDetails userDetails) {
-        User user = userRepository.findByLoginId(userDetails.getUsername())
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
-
-        if (user.getRole() != UserRole.USER) {
-            throw new OrderException(ErrorCode.ORDER_FORBIDDEN);
-        }
-
-        return user;
-    }
-
-    // 판매자 권한 검증
+    /**
+     * 현재 사용자 조회 및 판매자 권한 검증
+     * @param userDetails 현재 로그인된 사용자 정보
+     * @return 검증된 사용자 정보
+     */
     private User getCurrentUserAndValidateSellerPermission(UserDetails userDetails) {
         String loginId = userDetails.getUsername();
         User user = userRepository.findByLoginId(loginId)
@@ -276,7 +271,12 @@ public class OrderService {
         return user;
     }
 
-    // 선택된 장바구니 아이템 조회 (selected = true 인 아이템들만)
+    /**
+     * 선택된 장바구니 아이템 조회
+     * - 현재 사용자의 장바구니에서 선택된 아이템들만 조회
+     * @param userId 현재 사용자 ID
+     * @return 선택된 장바구니 아이템 리스트
+     */
     private List<CartItem> getSelectedCartItems(Long userId) {
         List<CartItem> cartItems = cartItemRepository.findByUserIdWithCart(userId);
         return cartItems.stream()
@@ -284,12 +284,23 @@ public class OrderService {
                 .toList();
     }
 
+    /**
+     * 장바구니 아이템이 비어있는지 검증
+     * - 선택된 장바구니 아이템이 없으면 예외 처리
+     * @param selectedCartItems 선택된 장바구니 아이템 리스트
+     */
     private void validateCartItems(List<CartItem> selectedCartItems) {
         if (selectedCartItems.isEmpty()) {
             throw new OrderException(ErrorCode.ORDER_CART_EMPTY);
         }
     }
 
+    /**
+     * 상품 이미지 조회
+     * - 장바구니 아이템에서 이미지 ID를 추출하여 중복 제거 후 이미지 정보를 조회
+     * @param cartItems 선택된 장바구니 아이템 리스트
+     * @return 이미지 ID와 이미지 객체의 맵
+     */
     private Map<Long, ProductImage> getProductImages(List<CartItem> cartItems) {
         // 장바구니 아이템에서 이미지 ID를 추출하여 중복 제거
         Set<Long> imageIds = cartItems.stream()
@@ -300,7 +311,7 @@ public class OrderService {
                 .collect(Collectors.toMap(ProductImage::getImageId, Function.identity()));
     }
 
-    // 상품 옵션 조회 및 재고 확인
+    // 상품 옵션 검증
     private Map<Long, ProductOption> validateProductOptions(List<CartItem> cartItems) {
         // 장바구니 아이템에서 옵션 ID를 추출하여 중복 제거
         Set<Long> optionIds = cartItems.stream()
@@ -358,6 +369,7 @@ public class OrderService {
                 .build();
     }
 
+    // 총 금액을 계산한다.
     private BigDecimal calculateTotalAmount(List<CartItem> cartItems, Map<Long, ProductOption> optionMap) {
         return cartItems.stream()
                 .map(cartItem -> {
@@ -415,33 +427,7 @@ public class OrderService {
         return units.multiply(POINT_REWARD_AMOUNT).intValue();
     }
 
-    // 포인트가 유효한지 검증한다.
-    private void validatePointUsage(User user, Integer usedPoints) {
-        // 사용할 포인트 검증
-        if (usedPoints == null || usedPoints == 0) {
-            return;
-        }
-
-        // 유효값 및 100 포인트 단위 검증 (100 포인트 단위여야 한다)
-        if (usedPoints < 0 || usedPoints % 100 != 0) {
-            throw new OrderException(ErrorCode.INVALID_POINT);
-        }
-
-        // 사용자 포인트 검증
-        UserPoint userPoint = getUserPoint(user);
-        if (!userPoint.canUsePoints(usedPoints)) {
-            throw new OrderException(ErrorCode.OUT_OF_POINT);
-        }
-    }
-
-    private UserPoint getUserPoint(User user) {
-        return userPointRepository.findByUser(user)
-                .orElse(UserPoint.builder()
-                        .user(user)
-                        .currentPoints(0)
-                        .build());
-    }
-
+    // 주문을 생성하고 저장한다.
     private Order createAndSaveOrder(User user, OrderCreateRequest request, OrderCalculation calculation,
                                      List<CartItem> cartItems, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
         // 주문 Entity 생성
@@ -508,12 +494,20 @@ public class OrderService {
         }
     }
 
+    /**
+     * 주문 후 처리
+     * - 재고 차감, 포인트 처리, 장바구니 아이템 삭제
+     * @param user 주문을 요청한 사용자 정보
+     * @param cartItems 선택된 장바구니 아이템 리스트
+     * @param optionMap 상품 옵션 맵
+     * @param calculation 주문 금액 계산 정보
+     */
     private void processPostOrder(User user, List<CartItem> cartItems, Map<Long, ProductOption> optionMap, OrderCalculation calculation) {
         // 재고 차감
         decreaseStock(cartItems, optionMap);
 
         // 포인트 처리
-        processUserPoints(user, calculation.getActualUsedPoints(), calculation.getEarnedPoints());
+        orderCommonService.processUserPoints(user, calculation.getActualUsedPoints(), calculation.getEarnedPoints());
 
         // 장바구니 아이템 삭제
         cartItemRepository.deleteAll(cartItems);
@@ -531,24 +525,5 @@ public class OrderService {
                 }).toList();
 
         productOptionRepository.saveAll(optionsToUpdate);
-    }
-
-    // UserPoint에 적립 및 사용
-    private void processUserPoints(User user, Integer usedPoints, Integer earnedPoints) {
-        // UserPoint를 조회한다.
-        UserPoint userPoint = getUserPoint(user);
-
-        // 포인트 사용
-        if (usedPoints != null && usedPoints > 0) {
-            userPoint.usePoints(usedPoints);
-        }
-
-        // 포인트 적립
-        if (earnedPoints != null && earnedPoints > 0) {
-            userPoint.earnPoints(earnedPoints);
-        }
-
-        // DB에 저장
-        userPointRepository.save(userPoint);
     }
 }

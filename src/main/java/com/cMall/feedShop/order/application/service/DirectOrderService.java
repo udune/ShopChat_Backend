@@ -17,12 +17,7 @@ import com.cMall.feedShop.product.domain.model.ProductImage;
 import com.cMall.feedShop.product.domain.model.ProductOption;
 import com.cMall.feedShop.product.domain.repository.ProductImageRepository;
 import com.cMall.feedShop.product.domain.repository.ProductOptionRepository;
-import com.cMall.feedShop.user.domain.enums.UserRole;
-import com.cMall.feedShop.user.domain.exception.UserException;
 import com.cMall.feedShop.user.domain.model.User;
-import com.cMall.feedShop.user.domain.model.UserPoint;
-import com.cMall.feedShop.user.domain.repository.UserPointRepository;
-import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -43,11 +38,10 @@ import static com.cMall.feedShop.order.application.constants.OrderConstants.*;
 @Transactional(readOnly = true)
 public class DirectOrderService {
 
-    private final UserRepository userRepository;
     private final ProductOptionRepository productOptionRepository;
     private final DiscountCalculator discountCalculator;
     private final OrderRepository orderRepository;
-    private final UserPointRepository userPointRepository;
+    private final OrderCommonService orderCommonService;
     private final ProductImageRepository productImageRepository;
 
     /**
@@ -59,7 +53,7 @@ public class DirectOrderService {
     @Transactional
     public OrderCreateResponse createOrder(DirectOrderCreateRequest request, UserDetails userDetails) {
         // 1. 현재 사용자 조회를 하고 사용자 권한을 검증
-        User currentUser = validateUser(userDetails);
+        User currentUser = orderCommonService.validateUser(userDetails);
 
         // 2. 주문 아이템 목록을 조회
         List<OrderItemRequest> orderItemRequests = request.getItems();
@@ -73,7 +67,7 @@ public class DirectOrderService {
         OrderCalculation calculation = calculateOrderAmount(orderItemRequests, optionMap, request.getUsedPoints());
 
         // 4. 포인트 사용 가능 여부 확인
-        validatePointUsage(currentUser, calculation.getActualUsedPoints());
+        orderCommonService.validatePointUsage(currentUser, calculation.getActualUsedPoints());
 
         // 5. 주문 및 주문 아이템 생성
         Order order = createAndSaveOrder(currentUser, request, calculation, orderItemRequests, optionMap, imageMap);
@@ -83,19 +77,6 @@ public class DirectOrderService {
 
         // 7. 주문 생성 응답 반환
         return OrderCreateResponse.from(order);
-    }
-
-    // JWT 에서 현재 사용자 정보 조회
-    // 사용자 권한 검증
-    private User validateUser(UserDetails userDetails) {
-        User user = userRepository.findByLoginId(userDetails.getUsername())
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
-
-        if (user.getRole() != UserRole.USER) {
-            throw new OrderException(ErrorCode.ORDER_FORBIDDEN);
-        }
-
-        return user;
     }
 
     // 상품 옵션 조회 및 재고 확인 (직접 주문용)
@@ -133,7 +114,7 @@ public class DirectOrderService {
                 .collect(Collectors.toSet());
 
         // 상품 ID 들로 메인 이미지들을 한 번에 조회
-        List<ProductImage> mainImages = productImageRepository.findMainImagesByProductIds(productIds);
+        List<ProductImage> mainImages = productImageRepository.findFirstImagesByProductIds(productIds);
 
         // 메인 이미지가 없는 상품이 있다면 예외 발생
         if (mainImages.size() != productIds.size()) {
@@ -240,25 +221,6 @@ public class DirectOrderService {
         return units.multiply(POINT_REWARD_AMOUNT).intValue();
     }
 
-    // 포인트가 유효한지 검증한다.
-    private void validatePointUsage(User user, Integer usedPoints) {
-        // 사용할 포인트 검증
-        if (usedPoints == null || usedPoints == 0) {
-            return;
-        }
-
-        // 유효값 및 100 포인트 단위 검증 (100 포인트 단위여야 한다)
-        if (usedPoints < 0 || usedPoints % 100 != 0) {
-            throw new OrderException(ErrorCode.INVALID_POINT);
-        }
-
-        // 사용자 포인트 검증
-        UserPoint userPoint = getUserPoint(user);
-        if (!userPoint.canUsePoints(usedPoints)) {
-            throw new OrderException(ErrorCode.OUT_OF_POINT);
-        }
-    }
-
     private Order createAndSaveOrder(User user, DirectOrderCreateRequest request, OrderCalculation calculation,
                                      List<OrderItemRequest> items, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
         // 주문 Entity 생성
@@ -331,7 +293,7 @@ public class DirectOrderService {
         decreaseStock(items, optionMap);
 
         // 포인트 처리
-        processUserPoints(user, calculation.getActualUsedPoints(), calculation.getEarnedPoints());
+        orderCommonService.processUserPoints(user, calculation.getActualUsedPoints(), calculation.getEarnedPoints());
     }
 
     // 재고 차감
@@ -346,32 +308,5 @@ public class DirectOrderService {
                 }).toList();
 
         productOptionRepository.saveAll(optionsToUpdate);
-    }
-
-    // UserPoint에 적립 및 사용
-    private void processUserPoints(User user, Integer usedPoints, Integer earnedPoints) {
-        // UserPoint를 조회한다.
-        UserPoint userPoint = getUserPoint(user);
-
-        // 포인트 사용
-        if (usedPoints != null && usedPoints > 0) {
-            userPoint.usePoints(usedPoints);
-        }
-
-        // 포인트 적립
-        if (earnedPoints != null && earnedPoints > 0) {
-            userPoint.earnPoints(earnedPoints);
-        }
-
-        // DB에 저장
-        userPointRepository.save(userPoint);
-    }
-
-    private UserPoint getUserPoint(User user) {
-        return userPointRepository.findByUser(user)
-                .orElse(UserPoint.builder()
-                        .user(user)
-                        .currentPoints(0)
-                        .build());
     }
 }
