@@ -64,6 +64,7 @@ class DirectOrderServiceTest {
 
     /**
      * 각 테스트 실행 전에 공통 테스트 데이터를 준비합니다
+     * 초등학생도 이해할 수 있도록: 시험 보기 전에 연필과 지우개를 준비하는 것과 같아요
      */
     @BeforeEach
     void setUp() {
@@ -258,6 +259,15 @@ class DirectOrderServiceTest {
         DirectOrderCreateRequest request = new DirectOrderCreateRequest();
         ReflectionTestUtils.setField(request, "items", List.of(excessiveItem));
 
+        // 포인트 사용을 포함한 계산 결과 생성
+        OrderCalculation calculationWithPoints = OrderCalculation.builder()
+                .totalAmount(BigDecimal.valueOf(100000)) // 총 금액 10만원
+                .finalAmount(BigDecimal.valueOf(99000)) // 포인트 차감 후 9만9천원
+                .actualUsedPoints(1000) // 실제 사용된 포인트 1000원
+                .earnedPoints(495) // 적립될 포인트 495원
+                .build();
+
+        // Mock 설정
         given(orderCommonService.validateUser(userDetails)).willReturn(testUser);
 
         // When & Then
