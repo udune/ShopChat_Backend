@@ -4,6 +4,7 @@ import com.cMall.feedShop.cart.domain.model.CartItem;
 import com.cMall.feedShop.cart.domain.repository.CartItemRepository;
 import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.order.application.dto.request.OrderCreateRequest;
+import com.cMall.feedShop.order.application.dto.request.OrderItemRequest;
 import com.cMall.feedShop.order.application.dto.request.OrderStatusUpdateRequest;
 import com.cMall.feedShop.order.application.dto.response.*;
 import com.cMall.feedShop.order.application.calculator.OrderCalculation;
@@ -325,17 +326,22 @@ public class OrderService {
                 .collect(Collectors.toMap(ProductOption::getOptionId, Function.identity()));
 
         // 재고 검증
-        validateCartStock(cartItems, optionMap);
+        validateCartOrderStock(cartItems, optionMap);
 
         return optionMap;
     }
 
     // 재고를 확인한다.
-    private void validateCartStock(List<CartItem> cartItems, Map<Long, ProductOption> optionMap) {
-        for (CartItem cartItem : cartItems) {
-            ProductOption option = optionMap.get(cartItem.getOptionId());
-            if (!option.isInStock() || option.getStock() < cartItem.getQuantity()) {
-                throw new ProductException(ErrorCode.OUT_OF_STOCK);
+    private void validateCartOrderStock(List<CartItem> cartItems, Map<Long, ProductOption> optionMap) {
+        // 각 주문 아이템마다 재고를 확인한다.
+        for (CartItem item : cartItems) {
+            // 주문 아이템에 해당하는 상품 옵션을 가져온다.
+            ProductOption option = optionMap.get(item.getOptionId());
+            // 재고가 없거나 주문 수량보다 적은 경우
+            if (!option.isInStock() || option.getStock() < item.getQuantity()) {
+                throw new ProductException(ErrorCode.OUT_OF_STOCK,
+                        String.format("상품 '%s'의 재고가 부족합니다. 현재 재고: %d, 요청 수량: %d",
+                                option.getProduct().getName(), option.getStock(), item.getQuantity()));
             }
         }
     }
