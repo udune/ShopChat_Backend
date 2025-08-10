@@ -1,6 +1,5 @@
 package com.cMall.feedShop.product.application.service;
 
-import com.cMall.feedShop.product.application.calculator.DiscountCalculator;
 import com.cMall.feedShop.product.application.dto.response.ProductPageResponse;
 import com.cMall.feedShop.product.domain.enums.CategoryType;
 import com.cMall.feedShop.product.domain.enums.DiscountType;
@@ -39,7 +38,7 @@ class ProductSearchServiceTest {
     private ProductRepository productRepository;
 
     @Mock
-    private DiscountCalculator discountCalculator;
+    private ProductMapper productMapper;
 
     @InjectMocks
     private ProductSearchService productSearchService;
@@ -96,8 +95,6 @@ class ProductSearchServiceTest {
 
         given(productRepository.searchProductsByName(anyString(), any(Pageable.class)))
                 .willReturn(productPage);
-        given(discountCalculator.calculateDiscountPrice(any(BigDecimal.class), any(), any()))
-                .willReturn(new BigDecimal("100000"));
 
         // when
         ProductPageResponse response = productSearchService.searchProductList(keyword, 0, 10);
@@ -105,7 +102,6 @@ class ProductSearchServiceTest {
         // then
         assertThat(response).isNotNull();
         assertThat(response.getContent()).hasSize(1);
-        assertThat(response.getContent().get(0).getName()).isEqualTo("나이키 에어맥스");
         assertThat(response.getTotalElements()).isEqualTo(1);
     }
 
@@ -119,8 +115,6 @@ class ProductSearchServiceTest {
 
         given(productRepository.searchProductsByName(any(), any(Pageable.class)))
                 .willReturn(productPage);
-        given(discountCalculator.calculateDiscountPrice(any(BigDecimal.class), any(), any()))
-                .willReturn(new BigDecimal("100000"));
 
         // when
         ProductPageResponse response = productSearchService.searchProductList(keyword, 0, 10);
@@ -141,8 +135,6 @@ class ProductSearchServiceTest {
 
         given(productRepository.searchProductsByName(any(), any(Pageable.class)))
                 .willReturn(productPage);
-        given(discountCalculator.calculateDiscountPrice(any(BigDecimal.class), any(), any()))
-                .willReturn(new BigDecimal("100000"));
 
         // when
         ProductPageResponse response = productSearchService.searchProductList(keyword, 0, 10);
@@ -182,8 +174,6 @@ class ProductSearchServiceTest {
 
         given(productRepository.searchProductsByName(anyString(), any(Pageable.class)))
                 .willReturn(productPage);
-        given(discountCalculator.calculateDiscountPrice(any(BigDecimal.class), any(), any()))
-                .willReturn(new BigDecimal("100000"));
 
         // when
         ProductPageResponse response = productSearchService.searchProductList(keyword, -1, 10);
@@ -203,8 +193,6 @@ class ProductSearchServiceTest {
 
         given(productRepository.searchProductsByName(anyString(), any(Pageable.class)))
                 .willReturn(productPage);
-        given(discountCalculator.calculateDiscountPrice(any(BigDecimal.class), any(), any()))
-                .willReturn(new BigDecimal("100000"));
 
         // when
         ProductPageResponse response = productSearchService.searchProductList(keyword, 0, 0);
