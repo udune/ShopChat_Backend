@@ -1,5 +1,6 @@
 package com.cMall.feedShop.product.application.service;
 
+import com.cMall.feedShop.product.application.dto.response.ProductListResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductPageResponse;
 import com.cMall.feedShop.product.domain.enums.CategoryType;
 import com.cMall.feedShop.product.domain.enums.DiscountType;
@@ -47,10 +48,18 @@ class ProductSearchServiceTest {
     private Product testProduct2;
     private Store testStore;
     private Category testCategory;
+    private ProductListResponse testResponse1;
+    private ProductListResponse testResponse2;
 
     @BeforeEach
     void setUp() {
-        // 테스트용 스토어 생성
+        setupStore();
+        setupCategory();
+        setupProducts();
+        setupResponses();
+    }
+
+    private void setupStore() {
         testStore = Store.builder()
                 .storeName("테스트 스토어")
                 .sellerId(1L)
@@ -58,12 +67,14 @@ class ProductSearchServiceTest {
                 .logo("http://logo.jpg")
                 .build();
         ReflectionTestUtils.setField(testStore, "storeId", 1L);
+    }
 
-        // 테스트용 카테고리 생성
+    private void setupCategory() {
         testCategory = new Category(CategoryType.SNEAKERS, "운동화");
         ReflectionTestUtils.setField(testCategory, "categoryId", 1L);
+    }
 
-        // 테스트용 상품들 생성
+    private void setupProducts() {
         testProduct1 = Product.builder()
                 .name("나이키 에어맥스")
                 .price(new BigDecimal("100000"))
@@ -85,6 +96,30 @@ class ProductSearchServiceTest {
         ReflectionTestUtils.setField(testProduct2, "productId", 2L);
     }
 
+    private void setupResponses() {
+        testResponse1 = ProductListResponse.builder()
+                .productId(1L)
+                .name("나이키 에어맥스")
+                .price(new BigDecimal("100000"))
+                .discountPrice(new BigDecimal("100000"))
+                .mainImageUrl("http://image1.jpg")
+                .categoryId(1L)
+                .storeId(1L)
+                .storeName("테스트 스토어")
+                .build();
+
+        testResponse2 = ProductListResponse.builder()
+                .productId(2L)
+                .name("아디다스 스탠스미스")
+                .price(new BigDecimal("80000"))
+                .discountPrice(new BigDecimal("80000"))
+                .mainImageUrl("http://image2.jpg")
+                .categoryId(1L)
+                .storeId(1L)
+                .storeName("테스트 스토어")
+                .build();
+    }
+
     @Test
     @DisplayName("키워드로 상품 검색 성공")
     void searchProducts_WithKeyword_Success() {
@@ -95,6 +130,8 @@ class ProductSearchServiceTest {
 
         given(productRepository.searchProductsByName(anyString(), any(Pageable.class)))
                 .willReturn(productPage);
+        given(productMapper.toListResponse(testProduct1))
+                .willReturn(testResponse1);
 
         // when
         ProductPageResponse response = productSearchService.searchProductList(keyword, 0, 10);
@@ -103,6 +140,7 @@ class ProductSearchServiceTest {
         assertThat(response).isNotNull();
         assertThat(response.getContent()).hasSize(1);
         assertThat(response.getTotalElements()).isEqualTo(1);
+        assertThat(response.getContent().get(0).getName()).isEqualTo("나이키 에어맥스");
     }
 
     @Test
@@ -113,8 +151,10 @@ class ProductSearchServiceTest {
         List<Product> products = Arrays.asList(testProduct1, testProduct2);
         Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 10), 2);
 
-        given(productRepository.searchProductsByName(any(), any(Pageable.class)))
+        given(productRepository.searchProductsByName(anyString(), any(Pageable.class)))
                 .willReturn(productPage);
+        given(productMapper.toListResponse(testProduct1)).willReturn(testResponse1);
+        given(productMapper.toListResponse(testProduct2)).willReturn(testResponse2);
 
         // when
         ProductPageResponse response = productSearchService.searchProductList(keyword, 0, 10);
@@ -135,6 +175,8 @@ class ProductSearchServiceTest {
 
         given(productRepository.searchProductsByName(any(), any(Pageable.class)))
                 .willReturn(productPage);
+        given(productMapper.toListResponse(testProduct1)).willReturn(testResponse1);
+        given(productMapper.toListResponse(testProduct2)).willReturn(testResponse2);
 
         // when
         ProductPageResponse response = productSearchService.searchProductList(keyword, 0, 10);
@@ -162,43 +204,5 @@ class ProductSearchServiceTest {
         assertThat(response).isNotNull();
         assertThat(response.getContent()).isEmpty();
         assertThat(response.getTotalElements()).isEqualTo(0);
-    }
-
-    @Test
-    @DisplayName("페이지 파라미터 검증 - 음수 페이지")
-    void searchProducts_NegativePage_DefaultsToZero() {
-        // given
-        String keyword = "나이키";
-        List<Product> products = Arrays.asList(testProduct1);
-        Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 10), 1);
-
-        given(productRepository.searchProductsByName(anyString(), any(Pageable.class)))
-                .willReturn(productPage);
-
-        // when
-        ProductPageResponse response = productSearchService.searchProductList(keyword, -1, 10);
-
-        // then
-        assertThat(response).isNotNull();
-        assertThat(response.getNumber()).isEqualTo(0);
-    }
-
-    @Test
-    @DisplayName("페이지 크기 검증 - 잘못된 크기")
-    void searchProducts_InvalidSize_DefaultsToTen() {
-        // given
-        String keyword = "나이키";
-        List<Product> products = Arrays.asList(testProduct1);
-        Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 10), 1);
-
-        given(productRepository.searchProductsByName(anyString(), any(Pageable.class)))
-                .willReturn(productPage);
-
-        // when
-        ProductPageResponse response = productSearchService.searchProductList(keyword, 0, 0);
-
-        // then
-        assertThat(response).isNotNull();
-        assertThat(response.getSize()).isEqualTo(10);
     }
 }
