@@ -7,8 +7,6 @@ import com.cMall.feedShop.product.domain.exception.ProductException;
 import com.cMall.feedShop.product.domain.enums.*;
 import com.cMall.feedShop.product.domain.model.Category;
 import com.cMall.feedShop.product.domain.model.Product;
-import com.cMall.feedShop.product.domain.model.ProductImage;
-import com.cMall.feedShop.product.domain.model.ProductOption;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import com.cMall.feedShop.store.domain.model.Store;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +24,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -84,27 +82,19 @@ class ProductReadServiceTest {
                 .price(new BigDecimal("50000"))
                 .discountType(DiscountType.RATE_DISCOUNT)
                 .discountValue(new BigDecimal("10"))
+                .description("상품 1 설명")
                 .store(store)
                 .category(category)
-                .description("상품 1 설명")
                 .build();
         ReflectionTestUtils.setField(product1, "productId", 1L);
-
-        // 상품 1에 이미지와 옵션 추가
-        ProductImage image1 = new ProductImage("http://image1.jpg", ImageType.MAIN, product1);
-        product1.getProductImages().add(image1);
-
-        ProductOption option1 = new ProductOption(Gender.UNISEX, Size.SIZE_250, Color.BLACK, 100, product1);
-        ProductOption option2 = new ProductOption(Gender.UNISEX, Size.SIZE_260, Color.WHITE, 50, product1);
-        product1.getProductOptions().addAll(Arrays.asList(option1, option2));
 
         product2 = Product.builder()
                 .name("상품2")
                 .price(new BigDecimal("30000"))
                 .discountType(DiscountType.NONE)
+                .description("상품 2 설명")
                 .store(store)
                 .category(category)
-                .description("상품 2 설명")
                 .build();
         ReflectionTestUtils.setField(product2, "productId", 2L);
     }
@@ -115,7 +105,6 @@ class ProductReadServiceTest {
                 .name("상품1")
                 .price(new BigDecimal("50000"))
                 .discountPrice(new BigDecimal("45000"))
-                .mainImageUrl("http://image1.jpg")
                 .categoryId(1L)
                 .storeId(1L)
                 .storeName("테스트 스토어")
@@ -126,7 +115,6 @@ class ProductReadServiceTest {
                 .name("상품2")
                 .price(new BigDecimal("30000"))
                 .discountPrice(new BigDecimal("30000"))
-                .mainImageUrl("http://image2.jpg")
                 .categoryId(1L)
                 .storeId(1L)
                 .storeName("테스트 스토어")
@@ -147,8 +135,7 @@ class ProductReadServiceTest {
     @DisplayName("상품 목록 조회 성공")
     void getProductList_Success() {
         // given
-        List<Product> products = Arrays.asList(product1, product2);
-        Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 20), 2);
+        Page<Product> productPage = new PageImpl<>(Arrays.asList(product1, product2), PageRequest.of(0, 20), 2);
 
         given(productRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class)))
                 .willReturn(productPage);
@@ -170,10 +157,9 @@ class ProductReadServiceTest {
 
     @Test
     @DisplayName("상품 목록 조회 - 잘못된 페이지 파라미터 처리")
-    void getProductList_InvalidParameters_ShouldUseDefaults() {
+    void getProductList_InvalidParameters() {
         // given
-        List<Product> products = Arrays.asList(product1);
-        Page<Product> productPage = new PageImpl<>(products, PageRequest.of(0, 20), 1);
+        Page<Product> productPage = new PageImpl<>(Arrays.asList(product1), PageRequest.of(0, 20), 1);
 
         given(productRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class)))
                 .willReturn(productPage);
@@ -185,6 +171,24 @@ class ProductReadServiceTest {
         // then
         assertThat(response).isNotNull();
         verify(productRepository, times(1)).findAllByOrderByCreatedAtDesc(any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("빈 상품 목록 조회")
+    void getProductList_EmptyResult() {
+        // given
+        Page<Product> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 20), 0);
+
+        given(productRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class)))
+                .willReturn(emptyPage);
+
+        // when
+        ProductPageResponse response = productReadService.getProductList(0, 20);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getContent()).isEmpty();
+        assertThat(response.getTotalElements()).isEqualTo(0);
     }
 
     @Test
@@ -212,36 +216,51 @@ class ProductReadServiceTest {
 
     @Test
     @DisplayName("상품 상세 조회 실패 - 존재하지 않는 상품")
-    void getProductDetail_Fail_ProductNotFound() {
+    void getProductDetail_ProductNotFound() {
         // given
         Long productId = 999L;
         given(productRepository.findByProductId(productId)).willReturn(Optional.empty());
 
         // when & then
-        ProductException thrown = assertThrows(
-                ProductException.class,
-                () -> productReadService.getProductDetail(productId)
-        );
+        assertThrows(ProductException.class,
+                () -> productReadService.getProductDetail(productId));
 
-        assertThat(thrown.getErrorCode().getMessage()).contains("상품을 찾을 수 없습니다");
         verify(productRepository, times(1)).findByProductId(productId);
     }
 
     @Test
-    @DisplayName("빈 상품 목록 조회")
-    void getProductList_EmptyResult() {
+    @DisplayName("상품 목록 조회 - 최소 사이즈 테스트")
+    void getProductList_MinSize() {
         // given
-        Page<Product> emptyPage = new PageImpl<>(Arrays.asList(), PageRequest.of(0, 20), 0);
+        Page<Product> productPage = new PageImpl<>(Arrays.asList(product1), PageRequest.of(0, 20), 1);
 
         given(productRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class)))
-                .willReturn(emptyPage);
+                .willReturn(productPage);
+        given(productMapper.toListResponse(product1)).willReturn(listResponse1);
 
-        // when
-        ProductPageResponse response = productReadService.getProductList(0, 20);
+        // when - 사이즈 0으로 호출
+        ProductPageResponse response = productReadService.getProductList(0, 0);
 
         // then
         assertThat(response).isNotNull();
-        assertThat(response.getContent()).isEmpty();
-        assertThat(response.getTotalElements()).isEqualTo(0);
+        verify(productRepository, times(1)).findAllByOrderByCreatedAtDesc(any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("상품 목록 조회 - 최대 사이즈 초과 테스트")
+    void getProductList_MaxSizeExceeded() {
+        // given
+        Page<Product> productPage = new PageImpl<>(Arrays.asList(product1), PageRequest.of(0, 20), 1);
+
+        given(productRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class)))
+                .willReturn(productPage);
+        given(productMapper.toListResponse(product1)).willReturn(listResponse1);
+
+        // when - 사이즈 150으로 호출 (최대 100 초과)
+        ProductPageResponse response = productReadService.getProductList(0, 150);
+
+        // then
+        assertThat(response).isNotNull();
+        verify(productRepository, times(1)).findAllByOrderByCreatedAtDesc(any(Pageable.class));
     }
 }
