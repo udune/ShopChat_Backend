@@ -14,4 +14,6 @@ public interface ProductQueryRepository {
             Long storeId,
             Pageable pageable
     );
+
+    Page<Product> searchProductsByName(String keyword, Pageable pageable);
 }
