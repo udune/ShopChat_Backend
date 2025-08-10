@@ -21,9 +21,17 @@ public enum ProductSortType {
     }
 
     public static ProductSortType fromCode(String code) {
-        if (code == null || code.isEmpty()) {
-            return LATEST; // 기본값으로 LATEST를 반환
+        if (code == null || code.trim().isEmpty()) {
+            return LATEST;
         }
-        return "popular".equalsIgnoreCase(code) ? POPULAR : LATEST;
+
+        String trimmedCode = code.trim();
+        for (ProductSortType type : values()) {
+            if (type.code.equalsIgnoreCase(trimmedCode)) {
+                return type;
+            }
+        }
+
+        return LATEST; // 일치하는 타입이 없을 경우 기본값 반환
     }
 }
