@@ -4,7 +4,6 @@ import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.common.service.GcpStorageService;
 import com.cMall.feedShop.order.domain.repository.OrderItemRepository;
 import com.cMall.feedShop.product.application.dto.request.ProductCreateRequest;
-import com.cMall.feedShop.product.application.dto.request.ProductImageRequest;
 import com.cMall.feedShop.product.application.dto.request.ProductOptionRequest;
 import com.cMall.feedShop.product.application.dto.request.ProductUpdateRequest;
 import com.cMall.feedShop.product.application.dto.response.ProductCreateResponse;
@@ -15,7 +14,6 @@ import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.model.ProductImage;
 import com.cMall.feedShop.product.domain.model.ProductOption;
 import com.cMall.feedShop.product.domain.repository.CategoryRepository;
-import com.cMall.feedShop.product.domain.repository.ProductImageRepository;
 import com.cMall.feedShop.product.domain.repository.ProductOptionRepository;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import com.cMall.feedShop.store.domain.model.Store;
@@ -24,8 +22,10 @@ import com.cMall.feedShop.user.domain.enums.UserRole;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -40,7 +40,6 @@ public class ProductService {
     private final StoreRepository storeRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
-    private final ProductImageRepository productImageRepository;
     private final ProductOptionRepository productOptionRepository;
     private final OrderItemRepository orderItemRepository;
     private final GcpStorageService gcpStorageService;
@@ -130,12 +129,12 @@ public class ProductService {
         // 7. 이미지 업데이트
 
         // 메인 이미지
-        if (mainImages != null && !mainImages.isEmpty()) {
+        if (mainImages != null) {
             updateProductImages(product, mainImages, ImageType.MAIN);
         }
 
         // 상세 이미지
-        if (detailImages != null && !detailImages.isEmpty()) {
+        if (detailImages != null) {
             updateProductImages(product, detailImages, ImageType.DETAIL);
         }
 
@@ -304,24 +303,29 @@ public class ProductService {
         List<ProductImage> existingImages = product.getProductImages().stream()
                 .filter(image -> image.getType() == type)
                 .toList();
-        if (!existingImages.isEmpty())
-        {
-            // GCP Storage 에서 이미지 파일 삭제
-            for (ProductImage image : existingImages) {
-                try {
-                    gcpStorageService.deleteFile(gcpStorageService.getFullFilePath(image.getUrl()));
-                } catch (Exception e) {
-                    throw new ProductException(ErrorCode.FILE_DELETE_ERROR, "이미지 삭제에 실패했습니다: " + e.getMessage());
-                }
-            }
 
-            // ProductImage 엔티티에서 삭제
+        if (!existingImages.isEmpty()) {
+            scheduleImageDeletion(existingImages); // 별도 메서드로 분리
             product.getProductImages().removeAll(existingImages);
-            productImageRepository.deleteAll(existingImages);
         }
 
         // 새로운 이미지 추가
         createProductImages(product, images, type);
+    }
+
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void scheduleImageDeletion(List<ProductImage> imagesToDelete) {
+
+        // 배치로 삭제할 파일 경로들 수집
+        List<String> filePaths = imagesToDelete.stream()
+                .map(image -> gcpStorageService.getFullFilePath(image.getUrl()))
+                .toList();
+
+        // 배치 삭제 시도 (실패해도 메인 트랜잭션에 영향 없음)
+        for (String filePath : filePaths) {
+            gcpStorageService.deleteFile(filePath);
+        }
     }
 
     private void updateProductOptions(Product product, List<ProductOptionRequest> requests) {
