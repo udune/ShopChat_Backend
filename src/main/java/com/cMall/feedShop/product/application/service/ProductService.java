@@ -252,7 +252,7 @@ public class ProductService {
     }
 
     // 옵션 추가
-    private void addOptions(Product product, List<ProductOptionRequest> requests) {
+    public void addOptions(Product product, List<ProductOptionRequest> requests) {
         if (requests == null || requests.isEmpty()) {
             return;
         }
