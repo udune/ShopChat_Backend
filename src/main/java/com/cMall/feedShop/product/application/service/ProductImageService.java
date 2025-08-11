@@ -37,23 +37,8 @@ public class ProductImageService {
         // 이미지 파일 검증
         imageValidator.validateAll(files, getProductImages(product, type).size());
 
-        try {
-            // GCP Storage에 업로드
-            List<GcpStorageService.UploadResult> uploadResults =
-                    gcpStorageService.uploadFilesWithDetails(files, "products");
-
-            // ProductImage 엔티티 생성
-            return uploadResults.stream()
-                    .map(result -> new ProductImage(
-                            gcpStorageService.extractObjectName(result.getFilePath()),
-                            type,
-                            product
-                    ))
-                    .toList();
-
-        } catch (Exception e) {
-            throw new ProductException(ErrorCode.FILE_UPLOAD_ERROR, "이미지 업로드에 실패했습니다.");
-        }
+        // 새 이미지 생성 및 GCP 에 업로드
+        return createProductImages(product, files, type);
     }
 
     /**
@@ -70,16 +55,8 @@ public class ProductImageService {
         imageValidator.validateFiles(files);
 
         try {
-            List<GcpStorageService.UploadResult> uploadResults =
-                    gcpStorageService.uploadFilesWithDetails(files, "products");
-
-            List<ProductImage> newImages = uploadResults.stream()
-                    .map(result -> new ProductImage(
-                            gcpStorageService.extractObjectName(result.getFilePath()),
-                            type,
-                            product
-                    ))
-                    .toList();
+            // 새 이미지 생성 및 GCP 에 업로드
+            List<ProductImage> newImages = createProductImages(product, files, type);
 
             // DB 업데이트
             product.getProductImages().removeAll(existingImages);
@@ -90,6 +67,25 @@ public class ProductImageService {
 
         } catch (Exception e) {
             throw new ProductException(ErrorCode.FILE_UPLOAD_ERROR, "이미지 교체에 실패했습니다");
+        }
+    }
+
+    // 새 이미지 생성 및 GCP 에 업로드
+    private List<ProductImage> createProductImages(Product product, List<MultipartFile> files, ImageType type) {
+        try {
+            List<GcpStorageService.UploadResult> uploadResults =
+                    gcpStorageService.uploadFilesWithDetails(files, "products");
+
+            return uploadResults.stream()
+                    .map(result -> new ProductImage(
+                            gcpStorageService.extractObjectName(result.getFilePath()),
+                            type,
+                            product
+                    ))
+                    .toList();
+
+        } catch (Exception e) {
+            throw new ProductException(ErrorCode.FILE_UPLOAD_ERROR, "이미지 업로드에 실패했습니다");
         }
     }
 
