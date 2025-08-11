@@ -1,7 +1,6 @@
 package com.cMall.feedShop.product.application.service;
 
 import com.cMall.feedShop.common.exception.ErrorCode;
-import com.cMall.feedShop.common.service.GcpStorageService;
 import com.cMall.feedShop.order.domain.repository.OrderItemRepository;
 import com.cMall.feedShop.product.application.dto.request.ProductCreateRequest;
 import com.cMall.feedShop.product.application.dto.request.ProductOptionRequest;
@@ -22,19 +21,16 @@ import com.cMall.feedShop.user.domain.enums.UserRole;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class ProductService {
     private final ProductRepository productRepository;
     private final StoreRepository storeRepository;
@@ -42,9 +38,10 @@ public class ProductService {
     private final UserRepository userRepository;
     private final ProductOptionRepository productOptionRepository;
     private final OrderItemRepository orderItemRepository;
-    private final GcpStorageService gcpStorageService;
+    private final ProductImageService productImageService;
 
     // 상품 등록
+    @Transactional
     public ProductCreateResponse createProduct(ProductCreateRequest request, List<MultipartFile> mainImages, List<MultipartFile> detailImages, UserDetails userDetails) {
         // 1. 현재 사용자 정보 가져오기 및 권한 검증
         User currentUser = getCurrentUser(userDetails);
@@ -74,20 +71,12 @@ public class ProductService {
                 .category(category)
                 .build();
 
-        // 7. 이미지 생성
+        // 7. 이미지 추가
+        addImages(product, mainImages, ImageType.MAIN);
+        addImages(product, detailImages, ImageType.DETAIL);
 
-        // 메인 이미지
-        if (mainImages != null && !mainImages.isEmpty()) {
-            createProductImages(product, mainImages, ImageType.MAIN);
-        }
-
-        // 상세 이미지
-        if (detailImages != null && !detailImages.isEmpty()) {
-            createProductImages(product, detailImages, ImageType.DETAIL);
-        }
-
-        // 8. 상품에 옵션 추가 (메모리상에서만)
-        createProductOptions(product, request.getOptions());
+        // 8. 옵션 추가
+        addOptions(product, request.getOptions());
 
         // 9. DB 저장
         Product savedProduct = productRepository.save(product);
@@ -97,6 +86,7 @@ public class ProductService {
     }
 
     // 상품 수정
+    @Transactional
     public void updateProduct(Long productId, ProductUpdateRequest request, List<MultipartFile> mainImages, List<MultipartFile> detailImages, UserDetails userDetails) {
         // 1. 현재 사용자 정보 가져오기 및 권한 검증
         User currentUser = getCurrentUser(userDetails);
@@ -116,31 +106,26 @@ public class ProductService {
         // 5. 상품명 중복 확인
         // 상품명을 변경했을 경우에만 중복 확인
         // (수정 시에는 DB에 저장된 상품과 비교하는데 자기 상품과는 비교하지 않아야 한다.)
-        String currentName = product.getName();
-        String newName = request.getName();
-        boolean isNameChanged = newName != null && !newName.equals(currentName);
-        if (isNameChanged) {
-            validateProductNameDuplicationForUpdate(product.getStore(), newName, productId);
-        }
+        validateNameChange(product, request.getName(), productId);
 
         // 6. 상품 필드 업데이트
-        updateProductFields(product, request, category);
+        updateBasicInfo(product, request, category);
 
         // 7. 이미지 업데이트
 
         // 메인 이미지
         if (mainImages != null) {
-            updateProductImages(product, mainImages, ImageType.MAIN);
+            productImageService.replaceImages(product, mainImages, ImageType.MAIN);
         }
 
         // 상세 이미지
         if (detailImages != null) {
-            updateProductImages(product, detailImages, ImageType.DETAIL);
+            productImageService.replaceImages(product, detailImages, ImageType.DETAIL);
         }
 
         // 8. 옵션 업데이트
         if (request.getOptions() != null) {
-            updateProductOptions(product, request.getOptions());
+            replaceOptions(product, request.getOptions());
         }
 
         // 9. DB 저장
@@ -148,6 +133,7 @@ public class ProductService {
     }
 
     // 상품 삭제
+    @Transactional
     public void deleteProduct(Long productId, UserDetails userDetails) {
         // 1. 현재 사용자 정보 가져오기 및 권한 검증
         User currentUser = getCurrentUser(userDetails);
@@ -207,6 +193,15 @@ public class ProductService {
         }
     }
 
+    // 상품명 중복 확인 (상품 수정 시)
+    private void validateNameChange(Product product, String newName, Long productId) {
+        String currentName = product.getName();
+        if (newName != null && !newName.equals(currentName)) {
+            // 상품명을 변경했을 경우에만 중복 확인
+            validateProductNameDuplicationForUpdate(product.getStore(), newName, productId);
+        }
+    }
+
     // 상품명 중복 확인 (상품 등록 시)
     private void validateProductNameDuplication(Store store, String productName) {
         if (productRepository.existsByStoreAndName(store, productName)) {
@@ -234,60 +229,8 @@ public class ProductService {
         }
     }
 
-    // 상품 이미지 생성
-    public void createProductImages(Product product, List<MultipartFile> images, ImageType type) {
-        if (images == null || images.isEmpty()) {
-            return; // 이미지가 없으면 아무 작업도 하지 않음
-        }
-
-        try {
-            List<GcpStorageService.UploadResult> uploadResults = gcpStorageService.uploadFilesWithDetails(images, "products");
-
-            if (!uploadResults.isEmpty()) {
-                List<ProductImage> productImages = new ArrayList<>();
-
-                for (GcpStorageService.UploadResult uploadResult : uploadResults) {
-                    // 업로드된 이미지 URL 에서 상대 경로 추출
-                    String imageUrl = gcpStorageService.extractObjectName(uploadResult.getFilePath());
-
-                    // ProductImage 엔티티 생성
-                    ProductImage productImage = new ProductImage(
-                            imageUrl,
-                            type,
-                            product
-                    );
-
-                    // productImages 리스트에 추가
-                    productImages.add(productImage);
-                }
-
-                // Product 엔티티에 이미지 추가
-                product.getProductImages().addAll(productImages);
-            }
-        } catch (Exception e) {
-            throw new ProductException(ErrorCode.FILE_UPLOAD_ERROR, "이미지 업로드에 실패했습니다: " + e.getMessage());
-        }
-    }
-
-    // 상품 옵션 생성
-    public void createProductOptions(Product product, List<ProductOptionRequest> requests)
-    {
-        List<ProductOption> productOptions = requests.stream()
-                .map(request -> new ProductOption(
-                        request.getGender(),
-                        request.getSize(),
-                        request.getColor(),
-                        request.getStock(),
-                        product
-                ))
-                .toList();
-
-        // Product 엔티티에 옵션 추가
-        product.getProductOptions().addAll(productOptions);
-    }
-
     // 상품 필드 업데이트
-    private void updateProductFields(Product product, ProductUpdateRequest request, Category category) {
+    private void updateBasicInfo(Product product, ProductUpdateRequest request, Category category) {
         // 기본 필드 업데이트
         product.updateInfo(request.getName(), request.getPrice(), request.getDescription());
 
@@ -295,50 +238,26 @@ public class ProductService {
         product.updateDiscount(request.getDiscountType(), request.getDiscountValue());
 
         // 카테고리 업데이트
-        product.updateCategory(category);
-    }
-
-    private void updateProductImages(Product product, List<MultipartFile> images, ImageType type) {
-        // 기존 이미지 삭제
-        List<ProductImage> existingImages = product.getProductImages().stream()
-                .filter(image -> image.getType() == type)
-                .toList();
-
-        if (!existingImages.isEmpty()) {
-            scheduleImageDeletion(existingImages); // 별도 메서드로 분리
-            product.getProductImages().removeAll(existingImages);
-        }
-
-        // 새로운 이미지 추가
-        createProductImages(product, images, type);
-    }
-
-    @Async
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void scheduleImageDeletion(List<ProductImage> imagesToDelete) {
-
-        // 배치로 삭제할 파일 경로들 수집
-        List<String> filePaths = imagesToDelete.stream()
-                .map(image -> gcpStorageService.getFullFilePath(image.getUrl()))
-                .toList();
-
-        // 배치 삭제 시도 (실패해도 메인 트랜잭션에 영향 없음)
-        for (String filePath : filePaths) {
-            gcpStorageService.deleteFile(filePath);
+        if (category != null) {
+            product.updateCategory(category);
         }
     }
 
-    private void updateProductOptions(Product product, List<ProductOptionRequest> requests) {
-        // 기존 옵션 삭제
-        List<ProductOption> existingOptions = product.getProductOptions();
-        if (!existingOptions.isEmpty())
-        {
-            productOptionRepository.deleteAll(existingOptions);
-            existingOptions.clear();
+    // 이미지 추가
+    private void addImages(Product product, List<MultipartFile> files, ImageType type) {
+        if (files != null && !files.isEmpty()) {
+            List<ProductImage> images = productImageService.uploadImages(product, files, type);
+            product.getProductImages().addAll(images);
+        }
+    }
+
+    // 옵션 추가
+    private void addOptions(Product product, List<ProductOptionRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            return;
         }
 
-        // 새로운 옵션 추가
-        List<ProductOption> newOptions = requests.stream()
+        List<ProductOption> options = requests.stream()
                 .map(request -> new ProductOption(
                         request.getGender(),
                         request.getSize(),
@@ -347,6 +266,20 @@ public class ProductService {
                         product
                 ))
                 .toList();
-        product.getProductOptions().addAll(newOptions);
+
+        product.getProductOptions().addAll(options);
+    }
+
+    // 옵션 교체
+    private void replaceOptions(Product product, List<ProductOptionRequest> requests) {
+        List<ProductOption> existingOptions = product.getProductOptions();
+        if (!existingOptions.isEmpty()) {
+            // 기존 옵션 삭제
+            productOptionRepository.deleteAll(existingOptions);
+            product.getProductOptions().clear();
+        }
+
+        // 새 옵션 추가
+        addOptions(product, requests);
     }
 }
