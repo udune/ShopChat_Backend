@@ -1,8 +1,8 @@
 package com.cMall.feedShop.order.application.service;
 
 import com.cMall.feedShop.common.exception.ErrorCode;
-import com.cMall.feedShop.order.application.adapter.OrderItemAdapter;
-import com.cMall.feedShop.order.application.adapter.OrderRequestAdapter;
+import com.cMall.feedShop.order.application.dto.OrderItemData;
+import com.cMall.feedShop.order.application.dto.OrderRequestData;
 import com.cMall.feedShop.order.application.calculator.OrderCalculation;
 import com.cMall.feedShop.order.domain.enums.OrderStatus;
 import com.cMall.feedShop.order.domain.exception.OrderException;
@@ -120,10 +120,10 @@ public class OrderCommonService {
      * @param adapters 주문 아이템 어댑터 리스트
      * @return 유효한 상품 옵션 ID와 ProductOption 객체의 매핑
      */
-    public Map<Long, ProductOption> getValidProductOptions(List<OrderItemAdapter> adapters) {
+    public Map<Long, ProductOption> getValidProductOptions(List<OrderItemData> adapters) {
         // 1. 모든 어댑터에서 상품 옵션 ID를 가져온다.
         Set<Long> optionIds = adapters.stream()
-                .map(OrderItemAdapter::getOptionId)
+                .map(OrderItemData::getOptionId)
                 .collect(Collectors.toSet());
 
         // 2. DB(ProductOption) 에서 해당 옵션 ID 들을 조회한다.
@@ -152,9 +152,9 @@ public class OrderCommonService {
      * @param adapters 주문 아이템 어댑터 리스트
      * @return 유효한 상품 이미지 ID와 ProductImage 객체의 매핑
      */
-    public Map<Long, ProductImage> getProductImages(List<OrderItemAdapter> adapters) {
+    public Map<Long, ProductImage> getProductImages(List<OrderItemData> adapters) {
         Set<Long> imageIds = adapters.stream()
-                .map(OrderItemAdapter::getImageId)
+                .map(OrderItemData::getImageId)
                 .collect(Collectors.toSet());
 
         return productImageRepository.findAllById(imageIds).stream()
@@ -169,9 +169,9 @@ public class OrderCommonService {
      * @param adapters 주문 아이템 어댑터 리스트
      * @param optionMap 유효한 상품 옵션 ID와 ProductOption 객체의 매핑
      */
-    private void validateStock(List<OrderItemAdapter> adapters, Map<Long, ProductOption> optionMap) {
+    private void validateStock(List<OrderItemData> adapters, Map<Long, ProductOption> optionMap) {
         // 각 주문 아이템마다 재고를 확인한다.
-        for (OrderItemAdapter adapter : adapters) {
+        for (OrderItemData adapter : adapters) {
             // 주문 아이템에 해당하는 상품 옵션을 가져온다.
             ProductOption option = optionMap.get(adapter.getOptionId());
             // 재고가 없거나 주문 수량보다 적은 경우
@@ -192,7 +192,7 @@ public class OrderCommonService {
      * @param usedPoints 사용자가 요청한 포인트
      * @return OrderCalculation 객체
      */
-    public OrderCalculation calculateOrderAmount(List<OrderItemAdapter> adapters, Map<Long, ProductOption> optionMap, Integer usedPoints) {
+    public OrderCalculation calculateOrderAmount(List<OrderItemData> adapters, Map<Long, ProductOption> optionMap, Integer usedPoints) {
         // 총 상품 금액 계산
         BigDecimal totalAmount = calculateTotalAmount(adapters, optionMap);
 
@@ -215,7 +215,7 @@ public class OrderCommonService {
     }
 
     // 총 금액을 계산한다.
-    private BigDecimal calculateTotalAmount(List<OrderItemAdapter> adapters, Map<Long, ProductOption> optionMap) {
+    private BigDecimal calculateTotalAmount(List<OrderItemData> adapters, Map<Long, ProductOption> optionMap) {
         return adapters.stream()
                 .map(adapter -> {
                     // 장바구니 아이템에서 옵션 ID로 상품을 조회한다.
@@ -284,8 +284,8 @@ public class OrderCommonService {
      * @param imageMap 유효한 상품 이미지 ID와 ProductImage 객체의 매핑
      * @return 저장된 Order 객체
      */
-    public Order createAndSaveOrder(User user, OrderRequestAdapter request, OrderCalculation calculation,
-                                    List<OrderItemAdapter> adapters, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
+    public Order createAndSaveOrder(User user, OrderRequestData request, OrderCalculation calculation,
+                                    List<OrderItemData> adapters, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
         // 주문 Entity 생성
         Order order = createOrderEntity(user, request, calculation);
 
@@ -305,7 +305,7 @@ public class OrderCommonService {
      * @param calculation 주문 금액 계산 결과
      * @return 생성된 Order 객체
      */
-    private Order createOrderEntity(User user, OrderRequestAdapter request, OrderCalculation calculation) {
+    private Order createOrderEntity(User user, OrderRequestData request, OrderCalculation calculation) {
         BigDecimal finalPrice = calculation.getFinalAmount().add(request.getDeliveryFee());
 
         return Order.builder()
@@ -339,8 +339,8 @@ public class OrderCommonService {
      * @param optionMap 유효한 상품 옵션 ID와 ProductOption 객체의 매핑
      * @param imageMap 유효한 상품 이미지 ID와 ProductImage 객체의 매핑
      */
-    private void createOrderItems(Order order, List<OrderItemAdapter> adapters, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
-        for (OrderItemAdapter adapter : adapters) {
+    private void createOrderItems(Order order, List<OrderItemData> adapters, Map<Long, ProductOption> optionMap, Map<Long, ProductImage> imageMap) {
+        for (OrderItemData adapter : adapters) {
             ProductOption option = optionMap.get(adapter.getOptionId());
             ProductImage image = imageMap.get(adapter.getImageId());
             Product product = option.getProduct();
@@ -376,7 +376,7 @@ public class OrderCommonService {
      * @param optionMap 유효한 상품 옵션 ID와 ProductOption 객체의 매핑
      * @param calculation 주문 금액 계산 결과
      */
-    public void processPostOrder(User user, List<OrderItemAdapter> adapters, Map<Long, ProductOption> optionMap, OrderCalculation calculation) {
+    public void processPostOrder(User user, List<OrderItemData> adapters, Map<Long, ProductOption> optionMap, OrderCalculation calculation) {
         // 재고 차감
         decreaseStock(adapters, optionMap);
 
@@ -411,7 +411,7 @@ public class OrderCommonService {
     }
 
     // 재고 차감
-    private void decreaseStock(List<OrderItemAdapter> adapters, Map<Long, ProductOption> optionMap) {
+    private void decreaseStock(List<OrderItemData> adapters, Map<Long, ProductOption> optionMap) {
         List<ProductOption> optionsToUpdate = adapters.stream()
                 .map(adapter -> {
                     ProductOption option = optionMap.get(adapter.getOptionId());

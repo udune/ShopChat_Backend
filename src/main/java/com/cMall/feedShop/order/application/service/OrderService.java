@@ -3,10 +3,9 @@ package com.cMall.feedShop.order.application.service;
 import com.cMall.feedShop.cart.domain.model.CartItem;
 import com.cMall.feedShop.cart.domain.repository.CartItemRepository;
 import com.cMall.feedShop.common.exception.ErrorCode;
-import com.cMall.feedShop.order.application.adapter.OrderItemAdapter;
-import com.cMall.feedShop.order.application.adapter.OrderRequestAdapter;
+import com.cMall.feedShop.order.application.dto.OrderItemData;
+import com.cMall.feedShop.order.application.dto.OrderRequestData;
 import com.cMall.feedShop.order.application.dto.request.OrderCreateRequest;
-import com.cMall.feedShop.order.application.dto.request.OrderItemRequest;
 import com.cMall.feedShop.order.application.dto.request.OrderStatusUpdateRequest;
 import com.cMall.feedShop.order.application.dto.response.*;
 import com.cMall.feedShop.order.application.calculator.OrderCalculation;
@@ -59,7 +58,7 @@ public class OrderService {
         validateCartItems(selectedCartItems);
 
         // 3. 어댑터로 변환해서 OrderCommonService 사용
-        List<OrderItemAdapter> adapters = OrderItemAdapter.fromCartItems(selectedCartItems);
+        List<OrderItemData> adapters = OrderItemData.fromCartItems(selectedCartItems);
         Map<Long, ProductOption> optionMap = orderCommonService.getValidProductOptions(adapters);
         Map<Long, ProductImage> imageMap = orderCommonService.getProductImages(adapters);
 
@@ -70,7 +69,7 @@ public class OrderService {
         orderCommonService.validatePointUsage(currentUser, calculation.getActualUsedPoints());
 
         // 6. 주문 및 주문 아이템 생성
-        Order order = orderCommonService.createAndSaveOrder(currentUser, OrderRequestAdapter.from(request), calculation, adapters, optionMap, imageMap);
+        Order order = orderCommonService.createAndSaveOrder(currentUser, OrderRequestData.from(request), calculation, adapters, optionMap, imageMap);
 
         // 7. 주문 후 처리
         orderCommonService.processPostOrder(currentUser, adapters, optionMap, calculation);
