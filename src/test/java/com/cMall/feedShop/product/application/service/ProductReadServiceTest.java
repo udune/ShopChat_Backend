@@ -256,7 +256,7 @@ class ProductReadServiceTest {
                 .willReturn(productPage);
         given(productMapper.toListResponse(product1)).willReturn(listResponse1);
 
-        // when - 사이즈 150으로 호출 (최대 100 초과)
+        // when - 사이즈 150으로 호출 (최대 50 초과)
         ProductPageResponse response = productReadService.getProductList(0, 150);
 
         // then

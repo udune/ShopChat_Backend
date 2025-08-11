@@ -6,8 +6,8 @@ import com.cMall.feedShop.product.application.utils.PagingUtils;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +30,11 @@ public class ProductSearchService {
     public ProductPageResponse searchProductList(String keyword, int page, int size) {
         // 페이지 정보 생성
         Pageable pageable = PagingUtils.createPageable(page, size);
+
+        // 키워드 trim
+        if (keyword != null) {
+            keyword = StringUtils.trimToEmpty(keyword);
+        }
 
         // 상품 검색 (키워드가 있으면 검색, 없으면 전체 목록)
         Page<Product> productPage = productRepository.searchProductsByName(keyword, pageable);

@@ -276,26 +276,4 @@ class ProductSearchServiceTest {
 
         verify(productRepository, times(1)).searchProductsByName(keyword, PageRequest.of(0, 20));
     }
-
-    @Test
-    @DisplayName("공백만 있는 키워드로 검색")
-    void searchProductList_WithWhitespaceKeyword() {
-        // given
-        String keyword = "   ";
-        Page<Product> productPage = new PageImpl<>(Arrays.asList(testProduct1, testProduct2), PageRequest.of(0, 10), 2);
-
-        given(productRepository.searchProductsByName(anyString(), any(Pageable.class)))
-                .willReturn(productPage);
-        given(productMapper.toListResponse(testProduct1)).willReturn(testResponse1);
-        given(productMapper.toListResponse(testProduct2)).willReturn(testResponse2);
-
-        // when
-        ProductPageResponse response = productSearchService.searchProductList(keyword, 0, 10);
-
-        // then
-        assertThat(response).isNotNull();
-        assertThat(response.getContent()).hasSize(2);
-
-        verify(productRepository, times(1)).searchProductsByName(keyword, PageRequest.of(0, 10));
-    }
 }

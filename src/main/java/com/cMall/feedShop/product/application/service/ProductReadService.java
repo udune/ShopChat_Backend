@@ -2,13 +2,13 @@ package com.cMall.feedShop.product.application.service;
 
 import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.product.application.dto.response.*;
+import com.cMall.feedShop.product.application.utils.PagingUtils;
 import com.cMall.feedShop.product.domain.exception.ProductException;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.Hibernate;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,16 +22,8 @@ public class ProductReadService {
 
     // 상품 목록 조회 (페이징)
     public ProductPageResponse getProductList(int page, int size) {
-        if (page < 0) {
-            page = 0;
-        }
-
-        // 기본값 20, 최대 100
-        if (size < 1 || size > 100) {
-            size = 20;
-        }
-
-        Pageable pageable = PageRequest.of(page, size);
+        // 페이지 정보 생성
+        Pageable pageable = PagingUtils.createPageable(page, size);
 
         // 삭제되지 않은 상품들을 Store, 이미지와 함께 조회. (모든 상품을 페이지별로)
         Page<Product> productPage = productRepository.findAllByOrderByCreatedAtDesc(pageable);
