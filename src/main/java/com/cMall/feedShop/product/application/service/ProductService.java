@@ -1,12 +1,14 @@
 package com.cMall.feedShop.product.application.service;
 
 import com.cMall.feedShop.common.exception.ErrorCode;
+import com.cMall.feedShop.common.service.GcpStorageService;
 import com.cMall.feedShop.order.domain.repository.OrderItemRepository;
 import com.cMall.feedShop.product.application.dto.request.ProductCreateRequest;
 import com.cMall.feedShop.product.application.dto.request.ProductImageRequest;
 import com.cMall.feedShop.product.application.dto.request.ProductOptionRequest;
 import com.cMall.feedShop.product.application.dto.request.ProductUpdateRequest;
 import com.cMall.feedShop.product.application.dto.response.ProductCreateResponse;
+import com.cMall.feedShop.product.domain.enums.ImageType;
 import com.cMall.feedShop.product.domain.exception.ProductException;
 import com.cMall.feedShop.product.domain.model.Category;
 import com.cMall.feedShop.product.domain.model.Product;
@@ -25,7 +27,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -39,9 +43,10 @@ public class ProductService {
     private final ProductImageRepository productImageRepository;
     private final ProductOptionRepository productOptionRepository;
     private final OrderItemRepository orderItemRepository;
+    private final GcpStorageService gcpStorageService;
 
     // 상품 등록
-    public ProductCreateResponse createProduct(ProductCreateRequest request, UserDetails userDetails) {
+    public ProductCreateResponse createProduct(ProductCreateRequest request, List<MultipartFile> mainImages, List<MultipartFile> detailImages, UserDetails userDetails) {
         // 1. 현재 사용자 정보 가져오기 및 권한 검증
         User currentUser = getCurrentUser(userDetails);
 
@@ -70,8 +75,17 @@ public class ProductService {
                 .category(category)
                 .build();
 
-        // 7. 상품 이미지 생성 및 저장 (메모리상에서만)
-        createProductImages(product, request.getImages());
+        // 7. 이미지 생성
+
+        // 메인 이미지
+        if (mainImages != null && !mainImages.isEmpty()) {
+            createProductImages(product, mainImages, ImageType.MAIN);
+        }
+
+        // 상세 이미지
+        if (detailImages != null && !detailImages.isEmpty()) {
+            createProductImages(product, detailImages, ImageType.DETAIL);
+        }
 
         // 8. 상품에 옵션 추가 (메모리상에서만)
         createProductOptions(product, request.getOptions());
@@ -84,7 +98,7 @@ public class ProductService {
     }
 
     // 상품 수정
-    public void updateProduct(Long productId, ProductUpdateRequest request, UserDetails userDetails) {
+    public void updateProduct(Long productId, ProductUpdateRequest request, List<MultipartFile> mainImages, List<MultipartFile> detailImages, UserDetails userDetails) {
         // 1. 현재 사용자 정보 가져오기 및 권한 검증
         User currentUser = getCurrentUser(userDetails);
 
@@ -114,8 +128,15 @@ public class ProductService {
         updateProductFields(product, request, category);
 
         // 7. 이미지 업데이트
-        if (request.getImages() != null) {
-            updateProductImages(product, request.getImages());
+
+        // 메인 이미지
+        if (mainImages != null && !mainImages.isEmpty()) {
+            updateProductImages(product, mainImages, ImageType.MAIN);
+        }
+
+        // 상세 이미지
+        if (detailImages != null && !detailImages.isEmpty()) {
+            updateProductImages(product, detailImages, ImageType.DETAIL);
         }
 
         // 8. 옵션 업데이트
@@ -215,18 +236,38 @@ public class ProductService {
     }
 
     // 상품 이미지 생성
-    public void createProductImages(Product product, List<ProductImageRequest> requests)
-    {
-        List<ProductImage> productImages = requests.stream()
-                .map(request -> new ProductImage(
-                        request.getUrl(),
-                        request.getType(),
-                        product
-                ))
-                .toList();
+    public void createProductImages(Product product, List<MultipartFile> images, ImageType type) {
+        if (images == null || images.isEmpty()) {
+            return; // 이미지가 없으면 아무 작업도 하지 않음
+        }
 
-        // Product 엔티티에 이미지 추가
-        product.getProductImages().addAll(productImages);
+        try {
+            List<GcpStorageService.UploadResult> uploadResults = gcpStorageService.uploadFilesWithDetails(images, "products");
+
+            if (!uploadResults.isEmpty()) {
+                List<ProductImage> productImages = new ArrayList<>();
+
+                for (GcpStorageService.UploadResult uploadResult : uploadResults) {
+                    // 업로드된 이미지 URL 에서 상대 경로 추출
+                    String imageUrl = gcpStorageService.extractObjectName(uploadResult.getFilePath());
+
+                    // ProductImage 엔티티 생성
+                    ProductImage productImage = new ProductImage(
+                            imageUrl,
+                            type,
+                            product
+                    );
+
+                    // productImages 리스트에 추가
+                    productImages.add(productImage);
+                }
+
+                // Product 엔티티에 이미지 추가
+                product.getProductImages().addAll(productImages);
+            }
+        } catch (Exception e) {
+            throw new ProductException(ErrorCode.FILE_UPLOAD_ERROR, "이미지 업로드에 실패했습니다: " + e.getMessage());
+        }
     }
 
     // 상품 옵션 생성
@@ -258,24 +299,27 @@ public class ProductService {
         product.updateCategory(category);
     }
 
-    private void updateProductImages(Product product, List<ProductImageRequest> requests) {
+    private void updateProductImages(Product product, List<MultipartFile> images, ImageType type) {
         // 기존 이미지 삭제
         List<ProductImage> existingImages = product.getProductImages();
         if (!existingImages.isEmpty())
         {
+            // GCP Storage 에서 이미지 파일 삭제
+            for (ProductImage image : existingImages) {
+                try {
+                    gcpStorageService.deleteFile(gcpStorageService.getFullFilePath(image.getUrl()));
+                } catch (Exception e) {
+                    throw new ProductException(ErrorCode.FILE_DELETE_ERROR, "이미지 삭제에 실패했습니다: " + e.getMessage());
+                }
+            }
+
+            // DB 에서 기존 이미지 삭제
             productImageRepository.deleteAll(existingImages);
             existingImages.clear();
         }
 
         // 새로운 이미지 추가
-        List<ProductImage> newImages = requests.stream()
-                .map(request -> new ProductImage(
-                        request.getUrl(),
-                        request.getType(),
-                        product
-                ))
-                .toList();
-        product.getProductImages().addAll(newImages);
+        createProductImages(product, images, type);
     }
 
     private void updateProductOptions(Product product, List<ProductOptionRequest> requests) {
