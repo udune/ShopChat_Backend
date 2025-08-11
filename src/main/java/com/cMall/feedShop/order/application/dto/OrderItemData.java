@@ -1,4 +1,4 @@
-package com.cMall.feedShop.order.application.adapter;
+package com.cMall.feedShop.order.application.dto;
 
 import com.cMall.feedShop.cart.domain.model.CartItem;
 import com.cMall.feedShop.order.application.dto.request.OrderItemRequest;
@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
  */
 @Getter
 @AllArgsConstructor
-public class OrderItemAdapter {
+public class OrderItemData {
     // 상품 옵션 ID
     // ex) "RED, 250, MALE"의 고유 번호
     private Long optionId;
@@ -27,26 +27,26 @@ public class OrderItemAdapter {
     private Integer quantity;
 
     // 장바구니 아이템의 상품 옵션 ID와 주문 수량을 기반으로 OrderItemAdapter 객체를 생성한다.
-    public static OrderItemAdapter from(CartItem cartItem) {
-        return new OrderItemAdapter(cartItem.getOptionId(), cartItem.getImageId(), cartItem.getQuantity());
+    public static OrderItemData from(CartItem cartItem) {
+        return new OrderItemData(cartItem.getOptionId(), cartItem.getImageId(), cartItem.getQuantity());
     }
 
     // 직접 주문한 아이템의 상품 옵션 ID와 주문 수량을 기반으로 OrderItemAdapter 객체를 생성한다.
-    public static OrderItemAdapter from(OrderItemRequest request) {
-        return new OrderItemAdapter(request.getOptionId(), request.getImageId(), request.getQuantity());
+    public static OrderItemData from(OrderItemRequest request) {
+        return new OrderItemData(request.getOptionId(), request.getImageId(), request.getQuantity());
     }
 
     // 장바구니 아이템 목록을 OrderItemAdapter 객체 목록으로 변환한다.
-    public static List<OrderItemAdapter> fromCartItems(List<CartItem> cartItems) {
+    public static List<OrderItemData> fromCartItems(List<CartItem> cartItems) {
         return cartItems.stream()
-                .map(OrderItemAdapter::from)
+                .map(OrderItemData::from)
                 .collect(Collectors.toList());
     }
 
     // 주문 아이템 요청 목록을 OrderItemAdapter 객체 목록으로 변환한다.
-    public static List<OrderItemAdapter> fromOrderItemRequests(List<OrderItemRequest> orderItemRequests) {
+    public static List<OrderItemData> fromOrderItemRequests(List<OrderItemRequest> orderItemRequests) {
         return orderItemRequests.stream()
-                .map(OrderItemAdapter::from)
+                .map(OrderItemData::from)
                 .collect(Collectors.toList());
     }
 }

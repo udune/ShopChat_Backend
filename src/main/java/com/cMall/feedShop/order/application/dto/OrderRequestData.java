@@ -1,4 +1,4 @@
-package com.cMall.feedShop.order.application.adapter;
+package com.cMall.feedShop.order.application.dto;
 
 import com.cMall.feedShop.order.application.dto.request.OrderCreateRequest;
 import com.cMall.feedShop.order.application.dto.request.DirectOrderCreateRequest;
@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 
 @Getter
 @Builder
-public class OrderRequestAdapter {
+public class OrderRequestData {
     private String deliveryAddress;
     private String deliveryDetailAddress;
     private String postalCode;
@@ -25,8 +25,8 @@ public class OrderRequestAdapter {
 
     private BigDecimal deliveryFee;
 
-    public static OrderRequestAdapter from(OrderCreateRequest request) {
-        return OrderRequestAdapter.builder()
+    public static OrderRequestData from(OrderCreateRequest request) {
+        return OrderRequestData.builder()
                 // 배송 정보
                 .deliveryAddress(request.getDeliveryAddress())
                 .deliveryDetailAddress(request.getDeliveryDetailAddress())
@@ -47,8 +47,8 @@ public class OrderRequestAdapter {
                 .build();
     }
 
-    public static OrderRequestAdapter from(DirectOrderCreateRequest request) {
-        return OrderRequestAdapter.builder()
+    public static OrderRequestData from(DirectOrderCreateRequest request) {
+        return OrderRequestData.builder()
                 // 배송 정보
                 .deliveryAddress(request.getDeliveryAddress())
                 .deliveryDetailAddress(request.getDeliveryDetailAddress())
