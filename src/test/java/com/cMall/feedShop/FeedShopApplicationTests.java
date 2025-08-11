@@ -1,5 +1,7 @@
 package com.cMall.feedShop;
 
+import com.cMall.feedShop.common.service.GcpStorageService;
+import com.cMall.feedShop.common.validator.ImageValidator;
 import com.cMall.feedShop.user.application.service.RecaptchaService;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -40,6 +42,12 @@ class FeedShopApplicationTests {
 
     @MockBean
     private RecaptchaService recaptchaService;
+
+    @MockBean
+    private GcpStorageService gcpStorageService;
+
+    @MockBean
+    private ImageValidator imageValidator;
 
     @Test
     void contextLoads() {
