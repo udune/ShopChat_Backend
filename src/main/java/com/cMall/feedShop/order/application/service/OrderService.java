@@ -32,6 +32,7 @@ import java.util.Map;
 
 import static com.cMall.feedShop.order.application.constants.OrderConstants.MAX_ORDER_QUANTITY;
 
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -208,7 +209,7 @@ public class OrderService {
         User seller = validateSeller(userDetails);
 
         // 2. 주문 조회 및 권한 검증
-        Order order = orderRepository.findByOrderIdAndSellerId(orderId, seller.getId())
+        Order order = orderRepository.findByOrderIdAndSeller(orderId, seller)
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
 
         // 3. 상태 변경 가능 여부 검증
@@ -222,28 +223,65 @@ public class OrderService {
     }
 
     /**
+     * 사용자 주문 상태 변경
+     * @param orderId
+     * @param request
+     * @param userDetails
+     * @return
+     */
+    @Transactional
+    public OrderStatusUpdateResponse updateUserOrderStatus(Long orderId, OrderStatusUpdateRequest request, UserDetails userDetails) {
+        // 1. 현재 사용자 조회 및 권한 검증
+        User user = validateUser(userDetails);
+
+        // 2. 주문 조회 및 권한 검증
+        Order order = orderRepository.findByOrderIdAndUser(orderId, user)
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+
+        // 3. 상태 변경 가능 여부 검증
+        validateUserStatusUpdate(order.getStatus(), request.getStatus());
+
+        // 4. 주문 상태 업데이트
+        order.updateStatus(request.getStatus());
+
+        // 5. 주문 상태 변경 응답 반환
+        return OrderStatusUpdateResponse.from(order);
+    }
+
+    // 판매자가 주문 상태를 변경할 수 있는지 검증한다.
+    /**
      * 주문 상태 변경 가능 여부 검증
      * - 현재 상태와 변경할 상태를 비교하여 유효성 검증
      * @param currentStatus 현재 주문 상태
      * @param newStatus 변경할 주문 상태
      */
     private void validateStatusUpdate(OrderStatus currentStatus, OrderStatus newStatus) {
-        // 주문됨 -> 배송중, 취소로 변경 가능
-        if (currentStatus == OrderStatus.ORDERED) {
-            if (newStatus != OrderStatus.SHIPPED && newStatus != OrderStatus.CANCELLED) {
-                throw new OrderException(ErrorCode.INVALID_ORDER_STATUS);
-            }
-        }
-        // 배송중 -> 배송완료로 변경 가능
-        else if (currentStatus == OrderStatus.SHIPPED) {
-            if (newStatus != OrderStatus.DELIVERED) {
-                throw new OrderException(ErrorCode.INVALID_ORDER_STATUS);
-            }
-        }
-        // 배송완료, 취소됨, 반품됨 상태는 변경 불가
-        else {
+        if (!currentStatus.canChangeTo(newStatus)) {
             throw new OrderException(ErrorCode.INVALID_ORDER_STATUS);
         }
+    }
+
+    // 유저가 주문 상태를 변경할 수 있는지 검증한다.
+    private void validateUserStatusUpdate(OrderStatus currentStatus, OrderStatus newStatus) {
+        if (!currentStatus.canUserChangeTo(newStatus)) {
+            throw new OrderException(ErrorCode.INVALID_ORDER_STATUS);
+        }
+    }
+
+    /**
+     * 현재 사용자 조회 및 사용자 권한 검증
+     * @param userDetails 현재 로그인된 사용자 정보
+     * @return 검증된 사용자 정보
+     */
+    private User validateUser(UserDetails userDetails) {
+        User user = userRepository.findByLoginId(userDetails.getUsername())
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getRole() != UserRole.USER) {
+            throw new OrderException(ErrorCode.ORDER_FORBIDDEN);
+        }
+
+        return user;
     }
 
     /**
@@ -252,8 +290,7 @@ public class OrderService {
      * @return 검증된 사용자 정보
      */
     private User validateSeller(UserDetails userDetails) {
-        String loginId = userDetails.getUsername();
-        User user = userRepository.findByLoginId(loginId)
+        User user = userRepository.findByLoginId(userDetails.getUsername())
                 .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
 
         if (user.getRole() != UserRole.SELLER) {
