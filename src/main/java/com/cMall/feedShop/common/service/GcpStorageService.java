@@ -76,6 +76,26 @@ public class GcpStorageService {
     }
 
     /**
+     * 단일 파일을 GCP Storage에 업로드
+     */
+    public UploadResult uploadFile(MultipartFile file, String directory) {
+        if (storage == null) {
+            log.error("GCP Storage가 초기화되지 않았습니다.");
+            throw new RuntimeException("GCP Storage가 초기화되지 않았습니다.");
+        }
+
+        try {
+            log.info("📤 GCP Storage 업로드 시작: {}", file.getOriginalFilename());
+            UploadResult result = uploadSingleFile(file, directory);
+            log.info("✅ 업로드 성공: {} -> {}", file.getOriginalFilename(), result.getFilePath());
+            return result;
+        } catch (Exception e) {
+            log.error("❌ 파일 업로드 실패: {}", file.getOriginalFilename(), e);
+            throw new RuntimeException("파일 업로드 실패: " + file.getOriginalFilename(), e);
+        }
+    }
+
+    /**
      * 여러 파일을 GCP Storage에 업로드
      */
     public List<UploadResult> uploadFilesWithDetails(List<MultipartFile> files, String directory) {
