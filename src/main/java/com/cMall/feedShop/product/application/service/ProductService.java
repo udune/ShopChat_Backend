@@ -301,7 +301,9 @@ public class ProductService {
 
     private void updateProductImages(Product product, List<MultipartFile> images, ImageType type) {
         // 기존 이미지 삭제
-        List<ProductImage> existingImages = product.getProductImages();
+        List<ProductImage> existingImages = product.getProductImages().stream()
+                .filter(image -> image.getType() == type)
+                .toList();
         if (!existingImages.isEmpty())
         {
             // GCP Storage 에서 이미지 파일 삭제
@@ -313,9 +315,9 @@ public class ProductService {
                 }
             }
 
-            // DB 에서 기존 이미지 삭제
+            // ProductImage 엔티티에서 삭제
+            product.getProductImages().removeAll(existingImages);
             productImageRepository.deleteAll(existingImages);
-            existingImages.clear();
         }
 
         // 새로운 이미지 추가
