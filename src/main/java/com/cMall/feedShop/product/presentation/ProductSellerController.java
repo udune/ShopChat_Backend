@@ -5,7 +5,6 @@ import com.cMall.feedShop.common.dto.ApiResponse;
 import com.cMall.feedShop.product.application.dto.request.ProductCreateRequest;
 import com.cMall.feedShop.product.application.dto.request.ProductUpdateRequest;
 import com.cMall.feedShop.product.application.dto.response.ProductCreateResponse;
-import com.cMall.feedShop.product.application.service.ProductImageService;
 import com.cMall.feedShop.product.application.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +24,6 @@ import java.util.List;
 //@Tag(name = "상품 관리(판매자)", description = "판매자가 상품을 등록하고 수정하는 API 입니다.")
 public class ProductSellerController {
     private final ProductService productService;
-    private final ProductImageService productImageService;
 
     /**
      * 상품 등록 API (이미지와 옵션 포함)
