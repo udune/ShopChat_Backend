@@ -249,12 +249,6 @@ public class OrderService {
     }
 
     // 판매자가 주문 상태를 변경할 수 있는지 검증한다.
-    /**
-     * 주문 상태 변경 가능 여부 검증
-     * - 현재 상태와 변경할 상태를 비교하여 유효성 검증
-     * @param currentStatus 현재 주문 상태
-     * @param newStatus 변경할 주문 상태
-     */
     private void validateStatusUpdate(OrderStatus currentStatus, OrderStatus newStatus) {
         if (!currentStatus.canChangeTo(newStatus)) {
             throw new OrderException(ErrorCode.INVALID_ORDER_STATUS);
