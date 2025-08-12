@@ -28,16 +28,22 @@ public class ProductSearchService {
      * @return 검색된 상품 목록 응답
      */
     public ProductPageResponse searchProductList(String keyword, int page, int size) {
-        // 페이지 정보 생성
-        Pageable pageable = PagingUtils.createPageable(page, size);
-
         // 키워드 trim
         if (keyword != null) {
             keyword = StringUtils.trimToEmpty(keyword);
         }
 
+        // 페이지 정보 생성
+        Pageable pageable = PagingUtils.createPageable(page, size);
+
         // 상품 검색 (키워드가 있으면 검색, 없으면 전체 목록)
         Page<Product> productPage = productRepository.searchProductsByName(keyword, pageable);
+
+        if (PagingUtils.isPageOverflow(productPage, page)) {
+            long totalElements = productPage.getTotalElements();
+            Pageable correctedPageable = PagingUtils.createPageable(page, size, totalElements);
+            productPage = productRepository.searchProductsByName(keyword, correctedPageable);
+        }
 
         // 각각의 상품(Product 엔티티)을 ProductListResponse(응답값)로 변환한다.
         Page<ProductListResponse> responsePage = productPage.map(productMapper::toListResponse);

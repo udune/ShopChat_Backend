@@ -25,6 +25,46 @@ public class ProductQueryRepositoryImpl implements ProductQueryRepository {
     private final JPAQueryFactory jpaQueryFactory;
 
     @Override
+    public long countByKeyword(String keyword) {
+        BooleanBuilder whereClause = new BooleanBuilder();
+
+        if (StringUtils.hasText(keyword)) {
+            whereClause.and(product.name.containsIgnoreCase(keyword.trim()));
+        }
+
+        Long count = jpaQueryFactory
+                .select(product.count())
+                .from(product)
+                .where(whereClause)
+                .fetchOne();
+
+        return count != null ? count : 0;
+    }
+
+    @Override
+    public long countWithFilters(Long categoryId, BigDecimal minPrice, BigDecimal maxPrice, Long storeId) {
+        BooleanBuilder whereClause = createWhereClause(categoryId, minPrice, maxPrice, storeId);
+
+        Long count = jpaQueryFactory
+                .select(product.count())
+                .from(product)
+                .where(whereClause)
+                .fetchOne();
+
+        return count != null ? count : 0;
+    }
+
+    @Override
+    public long countAll() {
+        Long count = jpaQueryFactory
+                .select(product.count())
+                .from(product)
+                .fetchOne();
+
+        return count != null ? count : 0;
+    }
+
+    @Override
     public Page<Product> searchProductsByName(String keyword, Pageable pageable) {
         BooleanBuilder whereClause = new BooleanBuilder();
 

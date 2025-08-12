@@ -29,7 +29,12 @@ public class ProductFilterService {
      */
     public ProductPageResponse filterProductList(ProductFilterRequest request, int page, int size, ProductSortType productSortType) {
         // 페이지 정보 생성
-        Pageable pageable = PagingUtils.createPageable(page, size);
+        Pageable pageable = PagingUtils.createPageable(page, size, productRepository.countWithFilters(
+                request.getCategoryId(),
+                request.getMinPrice(),
+                request.getMaxPrice(),
+                request.getStoreId()
+        ));
 
         // 필터링된 상품 목록을 조회한다.
         Page<Product> productPage = productRepository.findProductsWithFilters(
