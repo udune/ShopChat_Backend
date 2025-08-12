@@ -1,7 +1,8 @@
 package com.cMall.feedShop.product.application.service;
 
+import com.cMall.feedShop.common.dto.UploadResult;
 import com.cMall.feedShop.common.exception.ErrorCode;
-import com.cMall.feedShop.common.service.GcpStorageService;
+import com.cMall.feedShop.common.storage.GcpStorageService;
 import com.cMall.feedShop.common.validator.ImageValidator;
 import com.cMall.feedShop.product.domain.enums.ImageType;
 import com.cMall.feedShop.product.domain.exception.ProductException;
@@ -13,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+
+import static com.cMall.feedShop.common.storage.UploadDirectory.PRODUCTS;
 
 @Slf4j
 @Service
@@ -73,8 +76,8 @@ public class ProductImageService {
     // 새 이미지 생성 및 GCP 에 업로드
     private List<ProductImage> createProductImages(Product product, List<MultipartFile> files, ImageType type) {
         try {
-            List<GcpStorageService.UploadResult> uploadResults =
-                    gcpStorageService.uploadFilesWithDetails(files, "products");
+            List<UploadResult> uploadResults =
+                    gcpStorageService.uploadFilesWithDetails(files, PRODUCTS);
 
             return uploadResults.stream()
                     .map(result -> new ProductImage(
