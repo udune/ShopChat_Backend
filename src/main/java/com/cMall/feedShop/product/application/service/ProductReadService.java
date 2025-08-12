@@ -24,7 +24,8 @@ public class ProductReadService {
     // 상품 목록 조회 (페이징)
     public ProductPageResponse getProductList(int page, int size, ProductSortType productSortType) {
         // 페이지 정보 생성
-        Pageable pageable = PagingUtils.createPageable(page, size);
+        long totalElements = productRepository.countAll();
+        Pageable pageable = PagingUtils.createPageable(page, size, totalElements);
 
         // 정렬 기준에 따라 상품 목록 조회
         Page<Product> productPage = getProductsBySortType(productSortType, pageable);
