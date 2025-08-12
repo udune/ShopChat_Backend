@@ -143,7 +143,7 @@ class ProductReadServiceTest {
         given(productMapper.toListResponse(product2)).willReturn(listResponse2);
 
         // when
-        ProductPageResponse response = productReadService.getProductList(0, 20);
+        ProductPageResponse response = productReadService.getProductList(0, 20, null);
 
         // then
         assertThat(response).isNotNull();
@@ -166,7 +166,7 @@ class ProductReadServiceTest {
         given(productMapper.toListResponse(product1)).willReturn(listResponse1);
 
         // when - 음수 페이지와 큰 사이즈로 호출
-        ProductPageResponse response = productReadService.getProductList(-1, 200);
+        ProductPageResponse response = productReadService.getProductList(-1, 200, null);
 
         // then
         assertThat(response).isNotNull();
@@ -183,7 +183,7 @@ class ProductReadServiceTest {
                 .willReturn(emptyPage);
 
         // when
-        ProductPageResponse response = productReadService.getProductList(0, 20);
+        ProductPageResponse response = productReadService.getProductList(0, 20, null);
 
         // then
         assertThat(response).isNotNull();
@@ -239,7 +239,7 @@ class ProductReadServiceTest {
         given(productMapper.toListResponse(product1)).willReturn(listResponse1);
 
         // when - 사이즈 0으로 호출
-        ProductPageResponse response = productReadService.getProductList(0, 0);
+        ProductPageResponse response = productReadService.getProductList(0, 0, null);
 
         // then
         assertThat(response).isNotNull();
@@ -257,7 +257,7 @@ class ProductReadServiceTest {
         given(productMapper.toListResponse(product1)).willReturn(listResponse1);
 
         // when - 사이즈 150으로 호출 (최대 50 초과)
-        ProductPageResponse response = productReadService.getProductList(0, 150);
+        ProductPageResponse response = productReadService.getProductList(0, 150, null);
 
         // then
         assertThat(response).isNotNull();

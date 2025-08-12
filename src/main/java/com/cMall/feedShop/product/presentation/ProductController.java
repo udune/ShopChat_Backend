@@ -5,9 +5,7 @@ import com.cMall.feedShop.common.dto.ApiResponse;
 import com.cMall.feedShop.product.application.dto.response.CategoryResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductDetailResponse;
 import com.cMall.feedShop.product.application.service.CategoryService;
-import com.cMall.feedShop.product.application.service.ProductFilterService;
 import com.cMall.feedShop.product.application.service.ProductReadService;
-import com.cMall.feedShop.product.application.service.ProductSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,8 +18,6 @@ import java.util.List;
 public class ProductController {
     private final ProductReadService productReadService;
     private final CategoryService categoryService;
-    private final ProductFilterService productFilterService;
-    private final ProductSearchService productSearchService;
 
     /**
      * 상품 상세 조회 API

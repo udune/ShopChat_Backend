@@ -3,6 +3,7 @@ package com.cMall.feedShop.product.application.service;
 import com.cMall.feedShop.product.application.dto.request.ProductFilterRequest;
 import com.cMall.feedShop.product.application.dto.response.ProductListResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductPageResponse;
+import com.cMall.feedShop.product.domain.enums.ProductSortType;
 import com.cMall.feedShop.product.application.utils.PagingUtils;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
@@ -26,7 +27,7 @@ public class ProductFilterService {
      * @param size
      * @return
      */
-    public ProductPageResponse filterProductList(ProductFilterRequest request, int page, int size) {
+    public ProductPageResponse filterProductList(ProductFilterRequest request, int page, int size, ProductSortType productSortType) {
         // 페이지 정보 생성
         Pageable pageable = PagingUtils.createPageable(page, size);
 
@@ -36,6 +37,7 @@ public class ProductFilterService {
                 request.getMinPrice(),
                 request.getMaxPrice(),
                 request.getStoreId(),
+                productSortType,
                 pageable
         );
 
