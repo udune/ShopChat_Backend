@@ -76,7 +76,7 @@ class ProductServiceTest {
     }
 
     private void setupUser() {
-        seller = new User("sellerId", "password", "seller@test.com", UserRole.SELLER);
+        seller = new User("seller123", "password", "seller@test.com", UserRole.SELLER);
         ReflectionTestUtils.setField(seller, "id", 1L);
     }
 
@@ -142,8 +142,7 @@ class ProductServiceTest {
     @DisplayName("상품 등록 성공")
     void createProduct_Success() {
         // given
-        given(userDetails.getUsername()).willReturn("seller@test.com");
-        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(userRepository.findByLoginId("seller123")).willReturn(Optional.of(seller));
         given(storeRepository.findBySellerId(1L)).willReturn(Optional.of(store));
         given(categoryRepository.findById(1L)).willReturn(Optional.of(category));
         given(productRepository.save(any(Product.class))).willAnswer(invocation -> {
@@ -157,7 +156,7 @@ class ProductServiceTest {
         doNothing().when(productImageService).uploadImages(any(Product.class), eq(detailImages), eq(ImageType.DETAIL));
 
         // when
-        ProductCreateResponse response = productService.createProduct(createRequest, mainImages, detailImages, userDetails);
+        ProductCreateResponse response = productService.createProduct(createRequest, mainImages, detailImages, "seller123");
 
         // then
         assertThat(response).isNotNull();
@@ -171,8 +170,7 @@ class ProductServiceTest {
     @DisplayName("상품 등록 성공 - 이미지 없이")
     void createProduct_Success_WithoutImages() {
         // given
-        given(userDetails.getUsername()).willReturn("seller@test.com");
-        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(userRepository.findByLoginId("seller123")).willReturn(Optional.of(seller));
         given(storeRepository.findBySellerId(1L)).willReturn(Optional.of(store));
         given(categoryRepository.findById(1L)).willReturn(Optional.of(category));
         given(productRepository.save(any(Product.class))).willAnswer(invocation -> {
@@ -182,7 +180,7 @@ class ProductServiceTest {
         });
 
         // when
-        ProductCreateResponse response = productService.createProduct(createRequest, null, null, userDetails);
+        ProductCreateResponse response = productService.createProduct(createRequest, null, null, "seller123");
 
         // then
         assertThat(response).isNotNull();
@@ -195,15 +193,14 @@ class ProductServiceTest {
     @DisplayName("상품 등록 실패 - 판매자 권한 없음")
     void createProduct_Fail_NotSeller() {
         // given
-        User user = new User("userId", "password", "user@test.com", UserRole.USER);
+        User user = new User("user123", "password", "user@test.com", UserRole.USER);
         ReflectionTestUtils.setField(user, "id", 1L);
 
-        given(userDetails.getUsername()).willReturn("user@test.com");
-        given(userRepository.findByLoginId("user@test.com")).willReturn(Optional.of(user));
+        given(userRepository.findByLoginId("user123")).willReturn(Optional.of(user));
 
         // when & then
         ProductException thrown = assertThrows(ProductException.class, () ->
-                productService.createProduct(createRequest, mainImages, detailImages, userDetails));
+                productService.createProduct(createRequest, mainImages, detailImages, "user123"));
 
         assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
         verify(productRepository, never()).save(any(Product.class));
@@ -213,14 +210,13 @@ class ProductServiceTest {
     @DisplayName("상품 등록 실패 - 스토어 없음")
     void createProduct_Fail_StoreNotFound() {
         // given
-        given(userDetails.getUsername()).willReturn("seller@test.com");
-        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(userRepository.findByLoginId("seller123")).willReturn(Optional.of(seller));
         given(storeRepository.findBySellerId(1L)).willReturn(Optional.empty());
 
         // when & then
         ProductException thrown = assertThrows(
                 ProductException.class, () ->
-                        productService.createProduct(createRequest, mainImages, detailImages, userDetails));
+                        productService.createProduct(createRequest, mainImages, detailImages, "seller123"));
 
         assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.STORE_NOT_FOUND);
         verify(productRepository, never()).save(any(Product.class));
@@ -230,15 +226,14 @@ class ProductServiceTest {
     @DisplayName("상품 등록 실패 - 카테고리 없음")
     void createProduct_Fail_CategoryNotFound() {
         // given
-        given(userDetails.getUsername()).willReturn("seller@test.com");
-        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(userRepository.findByLoginId("seller123")).willReturn(Optional.of(seller));
         given(storeRepository.findBySellerId(1L)).willReturn(Optional.of(store));
         given(categoryRepository.findById(1L)).willReturn(Optional.empty());
 
         // when & then
         ProductException thrown = assertThrows(
                 ProductException.class, () ->
-                        productService.createProduct(createRequest, mainImages, detailImages, userDetails));
+                        productService.createProduct(createRequest, mainImages, detailImages, "seller123"));
 
         assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.CATEGORY_NOT_FOUND);
         verify(productRepository, never()).save(any(Product.class));
@@ -248,13 +243,12 @@ class ProductServiceTest {
     @DisplayName("상품 수정 성공")
     void updateProduct_Success() {
         // given
-        given(userDetails.getUsername()).willReturn("seller@test.com");
-        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(userRepository.findByLoginId("seller123")).willReturn(Optional.of(seller));
         given(productRepository.findByProductId(1L)).willReturn(Optional.of(product));
         given(categoryRepository.findById(1L)).willReturn(Optional.of(category));
 
         // when
-        productService.updateProduct(1L, updateRequest, mainImages, detailImages, userDetails);
+        productService.updateProduct(1L, updateRequest, mainImages, detailImages, "seller123");
 
         // then
         verify(productRepository, times(1)).save(product);
@@ -266,13 +260,12 @@ class ProductServiceTest {
     @DisplayName("상품 수정 성공 - 이미지 없이")
     void updateProduct_Success_WithoutImages() {
         // given
-        given(userDetails.getUsername()).willReturn("seller@test.com");
-        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(userRepository.findByLoginId("seller123")).willReturn(Optional.of(seller));
         given(productRepository.findByProductId(1L)).willReturn(Optional.of(product));
         given(categoryRepository.findById(1L)).willReturn(Optional.of(category));
 
         // when
-        productService.updateProduct(1L, updateRequest, null, null, userDetails);
+        productService.updateProduct(1L, updateRequest, null, null, "seller123");
 
         // then
         verify(productRepository, times(1)).save(product);
@@ -283,14 +276,13 @@ class ProductServiceTest {
     @DisplayName("상품 수정 실패 - 상품 없음")
     void updateProduct_Fail_ProductNotFound() {
         // given
-        given(userDetails.getUsername()).willReturn("seller@test.com");
-        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(userRepository.findByLoginId("seller123")).willReturn(Optional.of(seller));
         given(productRepository.findByProductId(1L)).willReturn(Optional.empty());
 
         // when & then
         ProductException thrown = assertThrows(
                 ProductException.class, () ->
-                        productService.updateProduct(1L, updateRequest, mainImages, detailImages, userDetails));
+                        productService.updateProduct(1L, updateRequest, mainImages, detailImages, "seller123"));
 
         assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
         verify(productRepository, never()).save(any(Product.class));
@@ -314,14 +306,13 @@ class ProductServiceTest {
                 .build();
         ReflectionTestUtils.setField(otherProduct, "productId", 2L);
 
-        given(userDetails.getUsername()).willReturn("seller@test.com");
-        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(userRepository.findByLoginId("seller123")).willReturn(Optional.of(seller));
         given(productRepository.findByProductId(2L)).willReturn(Optional.of(otherProduct));
 
         // when & then
         ProductException thrown = assertThrows(
                 ProductException.class, () ->
-                        productService.updateProduct(2L, updateRequest, mainImages, detailImages, userDetails));
+                        productService.updateProduct(2L, updateRequest, mainImages, detailImages, "seller123"));
 
         assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.STORE_FORBIDDEN);
         verify(productRepository, never()).save(any(Product.class));
@@ -331,12 +322,11 @@ class ProductServiceTest {
     @DisplayName("상품 삭제 성공")
     void deleteProduct_Success() {
         // given
-        given(userDetails.getUsername()).willReturn("seller@test.com");
-        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(userRepository.findByLoginId("seller123")).willReturn(Optional.of(seller));
         given(productRepository.findByProductId(1L)).willReturn(Optional.of(product));
 
         // when
-        productService.deleteProduct(1L, userDetails);
+        productService.deleteProduct(1L, "seller123");
 
         // then
         verify(productRepository, times(1)).delete(product);
@@ -346,14 +336,13 @@ class ProductServiceTest {
     @DisplayName("상품 삭제 실패 - 상품 없음")
     void deleteProduct_Fail_ProductNotFound() {
         // given
-        given(userDetails.getUsername()).willReturn("seller@test.com");
-        given(userRepository.findByLoginId("seller@test.com")).willReturn(Optional.of(seller));
+        given(userRepository.findByLoginId("seller123")).willReturn(Optional.of(seller));
         given(productRepository.findByProductId(1L)).willReturn(Optional.empty());
 
         // when & then
         ProductException thrown = assertThrows(
                 ProductException.class, () ->
-                        productService.deleteProduct(1L, userDetails));
+                        productService.deleteProduct(1L, "seller123"));
 
         assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
         verify(productRepository, never()).delete(any(Product.class));
