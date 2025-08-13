@@ -29,18 +29,19 @@ public class ProductImageService {
      * @param product 상품 엔티티
      * @param files 업로드할 이미지 파일 리스트
      * @param type 이미지 타입 (MAIN, DETAIL)
-     * @return 업로드된 이미지 리스트
+     * @return
      */
-    public List<ProductImage> uploadImages(Product product, List<MultipartFile> files, ImageType type) {
+    public void uploadImages(Product product, List<MultipartFile> files, ImageType type) {
         if (files == null || files.isEmpty()) {
-            return List.of();
+            return;
         }
 
         // 이미지 파일 검증
         imageValidator.validateAll(files, getProductImages(product, type).size());
 
         // 새 이미지 생성 및 GCP 에 업로드
-        return createProductImages(product, files, type);
+        List<ProductImage> newImages = createProductImages(product, files, type);
+        product.getProductImages().addAll(newImages);
     }
 
     /**
