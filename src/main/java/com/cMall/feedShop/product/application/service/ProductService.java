@@ -42,9 +42,9 @@ public class ProductService {
 
     // 상품 등록
     @Transactional
-    public ProductCreateResponse createProduct(ProductCreateRequest request, List<MultipartFile> mainImages, List<MultipartFile> detailImages, UserDetails userDetails) {
+    public ProductCreateResponse createProduct(ProductCreateRequest request, List<MultipartFile> mainImages, List<MultipartFile> detailImages, String loginId) {
         // 1. 현재 사용자 정보 가져오기 및 권한 검증
-        User currentUser = getCurrentUser(userDetails);
+        User currentUser = getCurrentUser(loginId);
 
         // 2. 판매자 권한 검증
         validateSellerRole(currentUser);
@@ -87,9 +87,9 @@ public class ProductService {
 
     // 상품 수정
     @Transactional
-    public void updateProduct(Long productId, ProductUpdateRequest request, List<MultipartFile> mainImages, List<MultipartFile> detailImages, UserDetails userDetails) {
+    public void updateProduct(Long productId, ProductUpdateRequest request, List<MultipartFile> mainImages, List<MultipartFile> detailImages, String loginId) {
         // 1. 현재 사용자 정보 가져오기 및 권한 검증
-        User currentUser = getCurrentUser(userDetails);
+        User currentUser = getCurrentUser(loginId);
 
         // 2. 판매자 권한 검증
         validateSellerRole(currentUser);
@@ -134,9 +134,9 @@ public class ProductService {
 
     // 상품 삭제
     @Transactional
-    public void deleteProduct(Long productId, UserDetails userDetails) {
+    public void deleteProduct(Long productId, String loginId) {
         // 1. 현재 사용자 정보 가져오기 및 권한 검증
-        User currentUser = getCurrentUser(userDetails);
+        User currentUser = getCurrentUser(loginId);
 
         // 2. 판매자 권한 검증
         validateSellerRole(currentUser);
@@ -152,8 +152,7 @@ public class ProductService {
     }
 
     // JWT 에서 현재 사용자 추출
-    private User getCurrentUser(UserDetails userDetails) {
-        String loginId = userDetails.getUsername();
+    private User getCurrentUser(String loginId) {
         return userRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new ProductException(ErrorCode.USER_NOT_FOUND));
     }

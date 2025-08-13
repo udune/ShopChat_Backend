@@ -6,6 +6,7 @@ import com.cMall.feedShop.product.application.dto.request.ProductCreateRequest;
 import com.cMall.feedShop.product.application.dto.request.ProductUpdateRequest;
 import com.cMall.feedShop.product.application.dto.response.ProductCreateResponse;
 import com.cMall.feedShop.product.application.service.ProductService;
+import com.cMall.feedShop.user.domain.model.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -39,7 +40,8 @@ public class ProductSellerController {
             @RequestPart(value = "detailImages", required = false) List<MultipartFile> detailImages,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        ProductCreateResponse data = productService.createProduct(request, mainImages, detailImages, userDetails);
+        User currentUser = (User) userDetails;
+        ProductCreateResponse data = productService.createProduct(request, mainImages, detailImages, currentUser.getLoginId());
         return ApiResponse.success(data);
     }
 
@@ -57,7 +59,8 @@ public class ProductSellerController {
             @RequestPart(value = "detailImages", required = false) List<MultipartFile> detailImages,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        productService.updateProduct(productId, request, mainImages, detailImages, userDetails);
+        User currentUser = (User) userDetails;
+        productService.updateProduct(productId, request, mainImages, detailImages, currentUser.getLoginId());
         return ApiResponse.success(null);
     }
 
@@ -72,7 +75,8 @@ public class ProductSellerController {
             @PathVariable Long productId,
             @AuthenticationPrincipal UserDetails userDetails)
     {
-        productService.deleteProduct(productId, userDetails);
+        User currentUser = (User) userDetails;
+        productService.deleteProduct(productId, currentUser.getLoginId());
         return ApiResponse.success(null);
     }
 }
