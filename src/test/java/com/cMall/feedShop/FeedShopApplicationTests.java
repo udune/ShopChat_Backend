@@ -36,9 +36,6 @@ class FeedShopApplicationTests {
     @Autowired
     private ApplicationContext applicationContext;
 
-    @Autowired
-    private RecaptchaVerificationService recaptchaVerificationService;
-
     @MockBean
     private EmailService emailService;
 
@@ -50,6 +47,9 @@ class FeedShopApplicationTests {
 
     @MockBean
     private ImageValidator imageValidator;
+
+    @Autowired
+    private RecaptchaVerificationService recaptchaVerificationService;
 
     @Test
     void contextLoads() {

@@ -152,17 +152,9 @@ class ProductServiceTest {
             return savedProduct;
         });
 
-        // ProductImageService mock 설정
-        List<ProductImage> mockMainImages = Arrays.asList(
-                new ProductImage("main.jpg", ImageType.MAIN, null)
-        );
-        List<ProductImage> mockDetailImages = Arrays.asList(
-                new ProductImage("detail.jpg", ImageType.DETAIL, null)
-        );
-        given(productImageService.uploadImages(any(Product.class), eq(mainImages), eq(ImageType.MAIN)))
-                .willReturn(mockMainImages);
-        given(productImageService.uploadImages(any(Product.class), eq(detailImages), eq(ImageType.DETAIL)))
-                .willReturn(mockDetailImages);
+        // ProductImageService mock 설정 - uploadImages는 void 메서드이므로 doNothing 사용
+        doNothing().when(productImageService).uploadImages(any(Product.class), eq(mainImages), eq(ImageType.MAIN));
+        doNothing().when(productImageService).uploadImages(any(Product.class), eq(detailImages), eq(ImageType.DETAIL));
 
         // when
         ProductCreateResponse response = productService.createProduct(createRequest, mainImages, detailImages, userDetails);

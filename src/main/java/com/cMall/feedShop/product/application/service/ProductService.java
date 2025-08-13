@@ -245,10 +245,11 @@ public class ProductService {
 
     // 이미지 추가
     private void addImages(Product product, List<MultipartFile> files, ImageType type) {
-        if (files != null && !files.isEmpty()) {
-            List<ProductImage> images = productImageService.uploadImages(product, files, type);
-            product.getProductImages().addAll(images);
+        if (files == null || files.isEmpty()) {
+            return;
         }
+
+        productImageService.uploadImages(product, files, type);
     }
 
     // 옵션 추가
