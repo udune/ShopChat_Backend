@@ -9,6 +9,10 @@ import com.cMall.feedShop.product.domain.model.Category;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import com.cMall.feedShop.store.domain.model.Store;
+import com.cMall.feedShop.store.domain.repository.StoreRepository;
+import com.cMall.feedShop.user.domain.enums.UserRole;
+import com.cMall.feedShop.user.domain.model.User;
+import com.cMall.feedShop.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,6 +48,12 @@ class ProductReadServiceTest {
     @Mock
     private ProductMapper productMapper;
 
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private StoreRepository storeRepository;
+
     @InjectMocks
     private ProductReadService productReadService;
 
@@ -51,16 +61,22 @@ class ProductReadServiceTest {
     private Product product2;
     private Store store;
     private Category category;
+    private User seller;
     private ProductListResponse listResponse1;
     private ProductListResponse listResponse2;
     private ProductDetailResponse detailResponse;
 
     @BeforeEach
     void setUp() {
+        setupSeller();
         setupStore();
         setupCategory();
         setupProducts();
         setupResponses();
+    }
+
+    private void setupSeller() {
+        seller = new User(1L, "seller123", "password", "seller123@test.com", UserRole.SELLER);
     }
 
     private void setupStore() {
@@ -262,5 +278,109 @@ class ProductReadServiceTest {
         // then
         assertThat(response).isNotNull();
         verify(productRepository, times(1)).findAllByOrderByCreatedAtDesc(any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("판매자 상품 목록 조회 성공")
+    void getSellerProductList_Success() {
+        // given
+        String loginId = "seller123";
+        Page<Product> productPage = new PageImpl<>(Arrays.asList(product1, product2), PageRequest.of(0, 20), 2);
+
+        given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(seller));
+        given(storeRepository.findBySellerId(seller.getId())).willReturn(Optional.of(store));
+        given(productRepository.countByStoreId(store.getStoreId())).willReturn(2L);
+        given(productRepository.findByStoreIdOrderByCreatedAtDesc(store.getStoreId(), any(Pageable.class)))
+                .willReturn(productPage);
+        given(productMapper.toListResponse(product1)).willReturn(listResponse1);
+        given(productMapper.toListResponse(product2)).willReturn(listResponse2);
+
+        // when
+        ProductPageResponse response = productReadService.getSellerProductList(0, 20, loginId);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getContent()).hasSize(2);
+        assertThat(response.getTotalElements()).isEqualTo(2);
+        assertThat(response.getContent().get(0).getName()).isEqualTo("상품1");
+        assertThat(response.getContent().get(1).getName()).isEqualTo("상품2");
+
+        verify(userRepository, times(1)).findByLoginId(loginId);
+        verify(storeRepository, times(1)).findBySellerId(seller.getId());
+        verify(productRepository, times(1)).countByStoreId(store.getStoreId());
+        verify(productRepository, times(1)).findByStoreIdOrderByCreatedAtDesc(store.getStoreId(), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("판매자 상품 목록 조회 실패 - 존재하지 않는 사용자")
+    void getSellerProductList_UserNotFound() {
+        // given
+        String loginId = "nonexistent";
+        given(userRepository.findByLoginId(loginId)).willReturn(Optional.empty());
+
+        // when & then
+        assertThrows(ProductException.class,
+                () -> productReadService.getSellerProductList(0, 20, loginId));
+
+        verify(userRepository, times(1)).findByLoginId(loginId);
+    }
+
+    @Test
+    @DisplayName("판매자 상품 목록 조회 실패 - 판매자 권한 없음")
+    void getSellerProductList_NotSeller() {
+        // given
+        String loginId = "buyer123";
+        User buyer = new User(2L, loginId, "password", "buyer123@test.com", UserRole.USER);
+
+        given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(buyer));
+
+        // when & then
+        assertThrows(ProductException.class,
+                () -> productReadService.getSellerProductList(0, 20, loginId));
+
+        verify(userRepository, times(1)).findByLoginId(loginId);
+    }
+
+    @Test
+    @DisplayName("판매자 상품 목록 조회 실패 - 스토어 없음")
+    void getSellerProductList_StoreNotFound() {
+        // given
+        String loginId = "seller123";
+        given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(seller));
+        given(storeRepository.findBySellerId(seller.getId())).willReturn(Optional.empty());
+
+        // when & then
+        assertThrows(ProductException.class,
+                () -> productReadService.getSellerProductList(0, 20, loginId));
+
+        verify(userRepository, times(1)).findByLoginId(loginId);
+        verify(storeRepository, times(1)).findBySellerId(seller.getId());
+    }
+
+    @Test
+    @DisplayName("판매자 상품 목록 조회 - 빈 목록")
+    void getSellerProductList_EmptyResult() {
+        // given
+        String loginId = "seller123";
+        Page<Product> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 20), 0);
+
+        given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(seller));
+        given(storeRepository.findBySellerId(seller.getId())).willReturn(Optional.of(store));
+        given(productRepository.countByStoreId(store.getStoreId())).willReturn(0L);
+        given(productRepository.findByStoreIdOrderByCreatedAtDesc(store.getStoreId(), any(Pageable.class)))
+                .willReturn(emptyPage);
+
+        // when
+        ProductPageResponse response = productReadService.getSellerProductList(0, 20, loginId);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getContent()).isEmpty();
+        assertThat(response.getTotalElements()).isEqualTo(0);
+
+        verify(userRepository, times(1)).findByLoginId(loginId);
+        verify(storeRepository, times(1)).findBySellerId(seller.getId());
+        verify(productRepository, times(1)).countByStoreId(store.getStoreId());
+        verify(productRepository, times(1)).findByStoreIdOrderByCreatedAtDesc(store.getStoreId(), any(Pageable.class));
     }
 }
