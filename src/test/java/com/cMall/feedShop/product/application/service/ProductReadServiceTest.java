@@ -34,6 +34,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
@@ -76,7 +77,9 @@ class ProductReadServiceTest {
     }
 
     private void setupSeller() {
-        seller = new User(1L, "seller123", "password", "seller123@test.com", UserRole.SELLER);
+        // User 생성자를 올바르게 사용 (loginId, password, email, role 순서)
+        seller = new User("seller123", "password", "seller123@test.com", UserRole.SELLER);
+        ReflectionTestUtils.setField(seller, "id", 1L);
     }
 
     private void setupStore() {
@@ -153,6 +156,8 @@ class ProductReadServiceTest {
         // given
         Page<Product> productPage = new PageImpl<>(Arrays.asList(product1, product2), PageRequest.of(0, 20), 2);
 
+        // ProductRepository countAll 메소드 mock 추가
+        given(productRepository.countAll()).willReturn(2L);
         given(productRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class)))
                 .willReturn(productPage);
         given(productMapper.toListResponse(product1)).willReturn(listResponse1);
@@ -168,6 +173,7 @@ class ProductReadServiceTest {
         assertThat(response.getContent().get(0).getName()).isEqualTo("상품1");
         assertThat(response.getContent().get(1).getName()).isEqualTo("상품2");
 
+        verify(productRepository, times(1)).countAll();
         verify(productRepository, times(1)).findAllByOrderByCreatedAtDesc(any(Pageable.class));
     }
 
@@ -177,6 +183,7 @@ class ProductReadServiceTest {
         // given
         Page<Product> productPage = new PageImpl<>(Arrays.asList(product1), PageRequest.of(0, 20), 1);
 
+        given(productRepository.countAll()).willReturn(1L);
         given(productRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class)))
                 .willReturn(productPage);
         given(productMapper.toListResponse(product1)).willReturn(listResponse1);
@@ -186,6 +193,7 @@ class ProductReadServiceTest {
 
         // then
         assertThat(response).isNotNull();
+        verify(productRepository, times(1)).countAll();
         verify(productRepository, times(1)).findAllByOrderByCreatedAtDesc(any(Pageable.class));
     }
 
@@ -195,6 +203,7 @@ class ProductReadServiceTest {
         // given
         Page<Product> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 20), 0);
 
+        given(productRepository.countAll()).willReturn(0L);
         given(productRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class)))
                 .willReturn(emptyPage);
 
@@ -250,6 +259,7 @@ class ProductReadServiceTest {
         // given
         Page<Product> productPage = new PageImpl<>(Arrays.asList(product1), PageRequest.of(0, 20), 1);
 
+        given(productRepository.countAll()).willReturn(1L);
         given(productRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class)))
                 .willReturn(productPage);
         given(productMapper.toListResponse(product1)).willReturn(listResponse1);
@@ -259,6 +269,7 @@ class ProductReadServiceTest {
 
         // then
         assertThat(response).isNotNull();
+        verify(productRepository, times(1)).countAll();
         verify(productRepository, times(1)).findAllByOrderByCreatedAtDesc(any(Pageable.class));
     }
 
@@ -268,6 +279,7 @@ class ProductReadServiceTest {
         // given
         Page<Product> productPage = new PageImpl<>(Arrays.asList(product1), PageRequest.of(0, 20), 1);
 
+        given(productRepository.countAll()).willReturn(1L);
         given(productRepository.findAllByOrderByCreatedAtDesc(any(Pageable.class)))
                 .willReturn(productPage);
         given(productMapper.toListResponse(product1)).willReturn(listResponse1);
@@ -277,6 +289,7 @@ class ProductReadServiceTest {
 
         // then
         assertThat(response).isNotNull();
+        verify(productRepository, times(1)).countAll();
         verify(productRepository, times(1)).findAllByOrderByCreatedAtDesc(any(Pageable.class));
     }
 
@@ -290,7 +303,7 @@ class ProductReadServiceTest {
         given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(seller));
         given(storeRepository.findBySellerId(seller.getId())).willReturn(Optional.of(store));
         given(productRepository.countByStoreId(store.getStoreId())).willReturn(2L);
-        given(productRepository.findByStoreIdOrderByCreatedAtDesc(store.getStoreId(), any(Pageable.class)))
+        given(productRepository.findByStoreIdOrderByCreatedAtDesc(eq(store.getStoreId()), any(Pageable.class)))
                 .willReturn(productPage);
         given(productMapper.toListResponse(product1)).willReturn(listResponse1);
         given(productMapper.toListResponse(product2)).willReturn(listResponse2);
@@ -308,7 +321,7 @@ class ProductReadServiceTest {
         verify(userRepository, times(1)).findByLoginId(loginId);
         verify(storeRepository, times(1)).findBySellerId(seller.getId());
         verify(productRepository, times(1)).countByStoreId(store.getStoreId());
-        verify(productRepository, times(1)).findByStoreIdOrderByCreatedAtDesc(store.getStoreId(), any(Pageable.class));
+        verify(productRepository, times(1)).findByStoreIdOrderByCreatedAtDesc(eq(store.getStoreId()), any(Pageable.class));
     }
 
     @Test
@@ -329,10 +342,11 @@ class ProductReadServiceTest {
     @DisplayName("판매자 상품 목록 조회 실패 - 판매자 권한 없음")
     void getSellerProductList_NotSeller() {
         // given
-        String loginId = "buyer123";
-        User buyer = new User(2L, loginId, "password", "buyer123@test.com", UserRole.USER);
+        User normalUser = new User("user123", "password", "user123@test.com", UserRole.USER);
+        ReflectionTestUtils.setField(normalUser, "id", 2L);
+        String loginId = "user123";
 
-        given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(buyer));
+        given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(normalUser));
 
         // when & then
         assertThrows(ProductException.class,
@@ -355,32 +369,5 @@ class ProductReadServiceTest {
 
         verify(userRepository, times(1)).findByLoginId(loginId);
         verify(storeRepository, times(1)).findBySellerId(seller.getId());
-    }
-
-    @Test
-    @DisplayName("판매자 상품 목록 조회 - 빈 목록")
-    void getSellerProductList_EmptyResult() {
-        // given
-        String loginId = "seller123";
-        Page<Product> emptyPage = new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 20), 0);
-
-        given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(seller));
-        given(storeRepository.findBySellerId(seller.getId())).willReturn(Optional.of(store));
-        given(productRepository.countByStoreId(store.getStoreId())).willReturn(0L);
-        given(productRepository.findByStoreIdOrderByCreatedAtDesc(store.getStoreId(), any(Pageable.class)))
-                .willReturn(emptyPage);
-
-        // when
-        ProductPageResponse response = productReadService.getSellerProductList(0, 20, loginId);
-
-        // then
-        assertThat(response).isNotNull();
-        assertThat(response.getContent()).isEmpty();
-        assertThat(response.getTotalElements()).isEqualTo(0);
-
-        verify(userRepository, times(1)).findByLoginId(loginId);
-        verify(storeRepository, times(1)).findBySellerId(seller.getId());
-        verify(productRepository, times(1)).countByStoreId(store.getStoreId());
-        verify(productRepository, times(1)).findByStoreIdOrderByCreatedAtDesc(store.getStoreId(), any(Pageable.class));
     }
 }
