@@ -28,20 +28,7 @@ public class MockStorageService implements StorageService {
         }
 
         // 실제 업로드 대신 가짜 결과를 반환합니다.
-        String directoryPath;
-        switch (directory) {
-            case REVIEWS:
-                directoryPath = "reviews";
-                break;
-            case PROFILES:
-                directoryPath = "profiles";
-                break;
-            case PRODUCTS:
-                directoryPath = "products";
-                break;
-            default:
-                directoryPath = "default";
-        }
+        String directoryPath = directory.getPath();
         UploadResult mockResult = UploadResult.builder()
                 .originalFilename("mock-file.jpg")
                 .storedFilename("mock-" + files.get(0).getOriginalFilename())
