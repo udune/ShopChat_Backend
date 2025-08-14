@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Builder
 public class StoreDetailResponse {
     private Long storeId;
+    private Long sellerId;
     private String storeName;
     private String description;
     private String logo;
@@ -19,6 +20,7 @@ public class StoreDetailResponse {
     public static StoreDetailResponse from(Store store) {
         return StoreDetailResponse.builder()
                 .storeId(store.getStoreId())
+                .sellerId(store.getSellerId())
                 .storeName(store.getStoreName())
                 .description(store.getDescription())
                 .logo(store.getLogo())
