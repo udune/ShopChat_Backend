@@ -7,8 +7,10 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -27,17 +29,34 @@ public class MockStorageService implements StorageService {
             return Collections.emptyList();
         }
 
-        // 실제 업로드 대신 가짜 결과를 반환합니다.
+        List<UploadResult> results = new ArrayList<>();
         String directoryPath = directory.getPath();
-        UploadResult mockResult = UploadResult.builder()
-                .originalFilename("mock-file.jpg")
-                .storedFilename("mock-" + files.get(0).getOriginalFilename())
-                .filePath(cdnBaseUrl + "/images/" + directoryPath + "/" + files.get(0).getOriginalFilename())
-                .fileSize(1000L)
-                .contentType("image/jpeg")
-                .build();
 
-        return Collections.singletonList(mockResult);
+        for (MultipartFile file : files) {
+            try {
+                String originalFilename = file.getOriginalFilename();
+                String extension = getFileExtension(originalFilename);
+                String storedFilename = "mock-" + UUID.randomUUID().toString() + extension;
+                String filePath = cdnBaseUrl + "/images/" + directoryPath + "/" + storedFilename;
+
+                UploadResult mockResult = UploadResult.builder()
+                        .originalFilename(originalFilename)
+                        .storedFilename(storedFilename)
+                        .filePath(filePath)
+                        .fileSize(file.getSize())
+                        .contentType(file.getContentType())
+                        .build();
+
+                results.add(mockResult);
+                log.info("Mock 업로드 성공: {} -> {}", originalFilename, storedFilename);
+
+            } catch (Exception e) {
+                log.error("Mock 파일 처리 실패: {}", file.getOriginalFilename(), e);
+                // 실제 환경에서는 예외를 던질 수도 있지만, Mock에서는 로그만 남기고 계속 진행
+            }
+        }
+
+        return results;
     }
 
     @Override
@@ -60,5 +79,12 @@ public class MockStorageService implements StorageService {
     public String getFullFilePath(String objectName) {
         // 개발환경용 경로 생성 로직
         return cdnBaseUrl + "/mock/" + objectName;
+    }
+
+    private String getFileExtension(String filename) {
+        if (filename == null || !filename.contains(".")) {
+            return "";
+        }
+        return filename.substring(filename.lastIndexOf("."));
     }
 }
