@@ -14,6 +14,8 @@ public interface ProductQueryRepository {
 
     long countAll();
 
+    long countByStoreId(Long storeId);
+
     Page<Product> findProductsWithFilters(
             Long categoryId,
             BigDecimal minPrice,
@@ -24,4 +26,6 @@ public interface ProductQueryRepository {
     );
 
     Page<Product> searchProductsByName(String keyword, Pageable pageable);
+
+    Page<Product> findByStoreIdOrderByCreatedAtDesc(Long storeId, Pageable pageable);
 }
