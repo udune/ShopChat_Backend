@@ -8,19 +8,19 @@ import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
-public class WishListResponse {
+public class WishListAddResponse {
     private Long wishlistId;
     private Long productId;
     private LocalDateTime createdAt;
 
-    public WishListResponse(Long wishlistId, Long productId, LocalDateTime createdAt) {
+    public WishListAddResponse(Long wishlistId, Long productId, LocalDateTime createdAt) {
         this.wishlistId = wishlistId;
         this.productId = productId;
         this.createdAt = createdAt;
     }
 
-    public static WishListResponse from(WishList wishlist) {
-        return new WishListResponse(
+    public static WishListAddResponse from(WishList wishlist) {
+        return new WishListAddResponse(
                 wishlist.getWishlistId(),
                 wishlist.getProduct().getProductId(),
                 wishlist.getCreatedAt()
