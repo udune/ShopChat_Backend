@@ -2,7 +2,6 @@ package com.cMall.feedShop.product.application.service;
 
 import com.cMall.feedShop.common.dto.UploadResult;
 import com.cMall.feedShop.common.exception.ErrorCode;
-import com.cMall.feedShop.common.storage.GcpStorageService;
 import com.cMall.feedShop.common.storage.StorageService;
 import com.cMall.feedShop.common.storage.UploadDirectory;
 import com.cMall.feedShop.common.validator.ImageValidator;
