@@ -1,8 +1,31 @@
 package com.cMall.feedShop.cart.presentation;
 
+import com.cMall.feedShop.cart.application.service.WishlistService;
+import com.cMall.feedShop.common.aop.ApiResponseFormat;
+import com.cMall.feedShop.common.dto.ApiResponse;
+import com.cMall.feedShop.user.domain.model.User;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequestMapping("/api/users")
+@RequiredArgsConstructor
 public class WishListController {
-    // TODO: 찜한 목록 컨트롤러 메서드 구현 예정
+    private final WishlistService wishListService;
+
+    @DeleteMapping("/wishlist/{productId}")
+    @ApiResponseFormat(message = "찜한 상품이 성공적으로 취소되었습니다.")
+    public ApiResponse<Void> deleteWishList(
+            @PathVariable Long productId,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        User currentUser = (User) userDetails;
+        wishListService.deleteWishList(productId, currentUser.getUsername());
+        return ApiResponse.success(null);
+    }
 }
