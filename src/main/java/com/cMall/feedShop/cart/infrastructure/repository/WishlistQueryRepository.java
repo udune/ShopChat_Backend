@@ -8,4 +8,7 @@ public interface WishlistQueryRepository {
 
     // 사용자 ID로 위시리스트 조회
     Page<WishlistInfo> findWishlistByUserId(Long userId, Pageable pageable);
+
+    // 사용자 ID로 위시리스트 개수 조회
+    long countWishlistByUserId(Long userId);
 }

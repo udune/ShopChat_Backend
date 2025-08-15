@@ -28,13 +28,16 @@ public class WishlistService {
         // 1. 사용자 조회
         User user = getCurrentUser(loginId);
 
-        // 2. 페이징 검증
-        Pageable pageable = PagingUtils.createPageable(page, size);
+        // 2. 전체 찜한 상품 개수 조회
+        long totalElements = wishlistRepository.countWishlistByUserId(user.getId());
 
-        // 3. 찜 목록 조회
+        // 3. 페이징 검증
+        Pageable pageable = PagingUtils.createPageable(page, size, totalElements);
+
+        // 4. 찜 목록 조회
         Page<WishlistInfo> wishlistPage = wishlistRepository.findWishlistByUserId(user.getId(), pageable);
 
-        // 4. 결과 반환
+        // 5. 결과 반환
         return WishListResponse.of(wishlistPage);
     }
 

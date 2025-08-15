@@ -59,4 +59,17 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
 
         return new PageImpl<>(content, pageable, total != null ? total : 0);
     }
+
+    @Override
+    public long countWishlistByUserId(Long userId) {
+        Long count = queryFactory
+                .select(wishList.count())
+                .from(wishList)
+                .join(product).on(wishList.product.productId.eq(product.productId))
+                .where(wishList.user.id.eq(userId)
+                        .and(wishList.deletedAt.isNull()))
+                .fetchOne();
+
+        return count != null ? count : 0;
+    }
 }
