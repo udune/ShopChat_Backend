@@ -7,7 +7,7 @@ import com.cMall.feedShop.cart.application.dto.response.CartCreateResponse;
 import com.cMall.feedShop.cart.application.dto.response.RecentViewResponse;
 import com.cMall.feedShop.cart.application.dto.response.WishListResponse;
 import com.cMall.feedShop.cart.domain.model.RecentView;
-import com.cMall.feedShop.cart.domain.model.Wishlist;
+import com.cMall.feedShop.cart.domain.model.WishList;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -124,7 +124,7 @@ class AdditionalCartTests {
     @DisplayName("Wishlist 엔티티 생성 테스트")
     void wishlist_Entity_Test() {
         // given
-        Wishlist wishlist = new Wishlist();
+        WishList wishlist = new WishList();
         LocalDateTime now = LocalDateTime.now();
 
         ReflectionTestUtils.setField(wishlist, "wishlistId", 1L);
