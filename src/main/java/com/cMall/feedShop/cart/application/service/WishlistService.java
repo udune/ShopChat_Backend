@@ -20,6 +20,7 @@ public class WishlistService {
     private final UserRepository userRepository;
     private final WishlistRepository wishlistRepository;
 
+    @Transactional
     public void deleteWishList(Long productId, String loginId) {
         // 1. 사용자 조회
         User currentUser = getCurrentUser(loginId);
