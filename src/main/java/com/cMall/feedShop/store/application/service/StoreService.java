@@ -7,9 +7,12 @@ import com.cMall.feedShop.store.domain.model.Store;
 import com.cMall.feedShop.store.domain.repository.StoreRepository;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
+import com.cMall.feedShop.store.application.dto.response.StoreListResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -42,4 +45,18 @@ public class StoreService {
         return storeRepository.findBySellerId(sellerId)
                 .orElseThrow(() -> new StoreException(ErrorCode.STORE_NOT_FOUND, "판매자의 가게를 찾을 수 없습니다."));
     }
+
+    /**
+     * 모든 상점 목록을 조회하는 서비스 메서드
+     *
+     * @return 상점 목록 응답 객체 리스트
+     */
+    public List<StoreListResponse> getAllStores() {
+        List<StoreListResponse> stores = storeRepository.findAllStoresOrderByName().stream()
+                .map(StoreListResponse::from)
+                .toList();
+
+        return stores;
+    }
+
 }
