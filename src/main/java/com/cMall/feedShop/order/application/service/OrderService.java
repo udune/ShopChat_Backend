@@ -24,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,7 +46,7 @@ public class OrderService {
     /**
      * 주문 생성
      * @param request 주문 생성 요청 정보
-     * @param userDetails 현재 로그인된 사용자 정보
+     * @param loginId 현재 로그인된 사용자 정보
      * @return 주문 생성 응답 정보
      */
     @Transactional
@@ -88,7 +87,7 @@ public class OrderService {
      * @param page
      * @param size
      * @param status
-     * @param userDetails
+     * @param loginId
      * @return
      */
     @Transactional(readOnly = true)
@@ -120,7 +119,7 @@ public class OrderService {
      * @param page
      * @param size
      * @param status
-     * @param userDetails
+     * @param loginId
      * @return
      */
     @Transactional(readOnly = true)
@@ -181,7 +180,7 @@ public class OrderService {
     /**
      * 주문 상세 조회
      * @param orderId
-     * @param userDetails
+     * @param loginId
      * @return
      */
     @Transactional(readOnly = true)
@@ -201,7 +200,7 @@ public class OrderService {
      * 판매자 주문 상태 변경
      * @param orderId
      * @param request
-     * @param userDetails
+     * @param loginId
      * @return
      */
     @Transactional
@@ -227,7 +226,7 @@ public class OrderService {
      * 사용자 주문 상태 변경
      * @param orderId
      * @param request
-     * @param userDetails
+     * @param loginId
      * @return
      */
     @Transactional
@@ -270,7 +269,7 @@ public class OrderService {
 
     /**
      * 현재 사용자 조회 및 사용자 권한 검증
-     * @param userDetails 현재 로그인된 사용자 정보
+     * @param loginId 현재 로그인된 사용자 정보
      * @return 검증된 사용자 정보
      */
     private User validateUser(String loginId) {
@@ -286,7 +285,7 @@ public class OrderService {
 
     /**
      * 현재 사용자 조회 및 판매자 권한 검증
-     * @param userDetails 현재 로그인된 사용자 정보
+     * @param loginId 현재 로그인된 사용자 정보
      * @return 검증된 사용자 정보
      */
     private User validateSeller(String loginId) {
