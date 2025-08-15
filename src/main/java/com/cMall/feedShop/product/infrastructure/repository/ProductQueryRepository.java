@@ -6,10 +6,26 @@ import com.cMall.feedShop.product.domain.model.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
+
 public interface ProductQueryRepository {
 
     long countWithAllConditions(ProductSearchRequest request);
 
     Page<Product> findWithAllConditions(ProductSearchRequest request, ProductSortType sortType, Pageable pageable);
 
+    long countByStoreId(Long storeId);
+
+    Page<Product> findProductsWithFilters(
+            Long categoryId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Long storeId,
+            ProductSortType productSortType,
+            Pageable pageable
+    );
+
+    Page<Product> searchProductsByName(String keyword, Pageable pageable);
+
+    Page<Product> findByStoreIdOrderByCreatedAtDesc(Long storeId, Pageable pageable);
 }
