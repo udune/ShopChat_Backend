@@ -1,6 +1,6 @@
 package com.cMall.feedShop.cart.infrastructure.repository;
 
-import com.cMall.feedShop.cart.domain.model.QWishlist;
+import com.cMall.feedShop.cart.domain.model.QWishList;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -13,7 +13,7 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
 
     @Override
     public boolean existsActiveWishlistByUserIdAndProductId(Long userId, Long productId) {
-        QWishlist wishlist = QWishlist.wishlist;
+        QWishList wishlist = QWishList.wishList;
 
         Integer result = queryFactory
                 .selectOne()
