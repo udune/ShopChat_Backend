@@ -1,5 +1,6 @@
 package com.cMall.feedShop.cart.application.dto.response.info;
 
+import com.cMall.feedShop.product.domain.enums.DiscountType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -14,6 +15,7 @@ public class WishlistInfo {
     private String productName;
     private String productImageUrl;
     private BigDecimal productPrice;
+    private DiscountType discountType;
     private BigDecimal discountValue;
     private LocalDateTime createdAt;
 }

@@ -32,6 +32,7 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
                         product.name,
                         productImage.url.coalesce(""),
                         product.price,
+                        product.discountType,
                         product.discountValue,
                         wishList.createdAt
                 ))
