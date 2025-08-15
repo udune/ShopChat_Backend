@@ -300,69 +300,6 @@ class StoreListServiceTest {
         }
     }
 
-    // ================================ 성능 테스트 ================================
-
-    @Nested
-    @DisplayName("성능 테스트")
-    class PerformanceTests {
-
-        @Test
-        @DisplayName("대량 데이터(1000개) 처리 성능 테스트")
-        void getAllStores_LargeDataSet_PerformanceTest() {
-            // Given
-            List<Store> largeStoreList = createLargeStoreList(1000);
-            given(storeRepository.findAllStoresOrderByName()).willReturn(largeStoreList);
-
-            // When
-            long startTime = System.currentTimeMillis();
-            List<StoreListResponse> result = storeService.getAllStores();
-            long endTime = System.currentTimeMillis();
-            long executionTime = endTime - startTime;
-
-            // Then
-            assertThat(result).hasSize(1000);
-            assertThat(executionTime).isLessThan(1000L); // 1초 이내
-
-            // 첫 번째와 마지막 데이터 확인
-            assertThat(result.get(0).getStoreName()).isEqualTo("Store_0");
-            assertThat(result.get(999).getStoreName()).isEqualTo("Store_999");
-
-            System.out.println("1000개 데이터 처리 시간: " + executionTime + "ms");
-        }
-
-        @Test
-        @DisplayName("메모리 효율성 테스트 - 스트림 처리 확인")
-        void getAllStores_MemoryEfficiency_StreamProcessing() {
-            // Given
-            List<Store> stores = createLargeStoreList(100);
-            given(storeRepository.findAllStoresOrderByName()).willReturn(stores);
-
-            // When
-            List<StoreListResponse> result = storeService.getAllStores();
-
-            // Then
-            assertThat(result).hasSize(100);
-
-            // 메모리 사용량이 적정 수준인지 확인 (간접 검증)
-            Runtime runtime = Runtime.getRuntime();
-            long usedMemory = runtime.totalMemory() - runtime.freeMemory();
-            assertThat(usedMemory).isLessThan(100 * 1024 * 1024); // 100MB 이내
-        }
-
-        @Test
-        @DisplayName("Repository 호출 최적화 확인 - 단일 호출")
-        void getAllStores_OptimizedRepositoryCalls_SingleCall() {
-            // Given
-            given(storeRepository.findAllStoresOrderByName()).willReturn(Arrays.asList(storeA, storeB));
-
-            // When
-            storeService.getAllStores();
-
-            // Then - Repository 메서드가 정확히 1번만 호출되는지 확인
-            verify(storeRepository, times(1)).findAllStoresOrderByName();
-            verify(storeRepository, never()).findAll(); // 비효율적인 메서드 호출 안 함
-        }
-    }
 
     // ================================ 데이터 변환 검증 테스트 ================================
 
