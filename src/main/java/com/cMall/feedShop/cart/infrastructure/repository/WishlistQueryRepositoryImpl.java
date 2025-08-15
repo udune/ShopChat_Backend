@@ -19,8 +19,8 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
                 .selectOne()
                 .from(wishlist)
                 .where(
-                        wishlist.userId.eq(userId)
-                                .and(wishlist.productId.eq(productId))
+                        wishlist.user.id.eq(userId)
+                                .and(wishlist.product.productId.eq(productId))
                                 .and(wishlist.deletedAt.isNull())
                 )
                 .fetchFirst();

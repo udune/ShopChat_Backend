@@ -21,8 +21,8 @@ public class WishListResponse {
 
     public static WishListResponse from(WishList wishlist) {
         return new WishListResponse(
-                wishlist.getId(),
-                wishlist.getProduct().getId(),
+                wishlist.getUser().getId(),
+                wishlist.getProduct().getProductId(),
                 wishlist.getCreatedAt()
         );
     }
