@@ -39,7 +39,7 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
                 .join(product).on(wishList.product.productId.eq(product.productId))
                 .leftJoin(productImage).on(
                         product.productId.eq(productImage.product.productId)
-                                .and(productImage.productImage.type.eq(ImageType.MAIN))
+                                .and(productImage.type.eq(ImageType.MAIN))
                 )
                 .where(wishList.user.id.eq(userId)
                         .and(wishList.deletedAt.isNull()))

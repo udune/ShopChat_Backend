@@ -14,6 +14,6 @@ public class WishlistInfo {
     private String productName;
     private String productImageUrl;
     private BigDecimal productPrice;
-    private BigDecimal discountPrice;
+    private BigDecimal discountValue;
     private LocalDateTime createdAt;
 }
