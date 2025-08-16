@@ -132,4 +132,10 @@ public class Product extends BaseTimeEntity {
         return productOptions.stream()
                 .anyMatch(ProductOption::isInStock);
     }
+
+    public void decreaseWishNumber() {
+        if (this.wishNumber != null && this.wishNumber > 0) {
+            this.wishNumber -= 1;
+        }
+    }
 }
