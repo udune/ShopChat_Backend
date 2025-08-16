@@ -29,11 +29,14 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
         QProduct product = QProduct.product;
         QProductImage productImage = QProductImage.productImage;
 
-        // 1. 위시리스트 조회 (Product만 join)
+        // 1. 위시리스트 조회 (Product만 join, 삭제되지 않은 것만)
         List<WishList> wishlists = queryFactory
                 .selectFrom(wishlist)
                 .join(wishlist.product, product).fetchJoin()
-                .where(wishlist.user.id.eq(userId))
+                .where(
+                        wishlist.user.id.eq(userId)
+                                .and(wishlist.deletedAt.isNull())
+                )
                 .orderBy(wishlist.createdAt.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -78,11 +81,14 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
                 ))
                 .collect(Collectors.toList());
 
-        // 5. 전체 개수 조회
+        // 5. 전체 개수 조회 (삭제되지 않은 것만)
         Long total = queryFactory
                 .select(wishlist.count())
                 .from(wishlist)
-                .where(wishlist.user.id.eq(userId))
+                .where(
+                        wishlist.user.id.eq(userId)
+                                .and(wishlist.deletedAt.isNull())
+                )
                 .fetchOne();
 
         return new PageImpl<>(content, pageable, total != null ? total : 0);
@@ -95,7 +101,10 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
         Long count = queryFactory
                 .select(wishlist.count())
                 .from(wishlist)
-                .where(wishlist.user.id.eq(userId))
+                .where(
+                        wishlist.user.id.eq(userId)
+                                .and(wishlist.deletedAt.isNull())
+                )
                 .fetchOne();
 
         return count != null ? count : 0;
