@@ -80,6 +80,9 @@ public class WishlistService {
         // 1. 사용자 조회
         User currentUser = getCurrentUser(loginId);
 
+        // 2. 상품 조회
+        Product product = getProduct(productId);
+
         // 2. 찜한 상품 조회
         WishList wishlist = wishlistRepository.findByUserIdAndProductId(
                         currentUser.getId(), productId)
@@ -90,6 +93,9 @@ public class WishlistService {
 
         // 4. DB 저장
         wishlistRepository.save(wishlist);
+
+        // 6. 상품 찜 수 감소
+        product.decreaseWishNumber();
     }
 
     /**
