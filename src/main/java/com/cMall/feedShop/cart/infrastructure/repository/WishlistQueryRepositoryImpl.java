@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Repository
@@ -125,5 +126,21 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
                 .fetchFirst();
 
         return result != null;
+    }
+
+    @Override
+    public Optional<WishList> findByUserIdAndProductId(Long userId, Long productId) {
+        QWishList wishList = QWishList.wishList;
+
+        WishList result = queryFactory
+                .selectFrom(wishList)
+                .where(
+                        wishList.user.id.eq(userId)
+                                .and(wishList.product.productId.eq(productId))
+                                .and(wishList.deletedAt.isNull())
+                )
+                .fetchOne();
+
+        return Optional.ofNullable(result);
     }
 }
