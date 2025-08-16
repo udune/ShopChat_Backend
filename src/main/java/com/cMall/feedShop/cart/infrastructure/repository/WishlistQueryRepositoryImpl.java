@@ -109,4 +109,21 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
 
         return count != null ? count : 0;
     }
+
+    @Override
+    public boolean existsActiveWishlistByUserIdAndProductId(Long userId, Long productId) {
+        QWishList wishlist = QWishList.wishList;
+
+        Integer result = queryFactory
+                .selectOne()
+                .from(wishlist)
+                .where(
+                        wishlist.user.id.eq(userId)
+                                .and(wishlist.product.productId.eq(productId))
+                                .and(wishlist.deletedAt.isNull())
+                )
+                .fetchFirst();
+
+        return result != null;
+    }
 }
