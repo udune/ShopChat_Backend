@@ -1,6 +1,7 @@
 package com.cMall.feedShop.user.domain.model;
 
 import com.cMall.feedShop.cart.domain.model.Cart;
+import com.cMall.feedShop.cart.domain.model.WishList;
 import com.cMall.feedShop.common.BaseTimeEntity;
 import com.cMall.feedShop.order.domain.model.Order;
 import com.cMall.feedShop.user.domain.enums.UserRole;
@@ -45,6 +46,9 @@ public class User extends BaseTimeEntity implements UserDetails {
 
     @OneToOne(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Cart cart;
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<WishList> wishlist;
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<Order> orders;
