@@ -1,7 +1,7 @@
 package com.cMall.feedShop.cart.application.service;
 
 import com.cMall.feedShop.cart.application.dto.request.WishListRequest;
-import com.cMall.feedShop.cart.application.dto.response.WishListResponse;
+import com.cMall.feedShop.cart.application.dto.response.WishListAddResponse;
 import com.cMall.feedShop.cart.domain.exception.CartException;
 import com.cMall.feedShop.cart.domain.model.WishList;
 import com.cMall.feedShop.cart.domain.repository.WishlistRepository;
@@ -114,7 +114,7 @@ class WishlistAddServiceTest {
         given(wishlistRepository.save(any(WishList.class))).willReturn(savedWishList);
 
         // when
-        WishListResponse response = wishlistService.addWishList(testRequest, "testLogin");
+        WishListAddResponse response = wishlistService.addWishList(testRequest, "testLogin");
 
         // then
         assertThat(response).isNotNull();
