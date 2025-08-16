@@ -1,7 +1,7 @@
 package com.cMall.feedShop.cart.application.service;
 
 import com.cMall.feedShop.cart.application.dto.request.WishListRequest;
-import com.cMall.feedShop.cart.application.dto.response.WishListResponse;
+import com.cMall.feedShop.cart.application.dto.response.WishListAddResponse;
 import com.cMall.feedShop.cart.domain.exception.CartException;
 import com.cMall.feedShop.cart.domain.model.WishList;
 import com.cMall.feedShop.cart.domain.repository.WishlistRepository;
@@ -24,7 +24,7 @@ public class WishlistService {
     private final WishlistRepository wishlistRepository;
 
     @Transactional
-    public WishListResponse addWishList(WishListRequest request, String loginId) {
+    public WishListAddResponse addWishList(WishListRequest request, String loginId) {
         // 1. 사용자 조회
         User user = getCurrentUser(loginId);
 
@@ -47,7 +47,7 @@ public class WishlistService {
         product.increaseWishNumber();
 
         // 7. 찜 목록 응답 생성
-        return WishListResponse.from(savedWishList);
+        return WishListAddResponse.from(savedWishList);
     }
 
     /**

@@ -1,7 +1,7 @@
 package com.cMall.feedShop.cart.presentation;
 
 import com.cMall.feedShop.cart.application.dto.request.WishListRequest;
-import com.cMall.feedShop.cart.application.dto.response.WishListResponse;
+import com.cMall.feedShop.cart.application.dto.response.WishListAddResponse;
 import com.cMall.feedShop.cart.application.service.WishlistService;
 import com.cMall.feedShop.common.aop.ApiResponseFormat;
 import com.cMall.feedShop.common.dto.ApiResponse;
@@ -23,12 +23,12 @@ public class WishListController {
 
     @PostMapping("/wishlist")
     @ApiResponseFormat(message = "상품이 찜 목록에 추가되었습니다.")
-    public ApiResponse<WishListResponse> addWishList(
+    public ApiResponse<WishListAddResponse> addWishList(
             @Valid @RequestBody WishListRequest request,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         User currentUser = (User) userDetails;
-        WishListResponse response = wishlistService.addWishList(request, currentUser.getUsername());
+        WishListAddResponse response = wishlistService.addWishList(request, currentUser.getUsername());
         return ApiResponse.success(response);
     }
 }
