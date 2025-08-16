@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class WishListController {
-    private final WishlistService wishListService;
+    private final WishlistService wishlistService;
 
     @DeleteMapping("/wishlist/{productId}")
     @ApiResponseFormat(message = "찜한 상품이 성공적으로 취소되었습니다.")
@@ -25,7 +25,7 @@ public class WishListController {
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         User currentUser = (User) userDetails;
-        wishListService.deleteWishList(productId, currentUser.getUsername());
+        wishlistService.deleteWishList(productId, currentUser.getUsername());
         return ApiResponse.success(null);
     }
 }
