@@ -19,6 +19,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -71,6 +73,23 @@ public class WishlistService {
 
         // 5. 결과 반환
         return WishListResponse.of(wishlistPage);
+    }
+
+    @Transactional
+    public void deleteWishList(Long productId, String loginId) {
+        // 1. 사용자 조회
+        User currentUser = getCurrentUser(loginId);
+
+        // 2. 찜한 상품 조회
+        WishList wishlist = wishlistRepository.findByUserIdAndProductId(
+                        currentUser.getId(), productId)
+                .orElseThrow(() -> new CartException(ErrorCode.WISHLIST_ITEM_NOT_FOUND));
+
+        // 3. 찜한 상품 삭제
+        wishlist.delete(LocalDateTime.now());
+
+        // 4. DB 저장
+        wishlistRepository.save(wishlist);
     }
 
     /**

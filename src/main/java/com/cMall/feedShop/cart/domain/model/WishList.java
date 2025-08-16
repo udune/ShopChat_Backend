@@ -37,4 +37,8 @@ public class WishList extends BaseTimeEntity {
         this.user = user;
         this.product = product;
     }
+
+    public void delete(LocalDateTime deleteTime) {
+        this.deletedAt = deleteTime;
+    }
 }

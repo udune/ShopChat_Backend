@@ -2,6 +2,7 @@ package com.cMall.feedShop.cart.infrastructure.repository;
 
 import com.cMall.feedShop.cart.application.dto.response.info.WishlistInfo;
 import com.cMall.feedShop.cart.domain.model.QWishList;
+import com.cMall.feedShop.cart.domain.model.WishList;
 import com.cMall.feedShop.product.domain.enums.ImageType;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import static com.cMall.feedShop.cart.domain.model.QWishList.wishList;
 import static com.cMall.feedShop.product.domain.model.QProduct.product;
@@ -89,5 +91,21 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
                 .fetchOne();
 
         return count != null ? count : 0;
+    }
+
+    @Override
+    public Optional<WishList> findByUserIdAndProductId(Long userId, Long productId) {
+        QWishList wishList = QWishList.wishList;
+
+        WishList result = queryFactory
+                .selectFrom(wishList)
+                .where(
+                        wishList.user.id.eq(userId)
+                                .and(wishList.product.productId.eq(productId))
+                                .and(wishList.deletedAt.isNull())
+                )
+                .fetchOne();
+
+        return Optional.ofNullable(result);
     }
 }
