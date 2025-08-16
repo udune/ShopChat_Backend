@@ -1,8 +1,12 @@
 package com.cMall.feedShop.cart.infrastructure.repository;
 
 import com.cMall.feedShop.cart.application.dto.response.info.WishlistInfo;
+import com.cMall.feedShop.cart.domain.model.QWishList;
 import com.cMall.feedShop.product.domain.enums.ImageType;
+import com.cMall.feedShop.product.domain.model.QProduct;
+import com.cMall.feedShop.product.domain.model.QProductImage;
 import com.querydsl.core.types.Projections;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,26 +28,33 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
 
     @Override
     public Page<WishlistInfo> findWishlistByUserId(Long userId, Pageable pageable) {
+        QWishList wishList = QWishList.wishList;
+        QProduct product = QProduct.product;
+        QProductImage productImage = QProductImage.productImage;
+
+        JPAQuery<String> mainImageSubQuery = queryFactory
+                .select(productImage.url)
+                .from(productImage)
+                .where(productImage.product.eq(product)
+                        .and(productImage.type.eq(ImageType.MAIN)))
+                .orderBy(productImage.imageId.asc())
+                .limit(1);
+
         List<WishlistInfo> content = queryFactory
                 .select(Projections.constructor(
                         WishlistInfo.class,
                         wishList.wishlistId,
                         product.productId,
                         product.name,
-                        productImage.url.coalesce(""),
+                        mainImageSubQuery,
                         product.price,
                         product.discountType,
                         product.discountValue,
                         wishList.createdAt
                 ))
                 .from(wishList)
-                .join(product).on(wishList.product.productId.eq(product.productId))
-                .leftJoin(productImage).on(
-                        product.productId.eq(productImage.product.productId)
-                                .and(productImage.type.eq(ImageType.MAIN))
-                )
-                .where(wishList.user.id.eq(userId)
-                        .and(wishList.deletedAt.isNull()))
+                .join(wishList.product, product)
+                .where(wishList.user.id.eq(userId))
                 .orderBy(wishList.createdAt.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -52,9 +63,7 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
         Long total = queryFactory
                 .select(wishList.count())
                 .from(wishList)
-                .join(product).on(wishList.product.productId.eq(product.productId))
-                .where(wishList.user.id.eq(userId)
-                        .and(wishList.deletedAt.isNull()))
+                .where(wishList.user.id.eq(userId))
                 .fetchOne();
 
         return new PageImpl<>(content, pageable, total != null ? total : 0);
