@@ -30,4 +30,20 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
                 .where(product.productId.eq(productId))
                 .execute();
     }
+
+    @Override
+    public Optional<WishList> findByUserIdAndProductIdAndDeletedAtIsNull(Long userId, Long productId) {
+        QWishList wishList = QWishList.wishList;
+
+        WishList result = queryFactory
+                .selectFrom(wishList)
+                .where(
+                        wishList.user.id.eq(userId)
+                                .and(wishList.product.productId.eq(productId))
+                                .and(wishList.deletedAt.isNull())
+                )
+                .fetchOne();
+
+        return Optional.ofNullable(result);
+    }
 }
