@@ -141,7 +141,7 @@ class WishlistAddServiceTest {
         wishlistService.addWishList(testRequest, "testLogin");
 
         // then
-        verify(spyProduct, times(1)).increaseWishNumber();
+        verify(wishlistRepository, times(1)).increaseWishCount(1L);
     }
 
     // ==================== 실패 케이스 - 사용자 관련 ====================
