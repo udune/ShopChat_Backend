@@ -7,6 +7,7 @@ import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.product.domain.enums.*;
 import com.cMall.feedShop.product.domain.model.Category;
 import com.cMall.feedShop.product.domain.model.Product;
+import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import com.cMall.feedShop.store.domain.model.Store;
 import com.cMall.feedShop.user.domain.enums.UserRole;
 import com.cMall.feedShop.user.domain.model.User;
@@ -39,6 +40,9 @@ class WishlistDeleteServiceTest {
 
     @Mock
     private WishlistRepository wishlistRepository;
+
+    @Mock
+    private ProductRepository productRepository;
 
     @InjectMocks
     private WishlistService wishlistService;
@@ -138,6 +142,27 @@ class WishlistDeleteServiceTest {
         verify(wishlistRepository, never()).decreaseWishCount(any());
     }
 
+
+    @Test
+    @DisplayName("찜한 상품 취소 실패 - 상품 없음")
+    void deleteWishList_Fail_ProductNotFound() {
+        // given
+        Long productId = 999L;
+        String loginId = "testuser";
+
+        given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(testUser));
+        given(productRepository.findByProductId(productId)).willReturn(Optional.empty());
+
+        // when & then
+        CartException thrown = assertThrows(CartException.class, () ->
+                wishlistService.deleteWishList(productId, loginId));
+
+        assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+        verify(userRepository, times(1)).findByLoginId(loginId);
+        verify(productRepository, times(1)).findByProductId(productId);
+        verify(wishlistRepository, never()).findByUserIdAndProductId(any(), any());
+        verify(wishlistRepository, never()).save(any());
+    }
 
     @Test
     @DisplayName("찜한 상품 취소 실패 - 찜한 상품 없음")
