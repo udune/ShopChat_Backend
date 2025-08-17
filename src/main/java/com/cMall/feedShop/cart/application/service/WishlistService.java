@@ -12,8 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -32,18 +30,18 @@ public class WishlistService {
         Product product = getProduct(productId);
 
         // 2. 찜한 상품 조회
-        WishList wishlist = wishlistRepository.findByUserIdAndProductId(
+        WishList wishlist = wishlistRepository.findByUserIdAndProductIdAndDeletedAtIsNull(
                 currentUser.getId(), productId)
                 .orElseThrow(() -> new CartException(ErrorCode.WISHLIST_ITEM_NOT_FOUND));
 
         // 3. 찜한 상품 삭제
-        wishlist.delete(LocalDateTime.now());
+        wishlist.delete();
 
         // 4. DB 저장
         wishlistRepository.save(wishlist);
 
-        // 6. 상품 찜 수 감소
-        product.decreaseWishNumber();
+        // 5. 상품 찜 수 감소
+        wishlistRepository.decreaseWishCount(productId);
     }
 
     /**
