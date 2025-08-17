@@ -24,18 +24,4 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
                 .execute();
     }
 
-    @Override
-    public void decreaseWishCount(Long productId) {
-        QProduct product = QProduct.product;
-
-        queryFactory
-                .update(product)
-                .set(product.wishNumber,
-                        new CaseBuilder()
-                                .when(product.wishNumber.gt(0))
-                                .then(product.wishNumber.subtract(1))
-                                .otherwise(0))
-                .where(product.productId.eq(productId))
-                .execute();
-    }
 }
