@@ -72,8 +72,10 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
         Long count = queryFactory
                 .select(wishlist.count())
                 .from(wishlist)
-                .where(wishlist.user.id.eq(userId)
-                        .and(wishlist.deletedAt.isNull()))
+                .where(
+                        wishlist.user.id.eq(userId)
+                                .and(wishlist.deletedAt.isNull())
+                )
                 .fetchOne();
 
         return count != null ? count : 0;
