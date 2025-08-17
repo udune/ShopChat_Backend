@@ -7,7 +7,6 @@ import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.product.domain.enums.*;
 import com.cMall.feedShop.product.domain.model.Category;
 import com.cMall.feedShop.product.domain.model.Product;
-import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import com.cMall.feedShop.store.domain.model.Store;
 import com.cMall.feedShop.user.domain.enums.UserRole;
 import com.cMall.feedShop.user.domain.model.User;
@@ -40,9 +39,6 @@ class WishlistDeleteServiceTest {
 
     @Mock
     private WishlistRepository wishlistRepository;
-
-    @Mock
-    private ProductRepository productRepository;
 
     @InjectMocks
     private WishlistService wishlistService;
@@ -103,8 +99,7 @@ class WishlistDeleteServiceTest {
         String loginId = "testuser";
 
         given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(testUser));
-        given(productRepository.findByProductId(productId)).willReturn(Optional.of(testProduct));
-        given(wishlistRepository.findByUserIdAndProductId(testUser.getId(), productId))
+        given(wishlistRepository.findByUserIdAndProductIdAndDeletedAtIsNull(testUser.getId(), productId))
                 .willReturn(Optional.of(testWishList));
         given(wishlistRepository.save(any(WishList.class))).willReturn(testWishList);
 
@@ -113,9 +108,9 @@ class WishlistDeleteServiceTest {
 
         // then
         verify(userRepository, times(1)).findByLoginId(loginId);
-        verify(productRepository, times(1)).findByProductId(productId);
-        verify(wishlistRepository, times(1)).findByUserIdAndProductId(testUser.getId(), productId);
+        verify(wishlistRepository, times(1)).findByUserIdAndProductIdAndDeletedAtIsNull(testUser.getId(), productId);
         verify(wishlistRepository, times(1)).save(testWishList);
+        verify(wishlistRepository, times(1)).decreaseWishCount(productId);
 
         // deletedAt이 설정되었는지 확인 (간접적으로 delete 메서드가 호출되었는지 확인)
         assertThat(testWishList.getDeletedAt()).isNotNull();
@@ -138,30 +133,11 @@ class WishlistDeleteServiceTest {
 
         assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
         verify(userRepository, times(1)).findByLoginId(loginId);
-        verify(wishlistRepository, never()).findByUserIdAndProductId(any(), any());
+        verify(wishlistRepository, never()).findByUserIdAndProductIdAndDeletedAtIsNull(any(), any());
         verify(wishlistRepository, never()).save(any());
+        verify(wishlistRepository, never()).decreaseWishCount(any());
     }
 
-    @Test
-    @DisplayName("찜한 상품 취소 실패 - 상품 없음")
-    void deleteWishList_Fail_ProductNotFound() {
-        // given
-        Long productId = 999L;
-        String loginId = "testuser";
-
-        given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(testUser));
-        given(productRepository.findByProductId(productId)).willReturn(Optional.empty());
-
-        // when & then
-        CartException thrown = assertThrows(CartException.class, () ->
-                wishlistService.deleteWishList(productId, loginId));
-
-        assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
-        verify(userRepository, times(1)).findByLoginId(loginId);
-        verify(productRepository, times(1)).findByProductId(productId);
-        verify(wishlistRepository, never()).findByUserIdAndProductId(any(), any());
-        verify(wishlistRepository, never()).save(any());
-    }
 
     @Test
     @DisplayName("찜한 상품 취소 실패 - 찜한 상품 없음")
@@ -171,8 +147,7 @@ class WishlistDeleteServiceTest {
         String loginId = "testuser";
 
         given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(testUser));
-        given(productRepository.findByProductId(productId)).willReturn(Optional.of(testProduct));
-        given(wishlistRepository.findByUserIdAndProductId(testUser.getId(), productId))
+        given(wishlistRepository.findByUserIdAndProductIdAndDeletedAtIsNull(testUser.getId(), productId))
                 .willReturn(Optional.empty());
 
         // when & then
@@ -181,9 +156,9 @@ class WishlistDeleteServiceTest {
 
         assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.WISHLIST_ITEM_NOT_FOUND);
         verify(userRepository, times(1)).findByLoginId(loginId);
-        verify(productRepository, times(1)).findByProductId(productId);
-        verify(wishlistRepository, times(1)).findByUserIdAndProductId(testUser.getId(), productId);
+        verify(wishlistRepository, times(1)).findByUserIdAndProductIdAndDeletedAtIsNull(testUser.getId(), productId);
         verify(wishlistRepository, never()).save(any());
+        verify(wishlistRepository, never()).decreaseWishCount(any());
     }
 
     @Test
@@ -198,8 +173,7 @@ class WishlistDeleteServiceTest {
         ReflectionTestUtils.setField(otherUser, "id", 2L);
 
         given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(testUser));
-        given(productRepository.findByProductId(productId)).willReturn(Optional.of(testProduct));
-        given(wishlistRepository.findByUserIdAndProductId(testUser.getId(), productId))
+        given(wishlistRepository.findByUserIdAndProductIdAndDeletedAtIsNull(testUser.getId(), productId))
                 .willReturn(Optional.empty()); // 현재 사용자의 찜 목록에는 없음
 
         // when & then
@@ -208,9 +182,9 @@ class WishlistDeleteServiceTest {
 
         assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.WISHLIST_ITEM_NOT_FOUND);
         verify(userRepository, times(1)).findByLoginId(loginId);
-        verify(productRepository, times(1)).findByProductId(productId);
-        verify(wishlistRepository, times(1)).findByUserIdAndProductId(testUser.getId(), productId);
+        verify(wishlistRepository, times(1)).findByUserIdAndProductIdAndDeletedAtIsNull(testUser.getId(), productId);
         verify(wishlistRepository, never()).save(any());
+        verify(wishlistRepository, never()).decreaseWishCount(any());
     }
 
     // ==================== 경계값 테스트 ====================
@@ -255,23 +229,22 @@ class WishlistDeleteServiceTest {
                 .user(testUser)
                 .product(testProduct)
                 .build();
-        deletedWishList.delete(LocalDateTime.now().minusDays(1)); // 이미 삭제됨
+        deletedWishList.delete(); // 이미 삭제됨
         ReflectionTestUtils.setField(deletedWishList, "wishlistId", 1L);
 
         given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(testUser));
-        given(productRepository.findByProductId(productId)).willReturn(Optional.of(testProduct));
-        given(wishlistRepository.findByUserIdAndProductId(testUser.getId(), productId))
-                .willReturn(Optional.of(deletedWishList));
-        given(wishlistRepository.save(any(WishList.class))).willReturn(deletedWishList);
+        given(wishlistRepository.findByUserIdAndProductIdAndDeletedAtIsNull(testUser.getId(), productId))
+                .willReturn(Optional.empty()); // 이미 삭제된 경우 조회되지 않음
 
-        // when
-        wishlistService.deleteWishList(productId, loginId);
+        // when & then
+        CartException thrown = assertThrows(CartException.class, () ->
+                wishlistService.deleteWishList(productId, loginId));
 
-        // then - 이미 삭제된 것도 다시 삭제 처리됨 (비즈니스 로직에 따라)
+        assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.WISHLIST_ITEM_NOT_FOUND);
         verify(userRepository, times(1)).findByLoginId(loginId);
-        verify(productRepository, times(1)).findByProductId(productId);
-        verify(wishlistRepository, times(1)).findByUserIdAndProductId(testUser.getId(), productId);
-        verify(wishlistRepository, times(1)).save(deletedWishList);
+        verify(wishlistRepository, times(1)).findByUserIdAndProductIdAndDeletedAtIsNull(testUser.getId(), productId);
+        verify(wishlistRepository, never()).save(any());
+        verify(wishlistRepository, never()).decreaseWishCount(any());
     }
 
     // ==================== 통합 테스트 ====================
@@ -287,8 +260,7 @@ class WishlistDeleteServiceTest {
         assertThat(testWishList.getDeletedAt()).isNull();
 
         given(userRepository.findByLoginId(loginId)).willReturn(Optional.of(testUser));
-        given(productRepository.findByProductId(productId)).willReturn(Optional.of(testProduct));
-        given(wishlistRepository.findByUserIdAndProductId(testUser.getId(), productId))
+        given(wishlistRepository.findByUserIdAndProductIdAndDeletedAtIsNull(testUser.getId(), productId))
                 .willReturn(Optional.of(testWishList));
         given(wishlistRepository.save(any(WishList.class))).willAnswer(invocation -> {
             WishList savedWishList = invocation.getArgument(0);
@@ -302,9 +274,9 @@ class WishlistDeleteServiceTest {
 
         // then - 메서드 호출 순서와 횟수 검증
         verify(userRepository, times(1)).findByLoginId(loginId);
-        verify(productRepository, times(1)).findByProductId(productId);
-        verify(wishlistRepository, times(1)).findByUserIdAndProductId(testUser.getId(), productId);
+        verify(wishlistRepository, times(1)).findByUserIdAndProductIdAndDeletedAtIsNull(testUser.getId(), productId);
         verify(wishlistRepository, times(1)).save(testWishList);
+        verify(wishlistRepository, times(1)).decreaseWishCount(productId);
 
         // deletedAt이 설정되었는지 최종 확인
         assertThat(testWishList.getDeletedAt()).isNotNull();
