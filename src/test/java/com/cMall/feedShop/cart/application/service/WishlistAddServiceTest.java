@@ -6,6 +6,7 @@ import com.cMall.feedShop.cart.domain.exception.CartException;
 import com.cMall.feedShop.cart.domain.model.WishList;
 import com.cMall.feedShop.cart.domain.repository.WishlistRepository;
 import com.cMall.feedShop.common.exception.ErrorCode;
+import org.springframework.dao.DataIntegrityViolationException;
 import com.cMall.feedShop.product.domain.enums.CategoryType;
 import com.cMall.feedShop.product.domain.enums.DiscountType;
 import com.cMall.feedShop.product.domain.model.Category;
@@ -110,7 +111,6 @@ class WishlistAddServiceTest {
         // given
         given(userRepository.findByLoginId("testLogin")).willReturn(Optional.of(testUser));
         given(productRepository.findByProductId(1L)).willReturn(Optional.of(testProduct));
-        given(wishlistRepository.existsActiveWishlistByUserIdAndProductId(1L, 1L)).willReturn(false);
         given(wishlistRepository.save(any(WishList.class))).willReturn(savedWishList);
 
         // when
@@ -125,7 +125,6 @@ class WishlistAddServiceTest {
         // Mock 호출 검증
         verify(userRepository, times(1)).findByLoginId("testLogin");
         verify(productRepository, times(1)).findByProductId(1L);
-        verify(wishlistRepository, times(1)).existsActiveWishlistByUserIdAndProductId(1L, 1L);
         verify(wishlistRepository, times(1)).save(any(WishList.class));
     }
 
@@ -136,7 +135,6 @@ class WishlistAddServiceTest {
         Product spyProduct = spy(testProduct); // spy 객체로 메서드 호출 추적
         given(userRepository.findByLoginId("testLogin")).willReturn(Optional.of(testUser));
         given(productRepository.findByProductId(1L)).willReturn(Optional.of(spyProduct));
-        given(wishlistRepository.existsActiveWishlistByUserIdAndProductId(1L, 1L)).willReturn(false);
         given(wishlistRepository.save(any(WishList.class))).willReturn(savedWishList);
 
         // when
@@ -183,7 +181,6 @@ class WishlistAddServiceTest {
         );
 
         assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
-        verify(wishlistRepository, never()).existsActiveWishlistByUserIdAndProductId(any(), any());
         verify(wishlistRepository, never()).save(any());
     }
 
@@ -195,7 +192,7 @@ class WishlistAddServiceTest {
         // given
         given(userRepository.findByLoginId("testLogin")).willReturn(Optional.of(testUser));
         given(productRepository.findByProductId(1L)).willReturn(Optional.of(testProduct));
-        given(wishlistRepository.existsActiveWishlistByUserIdAndProductId(1L, 1L)).willReturn(true);
+        given(wishlistRepository.save(any(WishList.class))).willThrow(new DataIntegrityViolationException("중복 찜"));
 
         // when & then
         CartException thrown = assertThrows(
@@ -204,7 +201,7 @@ class WishlistAddServiceTest {
         );
 
         assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.ALREADY_WISHED_PRODUCT);
-        verify(wishlistRepository, never()).save(any());
+        verify(wishlistRepository, times(1)).save(any(WishList.class));
     }
 
     // ==================== 경계값 테스트 ====================
@@ -247,7 +244,6 @@ class WishlistAddServiceTest {
         // given
         given(userRepository.findByLoginId("testLogin")).willReturn(Optional.of(testUser));
         given(productRepository.findByProductId(1L)).willReturn(Optional.of(testProduct));
-        given(wishlistRepository.existsActiveWishlistByUserIdAndProductId(1L, 1L)).willReturn(false);
         given(wishlistRepository.save(any(WishList.class))).willReturn(savedWishList);
 
         // when
@@ -257,24 +253,24 @@ class WishlistAddServiceTest {
         var inOrder = inOrder(userRepository, productRepository, wishlistRepository);
         inOrder.verify(userRepository).findByLoginId("testLogin");
         inOrder.verify(productRepository).findByProductId(1L);
-        inOrder.verify(wishlistRepository).existsActiveWishlistByUserIdAndProductId(1L, 1L);
         inOrder.verify(wishlistRepository).save(any(WishList.class));
     }
 
     @Test
-    @DisplayName("찜 등록 실패 시 Repository save 호출되지 않음 검증")
-    void addWishList_VerifyNoSaveOnFailure() {
-        // given - 중복 찜 상황
+    @DisplayName("찜 등록 실패 시 상품 찜 수 증가하지 않음 검증")
+    void addWishList_VerifyNoIncreaseWishNumberOnFailure() {
+        // given - DataIntegrityViolationException 발생 상황
+        Product spyProduct = spy(testProduct);
         given(userRepository.findByLoginId("testLogin")).willReturn(Optional.of(testUser));
-        given(productRepository.findByProductId(1L)).willReturn(Optional.of(testProduct));
-        given(wishlistRepository.existsActiveWishlistByUserIdAndProductId(1L, 1L)).willReturn(true);
+        given(productRepository.findByProductId(1L)).willReturn(Optional.of(spyProduct));
+        given(wishlistRepository.save(any(WishList.class))).willThrow(new DataIntegrityViolationException("중복 찜"));
 
         // when & then
         assertThrows(CartException.class, () ->
                 wishlistService.addWishList(testRequest, "testLogin")
         );
 
-        // 실패 시 save가 호출되지 않았는지 검증
-        verify(wishlistRepository, never()).save(any(WishList.class));
+        // 실패 시 increaseWishNumber가 호출되지 않았는지 검증
+        verify(spyProduct, never()).increaseWishNumber();
     }
 }
