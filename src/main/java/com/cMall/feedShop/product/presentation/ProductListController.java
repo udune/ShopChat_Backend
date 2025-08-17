@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -101,7 +102,7 @@ public class ProductListController {
 
     private List<Color> parseColors(List<String> colors) {
         if (colors == null || colors.isEmpty()) {
-            return null;
+            return Collections.emptyList();
         }
 
         // 색상 문자열 리스트를 Color enum 리스트로 변환
@@ -119,7 +120,7 @@ public class ProductListController {
 
     private List<Size> parseSizes(List<String> sizes) {
         if (sizes == null || sizes.isEmpty()) {
-            return null;
+            return Collections.emptyList();
         }
 
         // 사이즈 문자열 리스트를 Size enum 리스트로 변환
@@ -137,7 +138,7 @@ public class ProductListController {
 
     private List<Gender> parseGenders(List<String> genders) {
         if (genders == null || genders.isEmpty()) {
-            return null;
+            return Collections.emptyList();
         }
 
         return genders.stream()
