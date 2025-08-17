@@ -1,5 +1,9 @@
 package com.cMall.feedShop.cart.infrastructure.repository;
 
+import com.cMall.feedShop.cart.domain.model.WishList;
+
+import java.util.Optional;
+
 public interface WishlistQueryRepository {
 
     // 찜 수 감소
