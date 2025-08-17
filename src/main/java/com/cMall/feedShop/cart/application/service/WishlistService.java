@@ -11,6 +11,7 @@ import com.cMall.feedShop.product.domain.repository.ProductRepository;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,23 +32,25 @@ public class WishlistService {
         // 2. 상품 조회
         Product product = getProduct(request.getProductId());
 
-        // 3. 찜 중복 검증
-        validateNotAlreadyWished(user.getId(), product.getProductId());
-
         // 4. 찜 생성
-        WishList wishlist = WishList.builder()
-                .user(user)
-                .product(product)
-                .build();
+        try {
+            WishList wishlist = WishList.builder()
+                    .user(user)
+                    .product(product)
+                    .build();
 
-        // 5. DB 저장
-        WishList savedWishList = wishlistRepository.save(wishlist);
+            // DB 저장
+            WishList savedWishList = wishlistRepository.save(wishlist);
 
-        // 6. 상품 찜 수 증가
-        product.increaseWishNumber();
+            // 상품 찜 수 증가
+            wishlistRepository.increaseWishCount(product.getProductId());
 
-        // 7. 찜 목록 응답 생성
-        return WishListAddResponse.from(savedWishList);
+            // 찜 목록 응답 생성
+            return WishListAddResponse.from(savedWishList);
+        } catch (DataIntegrityViolationException e) {
+            // 이미 찜 목록에 있는 경우 예외 처리
+            throw new CartException(ErrorCode.ALREADY_WISHED_PRODUCT);
+        }
     }
 
     /**
@@ -70,18 +73,5 @@ public class WishlistService {
     private Product getProduct(Long productId) {
         return productRepository.findByProductId(productId)
                 .orElseThrow(() -> new CartException(ErrorCode.PRODUCT_NOT_FOUND));
-    }
-
-    /**
-     * 사용자가 이미 찜한 상품인지 검증합니다.
-     *
-     * @param userId    사용자 ID
-     * @param productId 상품 ID
-     * @throws CartException 이미 찜한 상품인 경우
-     */
-    private void validateNotAlreadyWished(Long userId, Long productId) {
-        if (wishlistRepository.existsActiveWishlistByUserIdAndProductId(userId, productId)) {
-            throw new CartException(ErrorCode.ALREADY_WISHED_PRODUCT);
-        }
     }
 }

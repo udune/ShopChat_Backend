@@ -1,6 +1,8 @@
 package com.cMall.feedShop.cart.infrastructure.repository;
 
 import com.cMall.feedShop.cart.domain.model.QWishList;
+import com.cMall.feedShop.product.domain.model.QProduct;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -12,19 +14,49 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public boolean existsActiveWishlistByUserIdAndProductId(Long userId, Long productId) {
+    public void increaseWishCount(Long productId) {
+        QProduct product = QProduct.product;
+
+        queryFactory
+                .update(product)
+                .set(product.wishNumber, product.wishNumber.add(1))
+                .where(product.productId.eq(productId))
+                .execute();
+    }
+
+    @Override
+    public void decreaseWishCount(Long productId) {
+        QProduct product = QProduct.product;
+
+        queryFactory
+                .update(product)
+                .set(product.wishNumber,
+                        new CaseBuilder()
+                                .when(product.wishNumber.gt(0))
+                                .then(product.wishNumber.subtract(1))
+                                .otherwise(0))
+                .where(product.productId.eq(productId))
+                .execute();
+    }
+
+    @Override
+    public void syncWishCount(Long productId) {
         QWishList wishlist = QWishList.wishList;
+        QProduct product = QProduct.product;
 
-        Integer result = queryFactory
-                .selectOne()
+        // 실제 활성 찜 개수 조회
+        Long actualCount = queryFactory
+                .select(wishlist.count())
                 .from(wishlist)
-                .where(
-                        wishlist.user.id.eq(userId)
-                                .and(wishlist.product.productId.eq(productId))
-                                .and(wishlist.deletedAt.isNull())
-                )
-                .fetchFirst();
+                .where(wishlist.product.productId.eq(productId)
+                        .and(wishlist.deletedAt.isNull()))
+                .fetchOne();
 
-        return result != null;
+        // 카운터 동기화
+        queryFactory
+                .update(product)
+                .set(product.wishNumber, actualCount.intValue())
+                .where(product.productId.eq(productId))
+                .execute();
     }
 }
