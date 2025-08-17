@@ -38,25 +38,4 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
                 .where(product.productId.eq(productId))
                 .execute();
     }
-
-    @Override
-    public void syncWishCount(Long productId) {
-        QWishList wishlist = QWishList.wishList;
-        QProduct product = QProduct.product;
-
-        // 실제 활성 찜 개수 조회
-        Long actualCount = queryFactory
-                .select(wishlist.count())
-                .from(wishlist)
-                .where(wishlist.product.productId.eq(productId)
-                        .and(wishlist.deletedAt.isNull()))
-                .fetchOne();
-
-        // 카운터 동기화
-        queryFactory
-                .update(product)
-                .set(product.wishNumber, actualCount.intValue())
-                .where(product.productId.eq(productId))
-                .execute();
-    }
 }
