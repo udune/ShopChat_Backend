@@ -43,7 +43,7 @@ public class WishlistService {
             WishList savedWishList = wishlistRepository.save(wishlist);
 
             // 상품 찜 수 증가
-            product.increaseWishNumber();
+            wishlistRepository.increaseWishCount(product.getProductId());
 
             // 찜 목록 응답 생성
             return WishListAddResponse.from(savedWishList);
