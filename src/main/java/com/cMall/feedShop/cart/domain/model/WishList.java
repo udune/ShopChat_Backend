@@ -11,7 +11,20 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "wishlist")
+@Table(
+        name = "wishlist",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "UK_wishlist_user_product_active",
+                        columnNames = {"user_id", "product_id", "deleted_at"}
+                )
+        },
+        indexes = {
+                @Index(name = "IDX_wishlist_user_id", columnList = "user_id"),
+                @Index(name = "IDX_wishlist_product_id", columnList = "product_id"),
+                @Index(name = "IDX_wishlist_deleted_at", columnList = "deleted_at")
+        }
+)
 @Getter
 @NoArgsConstructor
 public class WishList extends BaseTimeEntity {
