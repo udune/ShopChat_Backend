@@ -133,9 +133,4 @@ public class Product extends BaseTimeEntity {
                 .anyMatch(ProductOption::isInStock);
     }
 
-    public void decreaseWishNumber() {
-        if (this.wishNumber != null && this.wishNumber > 0) {
-            this.wishNumber -= 1;
-        }
-    }
 }
