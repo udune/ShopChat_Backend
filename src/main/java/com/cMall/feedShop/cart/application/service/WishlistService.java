@@ -4,7 +4,6 @@ import com.cMall.feedShop.cart.application.dto.response.WishListResponse;
 import com.cMall.feedShop.cart.application.dto.response.info.WishlistInfo;
 import com.cMall.feedShop.cart.domain.exception.CartException;
 import com.cMall.feedShop.cart.domain.repository.WishlistRepository;
-import com.cMall.feedShop.cart.infrastructure.repository.WishlistQueryRepository;
 import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.product.application.utils.PagingUtils;
 import com.cMall.feedShop.user.domain.model.User;
