@@ -3,6 +3,7 @@ package com.cMall.feedShop.cart.infrastructure.repository;
 import com.cMall.feedShop.cart.application.dto.response.info.WishlistInfo;
 import com.cMall.feedShop.cart.domain.model.QWishList;
 import com.cMall.feedShop.cart.domain.model.WishList;
+import com.cMall.feedShop.product.domain.enums.ImageType;
 import com.cMall.feedShop.product.domain.model.QProduct;
 import com.cMall.feedShop.product.domain.model.QProductImage;
 import com.querydsl.core.types.Projections;
