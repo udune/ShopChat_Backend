@@ -1,8 +1,6 @@
 package com.cMall.feedShop.cart.infrastructure.repository;
 
-import com.cMall.feedShop.cart.domain.model.QWishList;
 import com.cMall.feedShop.product.domain.model.QProduct;
-import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

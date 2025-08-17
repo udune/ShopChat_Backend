@@ -133,8 +133,4 @@ public class Product extends BaseTimeEntity {
                 .anyMatch(ProductOption::isInStock);
     }
 
-    public void increaseWishNumber() {
-        this.wishNumber = (this.wishNumber == null ? 0 : this.wishNumber) + 1;
-    }
-
 }

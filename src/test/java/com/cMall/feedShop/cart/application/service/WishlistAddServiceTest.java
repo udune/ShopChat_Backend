@@ -271,6 +271,6 @@ class WishlistAddServiceTest {
         );
 
         // 실패 시 increaseWishNumber가 호출되지 않았는지 검증
-        verify(spyProduct, never()).increaseWishNumber();
+        verify(wishlistRepository, never()).increaseWishCount(1L);
     }
 }
