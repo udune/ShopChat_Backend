@@ -41,7 +41,7 @@ import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ProductReadService 테스트")
-class ProductReadServiceTest {
+class ProductSellerReadServiceTest {
 
     @Mock
     private ProductRepository productRepository;
