@@ -26,7 +26,7 @@ public class StoreSellerController {
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         User currentUser = (User) userDetails;
-        StoreDetailResponse data = storeService.getMyStoreDetail(currentUser.getUsername());
+        StoreDetailResponse data = storeService.getMyStoreDetail(currentUser.getId());
         return ApiResponse.success(data);
     }
 }
