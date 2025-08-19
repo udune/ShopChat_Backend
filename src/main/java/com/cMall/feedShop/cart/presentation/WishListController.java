@@ -1,5 +1,18 @@
 package com.cMall.feedShop.cart.presentation;
 
+import com.cMall.feedShop.cart.application.dto.request.WishListRequest;
+import com.cMall.feedShop.cart.application.dto.response.WishListAddResponse;
+import com.cMall.feedShop.cart.application.service.WishlistService;
+import com.cMall.feedShop.common.aop.ApiResponseFormat;
+import com.cMall.feedShop.common.dto.ApiResponse;
+import com.cMall.feedShop.user.domain.model.User;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import com.cMall.feedShop.cart.application.service.WishlistService;
 import com.cMall.feedShop.common.aop.ApiResponseFormat;
 import com.cMall.feedShop.common.dto.ApiResponse;
@@ -17,6 +30,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class WishListController {
     private final WishlistService wishlistService;
+
+    @PostMapping("/wishlist")
+    @ApiResponseFormat(message = "상품이 찜 목록에 추가되었습니다.")
+    public ApiResponse<WishListAddResponse> addWishList(
+            @Valid @RequestBody WishListRequest request,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        User currentUser = (User) userDetails;
+        WishListAddResponse response = wishlistService.addWishList(request, currentUser.getUsername());
+        return ApiResponse.success(response);
+    }
 
     @DeleteMapping("/wishlist/{productId}")
     @ApiResponseFormat(message = "찜한 상품이 성공적으로 취소되었습니다.")

@@ -17,6 +17,17 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
     private final JPAQueryFactory queryFactory;
 
     @Override
+    public void increaseWishCount(Long productId) {
+        QProduct product = QProduct.product;
+
+        queryFactory
+                .update(product)
+                .set(product.wishNumber, product.wishNumber.add(1))
+                .where(product.productId.eq(productId))
+                .execute();
+    }
+
+    @Override
     public void decreaseWishCount(Long productId) {
         QProduct product = QProduct.product;
 
@@ -46,4 +57,5 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
 
         return Optional.ofNullable(result);
     }
+
 }
