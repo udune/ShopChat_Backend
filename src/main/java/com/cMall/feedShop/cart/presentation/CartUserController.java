@@ -4,7 +4,10 @@ import com.cMall.feedShop.cart.application.dto.request.CartItemCreateRequest;
 import com.cMall.feedShop.cart.application.dto.request.CartItemUpdateRequest;
 import com.cMall.feedShop.cart.application.dto.response.CartItemListResponse;
 import com.cMall.feedShop.cart.application.dto.response.CartItemResponse;
-import com.cMall.feedShop.cart.application.service.CartService;
+import com.cMall.feedShop.cart.application.service.CartCreateService;
+import com.cMall.feedShop.cart.application.service.CartDeleteService;
+import com.cMall.feedShop.cart.application.service.CartReadService;
+import com.cMall.feedShop.cart.application.service.CartUpdateService;
 import com.cMall.feedShop.common.aop.ApiResponseFormat;
 import com.cMall.feedShop.common.dto.ApiResponse;
 import com.cMall.feedShop.user.domain.model.User;
@@ -19,7 +22,10 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class CartUserController {
 
-    private final CartService cartService;
+    private final CartCreateService cartCreateService;
+    private final CartReadService cartReadService;
+    private final CartUpdateService cartUpdateService;
+    private final CartDeleteService cartDeleteService;
 
     /**
      * 장바구니에 상품 추가
@@ -31,7 +37,7 @@ public class CartUserController {
             @Valid @RequestBody CartItemCreateRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         User currentUser = (User) userDetails;
-        CartItemResponse data = cartService.addCartItem(request, currentUser.getUsername());
+        CartItemResponse data = cartCreateService.addCartItem(request, currentUser.getUsername());
         return ApiResponse.success(data);
     }
 
@@ -45,7 +51,7 @@ public class CartUserController {
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         User currentUser = (User) userDetails;
-        CartItemListResponse data = cartService.getCartItems(currentUser.getUsername());
+        CartItemListResponse data = cartReadService.getCartItems(currentUser.getUsername());
         return ApiResponse.success(data);
     }
 
@@ -61,7 +67,7 @@ public class CartUserController {
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         User currentUser = (User) userDetails;
-        cartService.updateCartItem(cartItemId, request, currentUser.getUsername());
+        cartUpdateService.updateCartItem(cartItemId, request, currentUser.getUsername());
         return ApiResponse.success(null);
     }
   
@@ -76,7 +82,7 @@ public class CartUserController {
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         User currentUser = (User) userDetails;
-        cartService.deleteCartItem(cartItemId, currentUser.getUsername());
+        cartDeleteService.deleteCartItem(cartItemId, currentUser.getUsername());
         return ApiResponse.success(null);
     }
 }
