@@ -76,6 +76,26 @@ public class WishlistService {
         }
     }
 
+    @Transactional
+    public void deleteWishList(Long productId, String loginId) {
+        // 1. 사용자 조회
+        User currentUser = getCurrentUser(loginId);
+
+        // 2. 찜한 상품 조회
+        WishList wishlist = wishlistRepository.findByUserIdAndProductIdAndDeletedAtIsNull(
+                        currentUser.getId(), productId)
+                .orElseThrow(() -> new CartException(ErrorCode.WISHLIST_ITEM_NOT_FOUND));
+
+        // 3. 찜한 상품 삭제
+        wishlist.delete();
+
+        // 4. DB 저장
+        wishlistRepository.save(wishlist);
+
+        // 5. 상품 찜 수 감소
+        wishlistRepository.decreaseWishCount(productId);
+    }
+
     /**
      * 현재 로그인한 사용자의 정보를 가져옵니다.
      *
