@@ -7,7 +7,9 @@ import com.cMall.feedShop.product.application.dto.request.ProductUpdateRequest;
 import com.cMall.feedShop.product.application.dto.response.ProductCreateResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductPageResponse;
 import com.cMall.feedShop.product.application.service.ProductReadService;
-import com.cMall.feedShop.product.application.service.ProductService;
+import com.cMall.feedShop.product.application.service.ProductCreateService;
+import com.cMall.feedShop.product.application.service.ProductUpdateService;
+import com.cMall.feedShop.product.application.service.ProductDeleteService;
 import com.cMall.feedShop.user.domain.model.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +28,11 @@ import java.util.List;
 @RequiredArgsConstructor
 //@Tag(name = "상품 관리(판매자)", description = "판매자가 상품을 등록하고 수정하는 API 입니다.")
 public class ProductSellerController {
-    private final ProductService productService;
+    
     private final ProductReadService productReadService;
+    private final ProductCreateService productCreateService;
+    private final ProductUpdateService productUpdateService;
+    private final ProductDeleteService productDeleteService;
 
     /**
      * 상품 목록 조회 API
@@ -61,7 +66,7 @@ public class ProductSellerController {
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         User currentUser = (User) userDetails;
-        ProductCreateResponse data = productService.createProduct(request, mainImages, detailImages, currentUser.getLoginId());
+        ProductCreateResponse data = productCreateService.createProduct(request, mainImages, detailImages, currentUser.getLoginId());
         return ApiResponse.success(data);
     }
 
@@ -80,7 +85,7 @@ public class ProductSellerController {
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         User currentUser = (User) userDetails;
-        productService.updateProduct(productId, request, mainImages, detailImages, currentUser.getLoginId());
+        productUpdateService.updateProduct(productId, request, mainImages, detailImages, currentUser.getLoginId());
         return ApiResponse.success(null);
     }
 
@@ -96,7 +101,7 @@ public class ProductSellerController {
             @AuthenticationPrincipal UserDetails userDetails)
     {
         User currentUser = (User) userDetails;
-        productService.deleteProduct(productId, currentUser.getLoginId());
+        productDeleteService.deleteProduct(productId, currentUser.getLoginId());
         return ApiResponse.success(null);
     }
 }

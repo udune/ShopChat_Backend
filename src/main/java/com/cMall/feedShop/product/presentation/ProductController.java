@@ -4,7 +4,7 @@ import com.cMall.feedShop.common.aop.ApiResponseFormat;
 import com.cMall.feedShop.common.dto.ApiResponse;
 import com.cMall.feedShop.product.application.dto.response.CategoryResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductDetailResponse;
-import com.cMall.feedShop.product.application.service.CategoryService;
+import com.cMall.feedShop.product.application.service.CategoryReadService;
 import com.cMall.feedShop.product.application.service.ProductReadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +17,7 @@ import java.util.List;
 //@Tag(name = "상품 조회", description = "상품 목록과 상세 정보를 조회하는 API 입니다.")
 public class ProductController {
     private final ProductReadService productReadService;
-    private final CategoryService categoryService;
+    private final CategoryReadService categoryReadService;
 
     /**
      * 상품 상세 조회 API
@@ -40,7 +40,7 @@ public class ProductController {
     @GetMapping("/categories")
     @ApiResponseFormat(message = "카테고리 목록을 성공적으로 조회했습니다.")
     public ApiResponse<List<CategoryResponse>> getAllCategories() {
-        List<CategoryResponse> data = categoryService.getAllCategories();
+        List<CategoryResponse> data = categoryReadService.getAllCategories();
         return ApiResponse.success(data);
     }
 }
