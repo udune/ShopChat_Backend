@@ -4,7 +4,6 @@ import com.cMall.feedShop.cart.domain.model.WishList;
 import com.cMall.feedShop.cart.infrastructure.repository.WishlistQueryRepository;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface WishlistRepository extends JpaRepository<WishList, Long>, WishlistQueryRepository {
 import java.util.Optional;
 
 public interface WishlistRepository extends JpaRepository<WishList, Long>, WishlistQueryRepository {
