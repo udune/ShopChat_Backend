@@ -80,4 +80,16 @@ public class WishlistQueryRepositoryImpl implements WishlistQueryRepository {
 
         return count != null ? count : 0;
     }
+    
+    @Override
+    public void increaseWishCount(Long productId) {
+        QProduct product = QProduct.product;
+
+        queryFactory
+                .update(product)
+                .set(product.wishNumber, product.wishNumber.add(1))
+                .where(product.productId.eq(productId))
+                .execute();
+    }
+
 }

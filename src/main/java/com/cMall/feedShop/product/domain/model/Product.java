@@ -132,4 +132,5 @@ public class Product extends BaseTimeEntity {
         return productOptions.stream()
                 .anyMatch(ProductOption::isInStock);
     }
+
 }
