@@ -19,12 +19,7 @@ import com.cMall.feedShop.product.domain.model.ProductOption;
 import com.cMall.feedShop.user.domain.enums.UserRole;
 import com.cMall.feedShop.user.domain.exception.UserException;
 import com.cMall.feedShop.user.domain.model.User;
-import com.cMall.feedShop.user.domain.model.UserActivity;
-import com.cMall.feedShop.user.domain.repository.UserActivityRepository;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
-import com.cMall.feedShop.user.application.service.BadgeService;
-import com.cMall.feedShop.user.application.service.UserLevelService;
-import com.cMall.feedShop.user.domain.model.ActivityType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -49,8 +44,6 @@ public class OrderService {
     private final CartItemRepository cartItemRepository;
     private final OrderRepository orderRepository;
     private final OrderCommonService orderCommonService;
-    private final UserLevelService userLevelService;
-    private final UserActivityRepository userActivityRepository;
 
     /**
      * 주문 생성
