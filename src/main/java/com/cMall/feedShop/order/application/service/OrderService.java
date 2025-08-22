@@ -61,7 +61,7 @@ public class OrderService {
     @Transactional
     public OrderCreateResponse createOrder(OrderCreateRequest request, String loginId) {
         log.info("주문 생성 시작 - 사용포인트: {}", request.getUsedPoints());
-
+      
         // 1. 현재 사용자 조회를 하고 사용자 권한을 검증
         User currentUser = orderCommonService.validateUser(loginId);
 
@@ -111,7 +111,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public OrderPageResponse getOrderListForUser(int page, int size, String status, String loginId) {
         log.debug("사용자 주문 목록 조회 - page: {}, size: {}, status: {}", page, size, status);
-
+      
         // 1. 현재 사용자 조회를 하고 사용자 권한을 검증
         User currentUser = orderCommonService.validateUser(loginId);
 
