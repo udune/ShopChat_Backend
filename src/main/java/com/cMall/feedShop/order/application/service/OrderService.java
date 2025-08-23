@@ -21,6 +21,7 @@ import com.cMall.feedShop.user.domain.exception.UserException;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +37,7 @@ import static com.cMall.feedShop.order.application.constants.OrderConstants.MAX_
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class OrderService {
 
     private final UserRepository userRepository;
@@ -78,7 +80,10 @@ public class OrderService {
         // 8. 장바구니 아이템 삭제
         cartItemRepository.deleteAll(selectedCartItems);
 
-        // 9. 주문 생성 응답 반환
+        // 9. 뱃지 자동 수여 체크
+        orderHelper.checkAndAwardBadgesAfterOrder(currentUser.getId());
+
+        // 10. 주문 생성 응답 반환
         return OrderCreateResponse.from(order);
     }
 

@@ -16,13 +16,17 @@ import com.cMall.feedShop.product.domain.model.ProductImage;
 import com.cMall.feedShop.product.domain.model.ProductOption;
 import com.cMall.feedShop.product.domain.repository.ProductImageRepository;
 import com.cMall.feedShop.product.domain.repository.ProductOptionRepository;
+import com.cMall.feedShop.user.application.service.BadgeService;
+import com.cMall.feedShop.user.application.service.UserLevelService;
 import com.cMall.feedShop.user.domain.enums.UserRole;
+import com.cMall.feedShop.user.domain.model.ActivityType;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.application.service.PointService;
 import com.cMall.feedShop.user.domain.model.UserPoint;
 import com.cMall.feedShop.user.domain.repository.UserPointRepository;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +47,7 @@ import static com.cMall.feedShop.order.application.constants.OrderConstants.*;
 @Component
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class OrderHelper {
 
     private final UserRepository userRepository;
@@ -52,6 +57,8 @@ public class OrderHelper {
     private final DiscountCalculator discountCalculator;
     private final ProductImageRepository productImageRepository;
     private final OrderRepository orderRepository;
+    private final UserLevelService userLevelService;
+    private final BadgeService badgeService;
 
     /**
      * 사용자 검증
@@ -416,5 +423,36 @@ public class OrderHelper {
                 }).toList();
 
         productOptionRepository.saveAll(optionsToUpdate);
+    }
+
+    /**
+     * 주문 완료 후 뱃지 자동 수여 체크
+     */
+    public void checkAndAwardBadgesAfterOrder(Long userId) {
+        try {
+            // 1. 구매 완료 점수 부여
+            userLevelService.recordActivity(
+                    userId,
+                    ActivityType.PURCHASE_COMPLETION,
+                    "구매 완료",
+                    null,
+                    "ORDER"
+            );
+
+            // 2. 사용자의 총 주문 수 조회
+            Long totalOrders = orderRepository.countByUserIdAndOrderStatus(userId, OrderStatus.DELIVERED);
+
+            // 3. 사용자의 총 주문 금액 조회 (DELIVERED 상태만)
+            Long totalAmount = orderRepository.findTotalOrderAmountByUserId(userId);
+            if (totalAmount == null) {
+                totalAmount = 0L;
+            }
+
+            // 4. 뱃지 자동 수여 체크 (뱃지 획득 시 보너스 점수도 자동 부여됨)
+            badgeService.checkAndAwardPurchaseBadges(userId, totalOrders, totalAmount);
+        } catch (Exception e) {
+            // 뱃지 수여 실패가 주문 프로세스에 영향을 주지 않도록 예외 처리
+            log.error("뱃지 자동 수여 중 오류 발생 - userId: {}, error: {}", userId, e.getMessage());
+        }
     }
 }
