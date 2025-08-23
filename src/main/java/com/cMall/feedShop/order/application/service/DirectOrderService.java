@@ -63,9 +63,6 @@ public class DirectOrderService {
         // 9. 뱃지 자동 수여 체크
         orderHelper.checkAndAwardBadgesAfterOrder(currentUser.getId());
 
-        // 8. 뱃지 자동 수여 체크
-        orderCommonService.checkAndAwardBadgesAfterOrder(currentUser.getId(), order.getOrderId());
-
         // 9. 주문 생성 응답 반환
         return OrderCreateResponse.from(order);
     }
