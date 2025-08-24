@@ -71,7 +71,7 @@ public class ProductRecommendationService {
             return getFallbackProducts(limit);
         }
 
-        List<Product> products = productRecommendationRepository.findAllById(productIds);
+        List<Product> products = productRecommendationRepository.findProductsByIds(productIds);
 
         if (products.size() < limit) {
             List<Product> additional = getFallbackProducts(limit - products.size());
@@ -82,7 +82,7 @@ public class ProductRecommendationService {
     }
 
     private List<Product> getFallbackProducts(int limit) {
-        return productRecommendationRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, limit)).getContent();
+        return productRecommendationRepository.findAllProductsOrderByCreatedAtDesc(PageRequest.of(0, limit)).getContent();
     }
 
     private void saveRecommendation(User user, String prompt, List<Long> productIds, String response) {

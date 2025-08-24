@@ -6,6 +6,8 @@ import com.cMall.feedShop.ai.application.service.ProductRecommendationService;
 import com.cMall.feedShop.ai.domain.model.ProductRecommendation;
 import com.cMall.feedShop.common.aop.ApiResponseFormat;
 import com.cMall.feedShop.common.dto.ApiResponse;
+import com.cMall.feedShop.product.application.dto.response.ProductListResponse;
+import com.cMall.feedShop.product.application.service.ProductMapper;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.user.domain.model.User;
 import jakarta.validation.Valid;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -27,6 +30,7 @@ import java.util.List;
 public class ProductRecommendationController {
 
     private final ProductRecommendationService productRecommendationService;
+    private final ProductMapper productMapper;
 
     @PostMapping("/products/recommend")
     @ApiResponseFormat(message = "AI 추천 완료")
@@ -36,6 +40,19 @@ public class ProductRecommendationController {
     ) {
         User currentUser = (User) userDetails;
 
-        List<Product> recommendedProducts = productRecommendationService.recommendProducts(currentUser, request.getPrompt(), request.getLimit());
+        List<Product> recommendedProducts = productRecommendationService
+                .recommendProducts(currentUser, request.getPrompt(), request.getLimit());
+
+        List<ProductListResponse> productResponses = recommendedProducts.stream()
+                .map(productMapper::toListResponse)
+                .collect(Collectors.toList());
+
+        ProductRecommendationResponse response = ProductRecommendationResponse.builder()
+                .products(productResponses)
+                .prompt(request.getPrompt())
+                .count(productResponses.size())
+                .build();
+
+        return ApiResponse.success(response);
     }
 }

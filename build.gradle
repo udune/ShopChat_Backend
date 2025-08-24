@@ -27,6 +27,9 @@ configurations {
 
 repositories {
 	mavenCentral()
+	// Spring AI를 위한 repository 추가
+	maven { url 'https://repo.spring.io/milestone' }
+	maven { url 'https://repo.spring.io/snapshot' }
 }
 
 dependencies {
@@ -71,9 +74,7 @@ dependencies {
 
 	// Spring AI 의존성 추가
 	implementation platform('org.springframework.ai:spring-ai-bom:0.8.1')
-	implementation 'org.springframework.ai:spring-ai-core'
 	implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter'
-	implementation 'org.springframework.ai:spring-ai-spring-boot-autoconfigure'
 }
 
 jacoco {
