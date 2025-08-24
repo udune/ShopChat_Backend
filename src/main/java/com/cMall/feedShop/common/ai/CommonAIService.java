@@ -22,8 +22,10 @@ public class CommonAIService {
     @Value("${ai.enabled:true}")
     private boolean aiEnabled;
 
+    private final String fallbackText = "{\"message\": \"AI 서비스가 현재 사용 불가능합니다.\"}";
+
     // AI 모델을 사용하여 텍스트 생성, 실패 시 폴백 텍스트 반환
-    public String generateText(String prompt, String fallbackText) {
+    public String generateText(String prompt) {
         if (!aiEnabled || chatModel == null) {
             log.info("AI 비활성화 상태 (aiEnabled: {}, chatModel: {}), 폴백 반환",
                     aiEnabled, chatModel != null ? "있음" : "없음");
@@ -33,6 +35,9 @@ public class CommonAIService {
         try {
             ChatResponse response = chatModel.call(new Prompt(prompt));
             String result = response.getResult().getOutput().getContent();
+            if (result == null || result.isBlank()) {
+                return fallbackText;
+            }
             log.debug("AI 텍스트 생성 성공");
             return result;
         } catch (Exception e) {
@@ -44,7 +49,13 @@ public class CommonAIService {
     // AI 응답을 Map<String, Object>로 파싱, 실패 시 빈 맵 반환
     public Map<String, Object> getResponseMap(String response) {
         try {
+            if (response == null || response.isBlank()) {
+                return Map.of();
+            }
             String cleanJson = cleanJsonResponse(response);
+            if (cleanJson.isBlank()) {
+                return Map.of();
+            }
             return objectMapper.readValue(cleanJson, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
             log.warn("AI 응답 파싱 실패: {}", e.getMessage());
@@ -52,13 +63,23 @@ public class CommonAIService {
         }
     }
 
-    // 응답에서 JSON 부분만 추출
+    // ```json ... ``` 또는 불필요한 전후 텍스트 제거 + 첫 { ~ 마지막 } 까지 슬라이싱
     private String cleanJsonResponse(String response) {
-        if (response.contains("{")) {
-            int start = response.indexOf("{");
-            int end = response.lastIndexOf("}") + 1;
-            return response.substring(start, end);
+        String s = response.trim();
+        // 코드펜스 제거
+        if (s.startsWith("```")) {
+            int first = s.indexOf('\n');
+            int last = s.lastIndexOf("```");
+            if (first >= 0 && last > first) {
+                s = s.substring(first + 1, last).trim();
+            }
         }
-        return response;
+        // 첫 '{'와 마지막 '}' 사이만 추출
+        int start = s.indexOf('{');
+        int end = s.lastIndexOf('}');
+        if (start >= 0 && end >= start) {
+            return s.substring(start, end + 1).trim();
+        }
+        return "";
     }
 }

@@ -3,7 +3,6 @@ package com.cMall.feedShop.ai.presentation;
 import com.cMall.feedShop.ai.application.dto.request.ProductRecommendationRequest;
 import com.cMall.feedShop.ai.application.dto.response.ProductRecommendationResponse;
 import com.cMall.feedShop.ai.application.service.ProductRecommendationService;
-import com.cMall.feedShop.ai.domain.model.ProductRecommendation;
 import com.cMall.feedShop.common.aop.ApiResponseFormat;
 import com.cMall.feedShop.common.dto.ApiResponse;
 import com.cMall.feedShop.product.application.dto.response.ProductListResponse;

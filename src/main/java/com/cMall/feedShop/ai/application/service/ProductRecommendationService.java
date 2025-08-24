@@ -28,47 +28,49 @@ public class ProductRecommendationService {
 
     // AI를 사용하여 사용자 맞춤 상품 추천
     public List<Product> recommendProducts(User user, String prompt, int limit) {
-        log.info("AI 추천 요청 - 사용자: {}, 프롬프트: '{}'", user.getEmail(), prompt);
+        final int safeLimit = Math.max(1, Math.min(20, limit));
+        log.info("AI 추천 요청 - 사용자: {}, 프롬프트: '{}'", user != null ? user.getEmail() : "anonymous", prompt);
 
         try {
             // AI 프롬프트 생성
-            String aiPrompt = buildPrompt(user, prompt, limit);
+            String aiPrompt = buildPrompt(user, prompt, safeLimit);
 
             // 생성된 AI 프롬프트로 물어보기
-            String aiResponse = aiService.generateText(aiPrompt, null);
+            String aiResponse = aiService.generateText(aiPrompt);
 
             // AI 응답을 Map 으로 파싱
             Map<String, Object> responseMap = aiService.getResponseMap(aiResponse);
 
             // Map 으로 파싱한 결과에서 상품 ID 추출
-            List<Long> recommendedProductIds = extractProductIds(responseMap, limit);
+            List<Long> recommendedProductIds = extractProductIds(responseMap, safeLimit);
 
-            // 2. 상품 ID로 상품 조회
-            List<Product> products = getProductsByIds(recommendedProductIds, limit);
+            // 상품 ID로 상품 조회
+            List<Product> products = getProductsByIds(recommendedProductIds, safeLimit);
 
-            // 3. 추천 기록 저장
-            saveRecommendation(user, prompt, recommendedProductIds, "AI 추천 응답 저장됨");
+            // 추천 기록 저장
+            saveRecommendation(user, prompt, recommendedProductIds, aiResponse);
 
             return products;
         } catch (Exception e) {
             log.warn("AI 추천 중 오류 발생, 폴백 사용: {}", e.getMessage());
-            return getFallbackProducts(limit);
+            return getFallbackProducts(safeLimit);
         }
     }
 
+    @SuppressWarnings("unchecked")
     private List<Long> extractProductIds(Map<String, Object> responseMap, int limit) {
         try {
-            // 응답에서 productIds 키 추출
-            @SuppressWarnings("unchecked")
-            List<Integer> productIds = (List<Integer>) responseMap.get("productIds");
-
-            if (productIds == null || productIds.isEmpty()) {
+            Object raw = responseMap.get("productIds");
+            if (!(raw instanceof List<?> list) || list.isEmpty()) {
                 log.warn("AI 응답에서 productIds를 찾을 수 없음, 폴백 사용");
                 return getFallbackProductIds(limit);
             }
 
-            return productIds.stream()
-                    .map(Integer::longValue)
+            // Integer/Long/Double 등 어떤 Number든 안전하게 변환
+            return list.stream()
+                    .filter(elt -> elt instanceof Number)
+                    .map(elt -> ((Number) elt).longValue())
+                    .distinct()
                     .limit(limit)
                     .collect(Collectors.toList());
         } catch (Exception e) {
@@ -78,18 +80,40 @@ public class ProductRecommendationService {
     }
 
     private List<Product> getProductsByIds(List<Long> productIds, int limit) {
-        if (productIds.isEmpty()) {
+        if (productIds == null || productIds.isEmpty()) {
             return getFallbackProducts(limit);
         }
 
         List<Product> products = productRecommendationRepository.findProductsByIds(productIds);
 
-        if (products.size() < limit) {
-            List<Product> additional = getFallbackProducts(limit - products.size());
-            products.addAll(additional);
+        // id -> product 맵
+        Map<Long, Product> byId = products.stream()
+                .collect(Collectors.toMap(Product::getProductId, p -> p, (a, b) -> a));
+
+        // AI가 준 순서를 보존하며 수집
+        List<Product> ordered = productIds.stream()
+                .map(byId::get)
+                .filter(p -> p != null)
+                .collect(Collectors.toList());
+
+        // 부족하면 폴백으로 채우되 중복 제거
+        if (ordered.size() < limit) {
+            int need = limit - ordered.size();
+            var seen = new java.util.LinkedHashSet<Long>(
+                    ordered.stream().map(Product::getProductId).toList()
+            );
+            List<Product> fallback = getFallbackProducts(Math.max(need * 2, 1));
+            for (Product p : fallback) {
+                if (ordered.size() >= limit) break;
+                Long id = p.getProductId();
+                if (seen.add(id)) {        // 처음 본 id만 추가
+                    ordered.add(p);
+                }
+            }
         }
 
-        return products.stream().limit(limit).collect(Collectors.toList());
+        // 최종적으로 정확히 limit 개로 자르기
+        return ordered.stream().limit(limit).collect(Collectors.toList());
     }
 
     private List<Long> getFallbackProductIds(int limit) {
@@ -99,7 +123,9 @@ public class ProductRecommendationService {
     }
 
     private List<Product> getFallbackProducts(int limit) {
-        return productRecommendationRepository.findAllProductsOrderByCreatedAtDesc(PageRequest.of(0, limit)).getContent();
+        return productRecommendationRepository
+                .findAllProductsOrderByCreatedAtDesc(PageRequest.of(0, Math.max(1, limit)))
+                .getContent();
     }
 
     private String buildPrompt(User user, String promptInput, int limit) {
