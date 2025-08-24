@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -65,20 +67,20 @@ public class CommonAIService {
 
     // ```json ... ``` 또는 불필요한 전후 텍스트 제거 + 첫 { ~ 마지막 } 까지 슬라이싱
     private String cleanJsonResponse(String response) {
-        String s = response.trim();
+        String s = response == null ? "" : response.trim();
         // 코드펜스 제거
         if (s.startsWith("```")) {
-            int first = s.indexOf('\n');
-            int last = s.lastIndexOf("```");
-            if (first >= 0 && last > first) {
-                s = s.substring(first + 1, last).trim();
+            int firstNewline = s.indexOf('\n');
+            int lastFence = s.lastIndexOf("```");
+            if (firstNewline >= 0 && lastFence > firstNewline) {
+                s = s.substring(firstNewline + 1, lastFence).trim();
             }
         }
         // 첫 '{'와 마지막 '}' 사이만 추출
-        int start = s.indexOf('{');
-        int end = s.lastIndexOf('}');
-        if (start >= 0 && end >= start) {
-            return s.substring(start, end + 1).trim();
+        Pattern pattern = Pattern.compile("\\{.*?\\}", Pattern.DOTALL);
+        Matcher matcher = pattern.matcher(s);
+        if (matcher.find()) {
+            return matcher.group().trim();
         }
         return "";
     }

@@ -60,16 +60,21 @@ public class ProductRecommendationService {
     @SuppressWarnings("unchecked")
     private List<Long> extractProductIds(Map<String, Object> responseMap, int limit) {
         try {
-            Object raw = responseMap.get("productIds");
-            if (!(raw instanceof List<?> list) || list.isEmpty()) {
-                log.warn("AI 응답에서 productIds를 찾을 수 없음, 폴백 사용");
+            Object statusObj = responseMap.get("status");
+            if (statusObj != null && !"OK".equalsIgnoreCase(String.valueOf(statusObj))) {
+                log.warn("AI 응답 status가 OK가 아님: {}, fallback 사용", statusObj);
                 return getFallbackProductIds(limit);
             }
 
-            // Integer/Long/Double 등 어떤 Number든 안전하게 변환
-            return list.stream()
-                    .filter(elt -> elt instanceof Number)
-                    .map(elt -> ((Number) elt).longValue())
+            Object raw = responseMap.get("productIds");
+            if (!(raw instanceof List<?> list) || list.isEmpty()) {
+                log.warn("AI 응답에서 productIds를 찾을 수 없음, fallback 사용");
+                return getFallbackProductIds(limit);
+            }
+
+            return ((List<?>) raw).stream()
+                    .filter(elem -> elem instanceof Number)
+                    .map(elem -> ((Number) elem).longValue())
                     .distinct()
                     .limit(limit)
                     .collect(Collectors.toList());
@@ -139,7 +144,7 @@ public class ProductRecommendationService {
             """, limit, promptInput));
 
         // 사용자 프로필 정보가 있으면 추가
-        UserProfile profile = user.getUserProfile();
+        UserProfile profile = user != null ? user.getUserProfile() : null;
         if (profile != null) {
             prompt.append("\n=== 사용자 정보 ===\n");
 
@@ -177,7 +182,7 @@ public class ProductRecommendationService {
             - 현재 재고가 있는 상품만 추천
             
             응답은 다음 JSON 형식으로만 작성해주세요:
-            {"productIds": [1, 2, 3, 4, 5]}
+            {"status":"OK", "productIds": [1, 2, 3, 4, 5], "message": ""}
             """);
 
         return prompt.toString();
@@ -186,14 +191,12 @@ public class ProductRecommendationService {
     private void saveRecommendation(User user, String prompt, List<Long> productIds, String response) {
         try {
             String productIdsJson = objectMapper.writeValueAsString(productIds);
-
             ProductRecommendation recommendation = ProductRecommendation.builder()
                     .user(user)
                     .prompt(prompt)
                     .recommendedProductIds(productIdsJson)
                     .response(response)
                     .build();
-
             productRecommendationRepository.save(recommendation);
         } catch (Exception e) {
             log.error("추천 이력 저장 실패", e);
