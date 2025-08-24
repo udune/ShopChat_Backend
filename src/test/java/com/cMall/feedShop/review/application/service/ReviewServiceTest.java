@@ -57,6 +57,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doNothing;
 
 @ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
@@ -82,10 +83,22 @@ class ReviewServiceTest {
     private ReviewDuplicationValidator duplicationValidator;
 
     @Mock
+    private com.cMall.feedShop.review.domain.service.ReviewPurchaseVerificationService purchaseVerificationService;
+
+    @Mock
     private ReviewImageService reviewImageService;
+    
+    @Mock
+    private com.cMall.feedShop.review.domain.repository.ReviewImageRepository reviewImageRepository;
 
     @Mock
     private GcpStorageService gcpStorageService;
+
+    @Mock
+    private com.cMall.feedShop.user.application.service.BadgeService badgeService;
+
+    @Mock
+    private com.cMall.feedShop.user.application.service.UserLevelService userLevelService;
 
     @InjectMocks
     private ReviewService reviewService;
@@ -175,6 +188,7 @@ class ReviewServiceTest {
             given(userRepository.findByEmail("test@test.com")).willReturn(Optional.of(testUser));
             given(productRepository.findById(1L)).willReturn(Optional.of(testProduct));
             given(reviewRepository.save(any(Review.class))).willReturn(testReview);
+            doNothing().when(purchaseVerificationService).validateUserPurchasedProduct(any(User.class), any(Long.class));
 
             // when
             ReviewCreateResponse response = reviewService.createReview(createRequest, null);
@@ -197,7 +211,7 @@ class ReviewServiceTest {
             // when & then
             assertThatThrownBy(() -> reviewService.createReview(createRequest, null))
                     .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("인증이 필요합니다");
+                    .hasMessageContaining("로그인이 필요합니다");
         }
     }
 
@@ -335,6 +349,7 @@ class ReviewServiceTest {
             given(userRepository.findByEmail("test@test.com")).willReturn(Optional.of(testUser));
             given(productRepository.findById(1L)).willReturn(Optional.of(testProduct));
             given(reviewRepository.save(any(Review.class))).willReturn(testReview);
+            doNothing().when(purchaseVerificationService).validateUserPurchasedProduct(any(User.class), any(Long.class));
 
             // 중복 검증 통과하도록 설정 (예외 발생 안함)
             doNothing().when(duplicationValidator).validateNoDuplicateActiveReview(1L, 1L);
@@ -370,8 +385,10 @@ class ReviewServiceTest {
             given(userRepository.findByEmail("test@test.com")).willReturn(Optional.of(testUser));
             given(productRepository.findById(1L)).willReturn(Optional.of(testProduct));
             given(reviewRepository.save(any(Review.class))).willReturn(testReview);
+            doNothing().when(purchaseVerificationService).validateUserPurchasedProduct(any(User.class), any(Long.class));
             given(gcpStorageService.uploadFilesWithDetails(any(List.class), eq(UploadDirectory.REVIEWS)))
                     .willReturn(List.of(mockResult));
+            given(reviewImageRepository.save(any())).willReturn(mock(com.cMall.feedShop.review.domain.ReviewImage.class));
 
             // when
             ReviewCreateResponse response = reviewService.createReview(createRequest, imageFiles);
@@ -394,6 +411,7 @@ class ReviewServiceTest {
             given(userRepository.findByEmail("test@test.com")).willReturn(Optional.of(testUser));
             given(productRepository.findById(1L)).willReturn(Optional.of(testProduct));
             given(reviewRepository.save(any(Review.class))).willReturn(testReview);
+            doNothing().when(purchaseVerificationService).validateUserPurchasedProduct(any(User.class), any(Long.class));
 
             // when
             ReviewCreateResponse response = reviewService.createReview(createRequest, null);
@@ -477,6 +495,7 @@ class ReviewServiceTest {
             given(userRepository.findByEmail("test@test.com")).willReturn(Optional.of(testUser));
             given(productRepository.findById(1L)).willReturn(Optional.of(testProduct));
             given(reviewRepository.save(any(Review.class))).willReturn(testReview);
+            doNothing().when(purchaseVerificationService).validateUserPurchasedProduct(any(User.class), any(Long.class));
 
             // when
             ReviewCreateResponse response = reviewService.createReview(createRequest, emptyImageList);
@@ -514,6 +533,7 @@ class ReviewServiceTest {
             mockSecurityContext();
             given(userRepository.findByEmail("test@test.com")).willReturn(Optional.of(testUser));
             given(productRepository.findById(1L)).willReturn(Optional.of(testProduct));
+            doNothing().when(purchaseVerificationService).validateUserPurchasedProduct(any(User.class), any(Long.class));
             given(reviewRepository.save(any(Review.class))).willAnswer(invocation -> {
                 Review savedReview = invocation.getArgument(0);
                 // DTO의 값들이 올바르게 전달되었는지 검증
@@ -538,6 +558,6 @@ class ReviewServiceTest {
         given(securityContext.getAuthentication()).willReturn(authentication);
         given(authentication.isAuthenticated()).willReturn(true);
         given(authentication.getName()).willReturn("test@test.com");
-        given(authentication.getPrincipal()).willReturn("test@test.com");
+        given(authentication.getPrincipal()).willReturn("test@test.com"); // String으로 설정하면 getName()이 호출됨
     }
 }
