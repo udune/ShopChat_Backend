@@ -1,5 +1,6 @@
 package com.cMall.feedShop.user.domain.model;
 
+import com.cMall.feedShop.ai.domain.model.ProductRecommendation;
 import com.cMall.feedShop.cart.domain.model.Cart;
 import com.cMall.feedShop.cart.domain.model.WishList;
 import com.cMall.feedShop.common.BaseTimeEntity;
@@ -50,6 +51,9 @@ public class User extends BaseTimeEntity implements UserDetails {
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<Order> orders;
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<ProductRecommendation> productRecommendations;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserAddress> addresses = new java.util.ArrayList<>();
