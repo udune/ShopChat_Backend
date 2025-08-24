@@ -1,20 +1,14 @@
 package com.cMall.feedShop.ai.application.service;
 
-import com.cMall.feedShop.ai.domain.exception.AIException;
 import com.cMall.feedShop.ai.domain.model.ProductRecommendation;
 import com.cMall.feedShop.ai.domain.repository.ProductRecommendationRepository;
-import com.cMall.feedShop.common.exception.ErrorCode;
+import com.cMall.feedShop.common.ai.CommonAIService;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.domain.model.UserProfile;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,21 +22,28 @@ import java.util.stream.Collectors;
 @Slf4j
 @Transactional
 public class ProductRecommendationService {
-    private final ChatModel chatModel;
+    private final CommonAIService aiService;
     private final ProductRecommendationRepository productRecommendationRepository;
     private final ObjectMapper objectMapper;
 
-    @Value("${ai.recommendation.mode:ai}")
-    private String mode;
-
+    // AI를 사용하여 사용자 맞춤 상품 추천
     public List<Product> recommendProducts(User user, String prompt, int limit) {
         log.info("AI 추천 요청 - 사용자: {}, 프롬프트: '{}'", user.getEmail(), prompt);
 
         try {
-            // 1. AI 모델을 사용하여 추천 로직 구현 (예: OpenAI API 호출)
-            List<Long> recommendedProductIds = process(user, prompt, limit);
+            // AI 프롬프트 생성
+            String aiPrompt = buildPrompt(user, prompt, limit);
 
-            // 2. 상품 조회
+            // 생성된 AI 프롬프트로 물어보기
+            String aiResponse = aiService.generateText(aiPrompt, null);
+
+            // AI 응답을 Map 으로 파싱
+            Map<String, Object> responseMap = aiService.getResponseMap(aiResponse);
+
+            // Map 으로 파싱한 결과에서 상품 ID 추출
+            List<Long> recommendedProductIds = extractProductIds(responseMap, limit);
+
+            // 2. 상품 ID로 상품 조회
             List<Product> products = getProductsByIds(recommendedProductIds, limit);
 
             // 3. 추천 기록 저장
@@ -50,24 +51,30 @@ public class ProductRecommendationService {
 
             return products;
         } catch (Exception e) {
-            log.error("AI 추천 중 오류 발생: {}", e.getMessage());
-            throw new AIException(ErrorCode.PRODUCT_RECOMMENDATION_FAILED);
+            log.warn("AI 추천 중 오류 발생, 폴백 사용: {}", e.getMessage());
+            return getFallbackProducts(limit);
         }
     }
 
-    private List<Long> process(User user, String prompt, int limit) {
-        if ("mock".equals(mode)) {
-            return getMockRecommendation(prompt, limit);
-        } else {
-            return getRecommendation(user, prompt, limit);
-        }
-    }
+    private List<Long> extractProductIds(Map<String, Object> responseMap, int limit) {
+        try {
+            // 응답에서 productIds 키 추출
+            @SuppressWarnings("unchecked")
+            List<Integer> productIds = (List<Integer>) responseMap.get("productIds");
 
-    private List<Long> getMockRecommendation(String prompt, int limit) {
-        if (prompt.toLowerCase().contains("러닝")) {
-            return List.of(1L, 2L, 3L, 4L, 5L).stream().limit(limit).collect(Collectors.toList());
+            if (productIds == null || productIds.isEmpty()) {
+                log.warn("AI 응답에서 productIds를 찾을 수 없음, 폴백 사용");
+                return getFallbackProductIds(limit);
+            }
+
+            return productIds.stream()
+                    .map(Integer::longValue)
+                    .limit(limit)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.warn("AI 응답 파싱 실패: {}", e.getMessage());
+            return getFallbackProductIds(limit);
         }
-        return List.of(1L, 3L, 5L, 7L, 9L).stream().limit(limit).collect(Collectors.toList());
     }
 
     private List<Product> getProductsByIds(List<Long> productIds, int limit) {
@@ -85,38 +92,14 @@ public class ProductRecommendationService {
         return products.stream().limit(limit).collect(Collectors.toList());
     }
 
+    private List<Long> getFallbackProductIds(int limit) {
+        return getFallbackProducts(limit).stream()
+                .map(Product::getProductId)
+                .collect(Collectors.toList());
+    }
+
     private List<Product> getFallbackProducts(int limit) {
         return productRecommendationRepository.findAllProductsOrderByCreatedAtDesc(PageRequest.of(0, limit)).getContent();
-    }
-
-    private void saveRecommendation(User user, String prompt, List<Long> productIds, String response) {
-        try {
-            String productIdsJson = objectMapper.writeValueAsString(productIds);
-
-            ProductRecommendation recommendation = ProductRecommendation.builder()
-                    .user(user)
-                    .prompt(prompt)
-                    .recommendedProductIds(productIdsJson)
-                    .response(response)
-                    .build();
-
-            productRecommendationRepository.save(recommendation);
-        } catch (Exception e) {
-            log.error("추천 이력 저장 실패", e);
-        }
-    }
-
-    private List<Long> getRecommendation(User user, String prompt, int limit) {
-        String promptInput = buildPrompt(user, prompt, limit);
-
-        try {
-            ChatResponse response = chatModel.call(new Prompt(promptInput));
-            String content = response.getResult().getOutput().getContent();
-            return extractProductIds(content, limit);
-        } catch (Exception e) {
-            log.error("AI API 호출 실패: {}", e.getMessage(), e);
-            return getMockRecommendation(prompt, limit);
-        }
     }
 
     private String buildPrompt(User user, String promptInput, int limit) {
@@ -174,30 +157,20 @@ public class ProductRecommendationService {
         return prompt.toString();
     }
 
-    private List<Long> extractProductIds(String aiResponse, int limit) {
+    private void saveRecommendation(User user, String prompt, List<Long> productIds, String response) {
         try {
-            Map<String, Object> responseMap = objectMapper.readValue(
-                    cleanJsonResponse(aiResponse), new TypeReference<Map<String, Object>>() {});
+            String productIdsJson = objectMapper.writeValueAsString(productIds);
 
-            @SuppressWarnings("unchecked")
-            List<Integer> productIds = (List<Integer>) responseMap.get("productIds");
+            ProductRecommendation recommendation = ProductRecommendation.builder()
+                    .user(user)
+                    .prompt(prompt)
+                    .recommendedProductIds(productIdsJson)
+                    .response(response)
+                    .build();
 
-            return productIds.stream()
-                    .map(Integer::longValue)
-                    .limit(limit)
-                    .collect(Collectors.toList());
+            productRecommendationRepository.save(recommendation);
         } catch (Exception e) {
-            log.warn("AI 응답 파싱 실패", e);
-            return getMockRecommendation("", limit);
+            log.error("추천 이력 저장 실패", e);
         }
-    }
-
-    private String cleanJsonResponse(String response) {
-        if (response.contains("{")) {
-            int start = response.indexOf("{");
-            int end = response.lastIndexOf("}") + 1;
-            return response.substring(start, end);
-        }
-        return response;
     }
 }

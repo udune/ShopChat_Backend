@@ -40,13 +40,16 @@ public class ProductRecommendationController {
     ) {
         User currentUser = (User) userDetails;
 
+        // AI 추천 서비스 호출 (결과값은 상품 리스트)
         List<Product> recommendedProducts = productRecommendationService
                 .recommendProducts(currentUser, request.getPrompt(), request.getLimit());
 
+        // 상품 리스트를 응답 DTO로 변환
         List<ProductListResponse> productResponses = recommendedProducts.stream()
                 .map(productMapper::toListResponse)
                 .collect(Collectors.toList());
 
+        // 최종 응답 생성
         ProductRecommendationResponse response = ProductRecommendationResponse.builder()
                 .products(productResponses)
                 .prompt(request.getPrompt())
