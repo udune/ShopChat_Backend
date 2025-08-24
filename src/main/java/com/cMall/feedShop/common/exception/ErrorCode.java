@@ -114,7 +114,10 @@ public enum ErrorCode {
     DAILY_REWARD_LIMIT_EXCEEDED(409, "RW002", "일일 리워드 획득 한도를 초과했습니다."),
     MONTHLY_REWARD_LIMIT_EXCEEDED(409, "RW003", "월간 리워드 획득 한도를 초과했습니다."),
     REWARD_ALREADY_GRANTED(409, "RW004", "이미 지급된 리워드입니다."),
-    ACCESS_DENIED(403, "RW005", "접근 권한이 없습니다.");
+    ACCESS_DENIED(403, "RW005", "접근 권한이 없습니다."),
+
+    // AI
+    PRODUCT_RECOMMENDATION_FAILED(500, "AI001", "상품 추천에 실패했습니다. 잠시 후 다시 시도해주세요.");
 
     private final int status;
     private final String code;
