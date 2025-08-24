@@ -2,7 +2,6 @@ package com.cMall.feedShop.ai.domain.repository;
 
 import com.cMall.feedShop.ai.domain.model.ProductRecommendation;
 import com.cMall.feedShop.product.domain.model.Product;
-import com.cMall.feedShop.user.domain.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,9 +12,6 @@ import java.util.List;
 
 public interface ProductRecommendationRepository extends JpaRepository<ProductRecommendation, Long> {
 
-    // 사용자별 추천 이력 조회 (최신순)
-    List<ProductRecommendation> findByUserOrderByCreatedAtDesc(User user);
-
     // 상품 ID 목록으로 상품 조회
     @Query("SELECT p FROM Product p WHERE p.productId IN :productIds")
     List<Product> findProductsByIds(@Param("productIds") List<Long> productIds);
@@ -24,6 +20,4 @@ public interface ProductRecommendationRepository extends JpaRepository<ProductRe
     @Query("SELECT p FROM Product p ORDER BY p.createdAt DESC")
     Page<Product> findAllProductsOrderByCreatedAtDesc(Pageable pageable);
 
-    // 사용자별 추천 이력 개수 조회
-    Long countByUser(User user);
 }
