@@ -2,8 +2,8 @@ package com.cMall.feedShop.feed.application.service;
 
 import com.cMall.feedShop.feed.application.dto.response.FeedListResponseDto;
 import com.cMall.feedShop.feed.application.service.FeedMapper;
-import com.cMall.feedShop.feed.domain.Feed;
-import com.cMall.feedShop.feed.domain.FeedType;
+import com.cMall.feedShop.feed.domain.entity.Feed;
+import com.cMall.feedShop.feed.domain.enums.FeedType;
 import com.cMall.feedShop.feed.domain.repository.FeedRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -122,7 +122,7 @@ class FeedReadServiceTest {
         when(feedMapper.toFeedListResponseDto(any(Feed.class))).thenReturn(testFeedDto);
 
         // when
-        Page<FeedListResponseDto> result = feedReadService.getFeedsByType(FeedType.EVENT, testPageable, null);
+        Page<FeedListResponseDto> result = feedReadService.getFeeds(FeedType.EVENT, testPageable, null);
 
         // then
         assertThat(result).isNotNull();
@@ -200,7 +200,7 @@ class FeedReadServiceTest {
         when(feedMapper.toFeedListResponseDto(feed2)).thenReturn(dto2);
 
         // when
-        Page<FeedListResponseDto> result = feedReadService.getFeedsByType(FeedType.EVENT, testPageable, null);
+        Page<FeedListResponseDto> result = feedReadService.getFeeds(FeedType.EVENT, testPageable, null);
 
         // then
         assertThat(result).isNotNull();
