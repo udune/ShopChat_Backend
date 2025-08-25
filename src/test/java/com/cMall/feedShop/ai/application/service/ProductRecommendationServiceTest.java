@@ -1,6 +1,6 @@
 package com.cMall.feedShop.ai.application.service;
 
-import com.cMall.feedShop.common.ai.CommonAIService;
+import com.cMall.feedShop.common.ai.BaseAIService;
 import com.cMall.feedShop.common.storage.StorageService;
 import com.cMall.feedShop.product.domain.enums.DiscountType;
 import com.cMall.feedShop.product.domain.model.Product;
@@ -41,7 +41,7 @@ class ProductRecommendationServiceTest {
     private UserRepository userRepo;
 
     @MockBean
-    private CommonAIService ai;
+    private BaseAIService ai;
 
     @MockBean
     private StorageService storageService;
