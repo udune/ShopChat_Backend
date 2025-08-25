@@ -9,6 +9,7 @@ import com.cMall.feedShop.product.application.dto.response.ProductListResponse;
 import com.cMall.feedShop.product.application.service.ProductMapper;
 import com.cMall.feedShop.product.domain.model.Product;
 import com.cMall.feedShop.user.domain.model.User;
+import com.cMall.feedShop.user.domain.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public class ProductRecommendationController {
 
     private final ProductRecommendationService productRecommendationService;
     private final ProductMapper productMapper;
+    private final UserRepository userRepository;
 
     @PostMapping("/products/recommend")
     @ApiResponseFormat(message = "AI 추천 완료")
@@ -37,7 +39,7 @@ public class ProductRecommendationController {
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody ProductRecommendationRequest request
     ) {
-        User currentUser = (User) userDetails;
+        User currentUser = AuthUtils.extractUser(userDetails, userRepository);
 
         // AI 추천 서비스 호출 (결과값은 상품 리스트)
         List<Product> recommendedProducts = productRecommendationService
