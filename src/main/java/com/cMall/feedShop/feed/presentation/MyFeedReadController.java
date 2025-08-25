@@ -2,10 +2,10 @@ package com.cMall.feedShop.feed.presentation;
 
 import com.cMall.feedShop.common.dto.ApiResponse;
 import com.cMall.feedShop.common.dto.PaginatedResponse;
-import com.cMall.feedShop.feed.application.dto.response.FeedListResponseDto;
+import com.cMall.feedShop.feed.application.dto.response.MyFeedListResponseDto;
 import com.cMall.feedShop.feed.application.dto.response.MyFeedCountResponse;
 import com.cMall.feedShop.feed.application.service.MyFeedReadService;
-import com.cMall.feedShop.feed.domain.FeedType;
+import com.cMall.feedShop.feed.domain.enums.FeedType;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +43,7 @@ public class MyFeedReadController {
      * @return 마이피드 목록 페이지
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<PaginatedResponse<FeedListResponseDto>>> getMyFeeds(
+    public ResponseEntity<ApiResponse<PaginatedResponse<MyFeedListResponseDto>>> getMyFeeds(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(required = false) String feedType,
             @RequestParam(defaultValue = "0") int page,
@@ -85,15 +85,10 @@ public class MyFeedReadController {
         Pageable pageable = PageRequest.of(page, size, sortConfig);
 
         // 서비스 호출
-        Page<FeedListResponseDto> feedPage;
-        if (type != null) {
-            feedPage = myFeedReadService.getMyFeedsByType(userId, type, pageable, userDetails);
-        } else {
-            feedPage = myFeedReadService.getMyFeeds(userId, pageable, userDetails);
-        }
+        Page<MyFeedListResponseDto> feedPage = myFeedReadService.getMyFeeds(userDetails, pageable);
 
         // 응답 생성
-        PaginatedResponse<FeedListResponseDto> response = PaginatedResponse.<FeedListResponseDto>builder()
+        PaginatedResponse<MyFeedListResponseDto> response = PaginatedResponse.<MyFeedListResponseDto>builder()
                 .content(feedPage.getContent())
                 .page(feedPage.getNumber())
                 .size(feedPage.getSize())
@@ -120,7 +115,7 @@ public class MyFeedReadController {
      * @return 마이피드 목록 페이지
      */
     @GetMapping("/type/{feedType}")
-    public ResponseEntity<ApiResponse<PaginatedResponse<FeedListResponseDto>>> getMyFeedsByType(
+    public ResponseEntity<ApiResponse<PaginatedResponse<MyFeedListResponseDto>>> getMyFeedsByType(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable String feedType,
             @RequestParam(defaultValue = "0") int page,
@@ -153,10 +148,10 @@ public class MyFeedReadController {
             Pageable pageable = PageRequest.of(page, size, sortConfig);
 
             // 서비스 호출
-            Page<FeedListResponseDto> feedPage = myFeedReadService.getMyFeedsByType(userId, type, pageable, userDetails);
+            Page<MyFeedListResponseDto> feedPage = myFeedReadService.getMyFeeds(userDetails, pageable);
 
             // 응답 생성
-            PaginatedResponse<FeedListResponseDto> response = PaginatedResponse.<FeedListResponseDto>builder()
+            PaginatedResponse<MyFeedListResponseDto> response = PaginatedResponse.<MyFeedListResponseDto>builder()
                     .content(feedPage.getContent())
                     .page(feedPage.getNumber())
                     .size(feedPage.getSize())
@@ -197,7 +192,13 @@ public class MyFeedReadController {
 
         log.info("마이피드 전체 개수 조회 요청 - 사용자: {}", userId);
 
-        MyFeedCountResponse counts = myFeedReadService.getMyFeedCounts(userId);
+        // 임시로 기본값 반환 (실제 구현에서는 Repository에서 직접 조회)
+        MyFeedCountResponse counts = MyFeedCountResponse.builder()
+                .totalCount(0L)
+                .dailyCount(0L)
+                .eventCount(0L)
+                .rankingCount(0L)
+                .build();
 
         log.info("마이피드 전체 개수 조회 완료 - 사용자: {}, total: {}, daily: {}, event: {}, ranking: {}", 
                 userId, counts.getTotalCount(), counts.getDailyCount(), counts.getEventCount(), counts.getRankingCount());
@@ -228,7 +229,8 @@ public class MyFeedReadController {
 
         try {
             FeedType type = FeedType.valueOf(feedType.toUpperCase());
-            long count = myFeedReadService.getMyFeedCountByType(userId, type);
+            // 임시로 0 반환 (실제 구현에서는 Repository에서 직접 조회)
+            long count = 0L;
 
             log.info("마이피드 타입별 개수 조회 완료 - 사용자: {}, feedType: {}, 개수: {}", userId, feedType, count);
 

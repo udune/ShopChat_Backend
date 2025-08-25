@@ -4,7 +4,7 @@ import com.cMall.feedShop.common.dto.ApiResponse;
 import com.cMall.feedShop.common.dto.PaginatedResponse;
 import com.cMall.feedShop.feed.application.dto.response.FeedListResponseDto;
 import com.cMall.feedShop.feed.application.service.FeedReadService;
-import com.cMall.feedShop.feed.domain.FeedType;
+import com.cMall.feedShop.feed.domain.enums.FeedType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -130,7 +130,7 @@ public class FeedReadController {
             Pageable pageable = PageRequest.of(page, size, sortConfig);
             
             // 서비스 호출
-            Page<FeedListResponseDto> feedPage = feedReadService.getFeedsByType(type, pageable, userDetails);
+            Page<FeedListResponseDto> feedPage = feedReadService.getFeeds(type, pageable, userDetails);
             
             // 응답 생성
             PaginatedResponse<FeedListResponseDto> response = PaginatedResponse.<FeedListResponseDto>builder()
