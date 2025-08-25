@@ -1,6 +1,6 @@
 package com.cMall.feedShop.feed.application.service;
 
-import com.cMall.feedShop.feed.application.dto.response.MyFeedListResponseDto;
+import com.cMall.feedShop.feed.application.dto.response.FeedListResponseDto;
 import com.cMall.feedShop.feed.application.dto.response.MyFeedCountResponse;
 import com.cMall.feedShop.feed.application.exception.FeedAccessDeniedException;
 import com.cMall.feedShop.feed.application.service.FeedLikeService;
@@ -20,7 +20,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -48,7 +47,7 @@ public class MyFeedReadService {
      * @param userDetails 사용자 정보 (선택적)
      * @return 마이피드 목록 페이지
      */
-    public Page<MyFeedListResponseDto> getMyFeeds(Long userId, Pageable pageable, UserDetails userDetails) {
+    public Page<FeedListResponseDto> getMyFeeds(Long userId, Pageable pageable, UserDetails userDetails) {
         log.info("마이피드 목록 조회 - userId: {}, page: {}, size: {}, userDetails: {}",
                 userId, pageable.getPageNumber(), pageable.getPageSize(), userDetails != null ? "있음" : "없음");
 
@@ -60,15 +59,16 @@ public class MyFeedReadService {
         Page<Feed> feedPage = feedRepository.findByUserId(userId, pageable);
 
         // Feed 엔티티를 DTO로 변환
-        Page<MyFeedListResponseDto> responsePage = feedPage.map(feedMapper::toMyFeedListResponseDto);
+        Page<FeedListResponseDto> responsePage = feedPage.map(feedMapper::toFeedListResponseDto);
 
-        // 사용자별 좋아요 상태 설정
+        // 사용자별 좋아요 및 투표 상태 설정
         responsePage = responsePage.map(dto -> {
             boolean isLiked = userDetails != null ? 
                     feedLikeService.isLikedByUser(dto.getFeedId(), feedServiceUtils.getUserIdFromUserDetails(userDetails)) : false;
             boolean isVoted = userDetails != null ? 
                     feedVoteService.hasVoted(dto.getFeedId(), feedServiceUtils.getUserIdFromUserDetails(userDetails)) : false;
-            return MyFeedListResponseDto.builder()
+            
+            return FeedListResponseDto.builder()
                     .feedId(dto.getFeedId())
                     .title(dto.getTitle())
                     .content(dto.getContent())
@@ -109,7 +109,7 @@ public class MyFeedReadService {
      * @param userDetails 사용자 정보 (선택적)
      * @return 마이피드 목록 페이지
      */
-    public Page<MyFeedListResponseDto> getMyFeedsByType(Long userId, FeedType feedType, Pageable pageable, UserDetails userDetails) {
+    public Page<FeedListResponseDto> getMyFeedsByType(Long userId, FeedType feedType, Pageable pageable, UserDetails userDetails) {
         log.info("마이피드 타입별 조회 - userId: {}, feedType: {}, page: {}, size: {}, userDetails: {}",
                 userId, feedType, pageable.getPageNumber(), pageable.getPageSize(), userDetails != null ? "있음" : "없음");
 
@@ -121,15 +121,16 @@ public class MyFeedReadService {
         Page<Feed> feedPage = feedRepository.findByUserIdAndFeedType(userId, feedType.name(), pageable);
 
         // Feed 엔티티를 DTO로 변환
-        Page<MyFeedListResponseDto> responsePage = feedPage.map(feedMapper::toMyFeedListResponseDto);
+        Page<FeedListResponseDto> responsePage = feedPage.map(feedMapper::toFeedListResponseDto);
 
-        // 사용자별 좋아요 상태 설정
+        // 사용자별 좋아요 및 투표 상태 설정
         responsePage = responsePage.map(dto -> {
             boolean isLiked = userDetails != null ? 
                     feedLikeService.isLikedByUser(dto.getFeedId(), feedServiceUtils.getUserIdFromUserDetails(userDetails)) : false;
             boolean isVoted = userDetails != null ? 
                     feedVoteService.hasVoted(dto.getFeedId(), feedServiceUtils.getUserIdFromUserDetails(userDetails)) : false;
-            return MyFeedListResponseDto.builder()
+            
+            return FeedListResponseDto.builder()
                     .feedId(dto.getFeedId())
                     .title(dto.getTitle())
                     .content(dto.getContent())
@@ -233,5 +234,4 @@ public class MyFeedReadService {
 
         return response;
     }
-    
 } 
