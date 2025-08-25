@@ -41,10 +41,10 @@ public class ProductRecommendationService {
             // 생성된 AI 프롬프트로 물어보기
             String aiResponse = aiService.generateText(aiPrompt);
 
-            // AI 응답을 ObjectMapper 파싱
+            // AI 응답을 파싱
             ProductRecommendationAIResponse responseMap = aiService.parseAIResponse(aiResponse, ProductRecommendationAIResponse.class);
 
-            // Map 으로 파싱한 결과에서 상품 ID 추출
+            // 상품 ID 추출
             List<Long> recommendedProductIds = extractProductIds(responseMap, safeLimit);
 
             // 상품 ID로 상품 조회
@@ -60,7 +60,6 @@ public class ProductRecommendationService {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private List<Long> extractProductIds(ProductRecommendationAIResponse responseMap, int limit) {
         try {
             if (!responseMap.isSuccess()) {
