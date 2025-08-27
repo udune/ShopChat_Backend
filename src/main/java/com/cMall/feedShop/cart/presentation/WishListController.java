@@ -44,7 +44,7 @@ public class WishListController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
                     description = "찜하기 성공",
-                    content = @Content(schema = @Schema(implementation = WishListAddResponse.class))
+                    content = @Content(schema = @Schema(implementation = WishListCreateResponse.class))
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
