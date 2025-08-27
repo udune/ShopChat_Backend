@@ -428,14 +428,14 @@ public class OrderHelper {
     /**
      * 주문 완료 후 뱃지 자동 수여 체크
      */
-    public void checkAndAwardBadgesAfterOrder(Long userId) {
+    public void checkAndAwardBadgesAfterOrder(Long userId, Long orderId) {
         try {
             // 1. 구매 완료 점수 부여
             userLevelService.recordActivity(
                     userId,
                     ActivityType.PURCHASE_COMPLETION,
-                    "구매 완료",
-                    null,
+                    ActivityType.PURCHASE_COMPLETION.getDescription(),
+                    orderId,
                     "ORDER"
             );
 

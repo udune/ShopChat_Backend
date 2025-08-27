@@ -60,8 +60,8 @@ public class DirectOrderService {
         // 7. 재고 차감
         orderHelper.processPostOrder(currentUser, adapters, optionMap, calculation, order.getOrderId());
 
-        // 9. 뱃지 자동 수여 체크
-        orderHelper.checkAndAwardBadgesAfterOrder(currentUser.getId());
+        // 8. 뱃지 자동 수여 체크
+        orderHelper.checkAndAwardBadgesAfterOrder(currentUser.getId(), order.getOrderId());
 
         // 9. 주문 생성 응답 반환
         return OrderCreateResponse.from(order);
