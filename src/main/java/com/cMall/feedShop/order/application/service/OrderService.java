@@ -83,7 +83,7 @@ public class OrderService {
         cartItemRepository.deleteAll(selectedCartItems);
 
         // 9. 뱃지 자동 수여 체크
-        orderHelper.checkAndAwardBadgesAfterOrder(currentUser.getId());
+        orderHelper.checkAndAwardBadgesAfterOrder(currentUser.getId(), order.getOrderId());
 
         // 10. 주문 생성 응답 반환
         OrderCreateResponse response = OrderCreateResponse.from(order);
