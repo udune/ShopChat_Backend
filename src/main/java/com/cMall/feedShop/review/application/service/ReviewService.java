@@ -627,7 +627,7 @@ public class ReviewService {
     public ReviewResponse getReview(Long reviewId) {
         log.info("리뷰 상세 조회: ID={}", reviewId);
 
-        Review review = reviewRepository.findById(reviewId)
+        Review review = reviewRepository.findByIdWithUserProfile(reviewId)
                 .orElseThrow(() -> new ReviewNotFoundException("ID " + reviewId + "에 해당하는 리뷰를 찾을 수 없습니다."));
 
         if (!review.isActive()) {
