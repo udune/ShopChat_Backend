@@ -4,7 +4,7 @@ import com.cMall.feedShop.common.exception.BusinessException;
 import com.cMall.feedShop.common.exception.ErrorCode;
 import com.cMall.feedShop.feed.application.exception.FeedAccessDeniedException;
 import com.cMall.feedShop.feed.application.exception.FeedNotFoundException;
-import com.cMall.feedShop.feed.domain.Feed;
+import com.cMall.feedShop.feed.domain.entity.Feed;
 import com.cMall.feedShop.feed.domain.repository.FeedRepository;
 import com.cMall.feedShop.order.domain.model.OrderItem;
 import com.cMall.feedShop.user.domain.model.User;
@@ -33,6 +33,9 @@ class FeedDeleteServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private FeedImageService feedImageService;
 
     @Mock
     private UserDetails userDetails;
@@ -151,5 +154,27 @@ class FeedDeleteServiceTest {
         assertThatThrownBy(() -> feedDeleteService.deleteFeed(feedId, userDetails))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("피드 삭제 시 이미지 파일도 함께 삭제")
+    void deleteFeed_WithImages_Success() {
+        // given
+        Long feedId = 16L;
+        
+        // 피드에 이미지 추가
+        feed.addImage("image1.jpg", 1);
+        feed.addImage("image2.jpg", 2);
+
+        when(userDetails.getUsername()).thenReturn("owner_login");
+        when(userRepository.findByLoginId("owner_login")).thenReturn(Optional.of(owner));
+        when(feedRepository.findById(feedId)).thenReturn(Optional.of(feed));
+
+        // when
+        feedDeleteService.deleteFeed(feedId, userDetails);
+
+        // then
+        assertThat(feed.isDeleted()).isTrue();
+        verify(feedImageService, times(1)).deleteImages(eq(feed), any());
     }
 }

@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Getter
-@AllArgsConstructor
 public enum ErrorCode {
     // 공통
     INVALID_INPUT_VALUE(400, "C001", "잘못된 입력값입니다."),
@@ -31,9 +30,22 @@ public enum ErrorCode {
     USER_ACCOUNT_NOT_ACTIVE(403, "U012", "계정이 활성화되어 있지 않습니다. 이메일 인증을 완료해주세요."),
     ADDRESS_NOT_FOUND(404, "A001", "주소 정보를 찾을 수 없습니다."),
 
+    // 사용자 활동
+    NO_ACTIVITY_DATA(404, "UA001", "해당 기간의 활동 내역이 없습니다."),
+
     // 비밀번호 재설정 관련 추가
     INVALID_TOKEN(400, "U100", "유효하지 않거나 찾을 수 없는 토큰입니다."), // 일반적인 토큰 유효성 검사 실패 (찾을 수 없거나 잘못된 형식)
     TOKEN_EXPIRED(400, "U101", "토큰이 만료되었습니다. 비밀번호 재설정을 다시 시도해주세요."), // 토큰 만료
+
+    // MFA 관련
+    MFA_NOT_FOUND(404, "MFA001", "MFA 설정을 찾을 수 없습니다. 먼저 MFA 설정을 진행해주세요."),
+    MFA_ALREADY_ENABLED(409, "MFA002", "MFA가 이미 활성화되어 있습니다."),
+    MFA_NOT_ENABLED(400, "MFA003", "MFA가 활성화되어 있지 않습니다."),
+    INVALID_MFA_TOKEN(400, "MFA004", "유효하지 않은 MFA 토큰입니다."),
+    INVALID_BACKUP_CODE(400, "MFA005", "유효하지 않은 백업 코드입니다."),
+    MFA_SETUP_REQUIRED(400, "MFA006", "MFA 설정이 필요합니다."),
+    MFA_VERIFICATION_FAILED(400, "MFA007", "MFA 인증에 실패했습니다."),
+    BACKUP_CODES_EXHAUSTED(400, "MFA008", "모든 백업 코드를 사용했습니다. 새로운 백업 코드를 생성해주세요."),
 
     // 외부 API
     MAILGUN_API_FAILED(502, "E001", "이메일 전송 중 외부 API 오류가 발생했습니다."),
@@ -88,6 +100,8 @@ public enum ErrorCode {
     REVIEW_ALREADY_DELETED(409, "R005", "이미 삭제된 리뷰입니다."),
     REVIEW_DELETE_FORBIDDEN(403, "R006", "해당 리뷰를 삭제할 권한이 없습니다."),
     REVIEW_DELETION_FAILED(500, "R007", "리뷰 삭제 중 오류가 발생했습니다."),
+    DUPLICATE_REPORT(409, "R008", "이미 신고한 리뷰입니다."),
+    SELF_REPORT_NOT_ALLOWED(400, "R009", "자신이 작성한 리뷰는 신고할 수 없습니다."),
 
   
     // 이벤트 (현재 구현된 읽기 전용 API에서만 사용)
@@ -95,12 +109,19 @@ public enum ErrorCode {
     INVALID_EVENT_STATUS(400, "E002", "유효하지 않은 이벤트 상태입니다."),
     INVALID_EVENT_TYPE(400, "E003", "유효하지 않은 이벤트 타입입니다."),
     EVENT_NOT_AVAILABLE(400, "E004", "참여할 수 없는 이벤트입니다."),
-
+    ALREADY_PARTICIPATED_IN_EVENT(409, "E005", "이미 해당 이벤트에 참여하셨습니다."),
     // 피드
     FEED_NOT_FOUND(404, "F001", "피드를 찾을 수 없습니다."),
+    INVALID_REQUEST(400, "F002", "잘못된 요청입니다."),
+    DUPLICATE_REQUEST(409, "F003", "중복된 요청입니다."),
+    NOT_FOUND(404, "F004", "요청한 리소스를 찾을 수 없습니다."),
     FEED_ACCESS_DENIED(403, "F002", "해당 피드에 대한 권한이 없습니다."),
     DUPLICATE_FEED(409, "F003", "이미 해당 주문 상품에 대한 피드를 작성하셨습니다."),
     ORDER_ITEM_NOT_FOUND(404, "F004", "주문 상품을 찾을 수 없습니다."),
+
+    // 댓글
+    COMMENT_NOT_FOUND(404, "C001", "댓글을 찾을 수 없습니다."),
+    COMMENT_ACCESS_DENIED(403, "C002", "해당 댓글에 대한 권한이 없습니다."),
 
     // 리워드
     REWARD_POLICY_NOT_FOUND(404, "RW001", "리워드 정책을 찾을 수 없습니다."),
@@ -112,4 +133,10 @@ public enum ErrorCode {
     private final int status;
     private final String code;
     private final String message;
+    
+    ErrorCode(int status, String code, String message) {
+        this.status = status;
+        this.code = code;
+        this.message = message;
+    }
 }
