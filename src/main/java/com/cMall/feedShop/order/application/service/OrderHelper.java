@@ -22,9 +22,7 @@ import com.cMall.feedShop.user.domain.enums.UserRole;
 import com.cMall.feedShop.user.domain.model.ActivityType;
 import com.cMall.feedShop.user.domain.model.User;
 import com.cMall.feedShop.user.application.service.PointService;
-import com.cMall.feedShop.user.domain.model.UserActivity;
 import com.cMall.feedShop.user.domain.model.UserPoint;
-import com.cMall.feedShop.user.domain.repository.UserActivityRepository;
 import com.cMall.feedShop.user.domain.repository.UserPointRepository;
 import com.cMall.feedShop.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -60,7 +58,6 @@ public class OrderHelper {
     private final ProductImageRepository productImageRepository;
     private final OrderRepository orderRepository;
     private final UserLevelService userLevelService;
-    private final UserActivityRepository userActivityRepository;
     private final BadgeService badgeService;
 
     /**
