@@ -34,10 +34,10 @@ import java.util.Map;
 import static com.cMall.feedShop.order.application.constants.OrderConstants.MAX_ORDER_QUANTITY;
 
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class OrderService {
 
     private final UserRepository userRepository;
@@ -54,7 +54,7 @@ public class OrderService {
     @Transactional
     public OrderCreateResponse createOrder(OrderCreateRequest request, String loginId) {
         log.info("주문 생성 시작 - 사용포인트: {}", request.getUsedPoints());
-      
+
         // 1. 현재 사용자 조회를 하고 사용자 권한을 검증
         User currentUser = orderHelper.validateUser(loginId);
 
@@ -83,7 +83,7 @@ public class OrderService {
         cartItemRepository.deleteAll(selectedCartItems);
 
         // 9. 뱃지 자동 수여 체크
-        orderCommonService.checkAndAwardBadgesAfterOrder(currentUser.getId(), order.getOrderId());
+        orderHelper.checkAndAwardBadgesAfterOrder(currentUser.getId(), order.getOrderId());
 
         // 10. 주문 생성 응답 반환
         OrderCreateResponse response = OrderCreateResponse.from(order);
@@ -104,7 +104,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public OrderPageResponse getOrderListForUser(int page, int size, String status, String loginId) {
         log.debug("사용자 주문 목록 조회 - page: {}, size: {}, status: {}", page, size, status);
-      
+
         // 1. 현재 사용자 조회를 하고 사용자 권한을 검증
         User currentUser = orderHelper.validateUser(loginId);
 

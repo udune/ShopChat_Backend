@@ -44,10 +44,10 @@ import static com.cMall.feedShop.order.application.constants.OrderConstants.*;
  * 주문 관련 공통 서비스
  * - 사용자 검증, 포인트 사용 및 적립 처리 등을 담당
  */
-@Slf4j
 @Component
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class OrderHelper {
 
     private final UserRepository userRepository;

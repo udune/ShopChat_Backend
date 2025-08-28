@@ -28,7 +28,10 @@ public class ProductDeleteService {
         // 4. 주문에 포함된 상품인지 확인
         productHelper.validateProductNotInOrder(product);
 
-        // 5. DB 에서 삭제 (CASCADE DELETE)
+        // 5. 소프트 딜리트
+        product.delete();
+
+        // 6. DB 에서 삭제 (CASCADE DELETE)
         productRepository.delete(product);
     }
 }
