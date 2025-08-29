@@ -10,4 +10,7 @@ public interface WishlistRepository extends JpaRepository<WishList, Long>, Wishl
 
     // 사용자 ID와 상품 ID로 찜 목록 조회
     Optional<WishList> findByUserIdAndProductIdAndDeletedAtIsNull(Long userId, Long productId);
+
+    // 중복 찜 검증
+    boolean existsByUserIdAndProductIdAndDeletedAtIsNull(Long userId, Long productId);
 }

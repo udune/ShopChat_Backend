@@ -28,24 +28,24 @@ public class WishlistCreateService {
         // 2. 상품 조회
         Product product = wishlistHelper.getProduct(request.getProductId());
 
-        // 3. 찜 생성
-        try {
-            WishList wishlist = WishList.builder()
-                    .user(user)
-                    .product(product)
-                    .build();
-
-            // DB 저장
-            WishList savedWishList = wishlistRepository.save(wishlist);
-
-            // 상품 찜 수 증가
-            wishlistRepository.increaseWishCount(product.getProductId());
-
-            // 찜 목록 응답 생성
-            return WishListCreateResponse.from(savedWishList);
-        } catch (DataIntegrityViolationException e) {
-            // 이미 찜 목록에 있는 경우 예외 처리
+        // 3. 중복 찜 검증
+        if (wishlistRepository.existsByUserIdAndProductIdAndDeletedAtIsNull(user.getId(), product.getProductId())) {
             throw new CartException(ErrorCode.ALREADY_WISHED_PRODUCT);
         }
+
+        // 4. 찜 생성
+        WishList wishlist = WishList.builder()
+                .user(user)
+                .product(product)
+                .build();
+
+        // 5. DB 저장
+        WishList savedWishList = wishlistRepository.save(wishlist);
+
+        // 6. 상품 찜 수 증가
+        wishlistRepository.increaseWishCount(product.getProductId());
+
+        // 7. 찜 목록 응답 생성
+        return WishListCreateResponse.from(savedWishList);
     }
 }
