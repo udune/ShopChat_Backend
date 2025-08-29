@@ -6,7 +6,6 @@ import com.cMall.feedShop.cart.domain.exception.CartException;
 import com.cMall.feedShop.cart.domain.model.WishList;
 import com.cMall.feedShop.cart.domain.repository.WishlistRepository;
 import com.cMall.feedShop.common.exception.ErrorCode;
-import org.springframework.dao.DataIntegrityViolationException;
 import com.cMall.feedShop.product.domain.enums.CategoryType;
 import com.cMall.feedShop.product.domain.enums.DiscountType;
 import com.cMall.feedShop.product.domain.model.Category;
@@ -160,7 +159,8 @@ class WishlistCreateServiceTest {
         // given
         given(wishlistHelper.getCurrentUser("testLogin")).willReturn(testUser);
         given(wishlistHelper.getProduct(1L)).willReturn(testProduct);
-        given(wishlistRepository.save(any(WishList.class))).willThrow(new DataIntegrityViolationException("중복 찜"));
+        given(wishlistRepository.existsByUserIdAndProductIdAndDeletedAtIsNull(any(), any()))
+                .willReturn(true);
 
         // when & then
         CartException thrown = assertThrows(
@@ -200,7 +200,8 @@ class WishlistCreateServiceTest {
         // given
         given(wishlistHelper.getCurrentUser("testLogin")).willReturn(testUser);
         given(wishlistHelper.getProduct(1L)).willReturn(testProduct);
-        given(wishlistRepository.save(any(WishList.class))).willThrow(new DataIntegrityViolationException("중복 찜"));
+        given(wishlistRepository.existsByUserIdAndProductIdAndDeletedAtIsNull(any(), any()))
+                .willReturn(true);
 
         // when & then
         assertThrows(CartException.class, () ->
