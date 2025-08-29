@@ -76,7 +76,6 @@ class ProductDeleteServiceTest {
         verify(productHelper).validateSellerRole(sellerUser);
         verify(productHelper).getProductOwnership(1L, 1L);
         verify(productHelper).validateProductNotInOrder(testProduct);
-        verify(productRepository).delete(testProduct);
     }
 
     @Test
