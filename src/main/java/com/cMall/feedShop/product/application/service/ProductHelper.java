@@ -111,7 +111,8 @@ public class ProductHelper {
             return;
         }
 
-        productImageService.uploadImages(product, files, type);
+        List<String> uploadedUrls = productImageService.uploadImagesOnly(files, type);
+        productImageService.replaceImageRecords(product, uploadedUrls, type);
     }
 
     public void addOptions(Product product, List<ProductOptionRequest> requests) {
