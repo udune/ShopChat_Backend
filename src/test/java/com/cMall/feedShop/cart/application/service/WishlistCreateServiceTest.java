@@ -159,7 +159,7 @@ class WishlistCreateServiceTest {
         // given
         given(wishlistHelper.getCurrentUser("testLogin")).willReturn(testUser);
         given(wishlistHelper.getProduct(1L)).willReturn(testProduct);
-        given(wishlistRepository.existsByUserIdAndProductIdAndDeletedAtIsNull(any(), any()))
+        given(wishlistRepository.existsByUserIdAndProductIdAndDeletedAtIsNull(1L, 1L))
                 .willReturn(true);
 
         // when & then
@@ -171,7 +171,8 @@ class WishlistCreateServiceTest {
         assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.ALREADY_WISHED_PRODUCT);
         verify(wishlistHelper, times(1)).getCurrentUser("testLogin");
         verify(wishlistHelper, times(1)).getProduct(1L);
-        verify(wishlistRepository, times(1)).save(any(WishList.class));
+        verify(wishlistRepository, times(1)).existsByUserIdAndProductIdAndDeletedAtIsNull(1L, 1L);
+        verify(wishlistRepository, never()).save(any(WishList.class));
         verify(wishlistRepository, never()).increaseWishCount(any());
     }
 
