@@ -6,7 +6,6 @@ import com.cMall.feedShop.cart.domain.exception.CartException;
 import com.cMall.feedShop.cart.domain.model.WishList;
 import com.cMall.feedShop.cart.domain.repository.WishlistRepository;
 import com.cMall.feedShop.common.exception.ErrorCode;
-import org.springframework.dao.DataIntegrityViolationException;
 import com.cMall.feedShop.product.domain.enums.CategoryType;
 import com.cMall.feedShop.product.domain.enums.DiscountType;
 import com.cMall.feedShop.product.domain.model.Category;
@@ -160,7 +159,8 @@ class WishlistCreateServiceTest {
         // given
         given(wishlistHelper.getCurrentUser("testLogin")).willReturn(testUser);
         given(wishlistHelper.getProduct(1L)).willReturn(testProduct);
-        given(wishlistRepository.save(any(WishList.class))).willThrow(new DataIntegrityViolationException("중복 찜"));
+        given(wishlistRepository.existsByUserIdAndProductIdAndDeletedAtIsNull(1L, 1L))
+                .willReturn(true);
 
         // when & then
         CartException thrown = assertThrows(
@@ -171,7 +171,8 @@ class WishlistCreateServiceTest {
         assertThat(thrown.getErrorCode()).isEqualTo(ErrorCode.ALREADY_WISHED_PRODUCT);
         verify(wishlistHelper, times(1)).getCurrentUser("testLogin");
         verify(wishlistHelper, times(1)).getProduct(1L);
-        verify(wishlistRepository, times(1)).save(any(WishList.class));
+        verify(wishlistRepository, times(1)).existsByUserIdAndProductIdAndDeletedAtIsNull(1L, 1L);
+        verify(wishlistRepository, never()).save(any(WishList.class));
         verify(wishlistRepository, never()).increaseWishCount(any());
     }
 
@@ -200,7 +201,8 @@ class WishlistCreateServiceTest {
         // given
         given(wishlistHelper.getCurrentUser("testLogin")).willReturn(testUser);
         given(wishlistHelper.getProduct(1L)).willReturn(testProduct);
-        given(wishlistRepository.save(any(WishList.class))).willThrow(new DataIntegrityViolationException("중복 찜"));
+        given(wishlistRepository.existsByUserIdAndProductIdAndDeletedAtIsNull(any(), any()))
+                .willReturn(true);
 
         // when & then
         assertThrows(CartException.class, () ->
