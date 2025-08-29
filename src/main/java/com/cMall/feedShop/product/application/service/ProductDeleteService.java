@@ -30,8 +30,5 @@ public class ProductDeleteService {
 
         // 5. 소프트 딜리트
         product.delete();
-
-        // 6. DB 에서 삭제 (CASCADE DELETE)
-        productRepository.delete(product);
     }
 }
