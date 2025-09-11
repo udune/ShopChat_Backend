@@ -1,32 +1,20 @@
-# FeedShop Backend - 포트폴리오용 Cloud Build 설정
 steps:
-  # 1. Gradle을 사용한 Spring Boot 애플리케이션 빌드
-  - name: 'gradle:7.6-jdk17'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        echo "🔨 Building Spring Boot application..."
-        chmod +x ./gradlew
-        ./gradlew clean build -x test
-        echo "✅ Build completed successfully"
+  # 1단계: Gradle 빌드를 통해 JAR 파일 생성
+  - name: 'gradle:8.10.2-jdk17'
+    entrypoint: 'gradle'
+    args: ['clean', 'build', '-x', 'test']
+    env:
+      - 'SPRING_PROFILES_ACTIVE=prod'
 
-  # 2. Docker 이미지 빌드 (현재 commit SHA와 latest 태그 동시 생성)
+  # 2단계: Docker 이미지 빌드 (JAR 파일이 생성된 후)
   - name: 'gcr.io/cloud-builders/docker'
-    args: [
-      'build',
-      '-t', 'gcr.io/$PROJECT_ID/feedshop:$COMMIT_SHA',
-      '-t', 'gcr.io/$PROJECT_ID/feedshop:latest',
-      '.'
-    ]
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/feedshop:$COMMIT_SHA', '.']
 
-  # 3. Container Registry에 이미지 푸시
+  # 3단계: Container Registry에 이미지 푸시
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/feedshop:$COMMIT_SHA']
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/feedshop:latest']
 
-  # 4. Cloud Run에 배포
+  # 4단계: Cloud Run에 배포
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -40,36 +28,10 @@ steps:
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-      - '--port'
-      - '8080'
-
-      # 포트폴리오용 리소스 설정 (비용 최적화)
-      - '--memory'
-      - '2Gi'
-      - '--cpu'
-      - '1'
-      - '--max-instances'
-      - '5'
-      - '--min-instances'
-      - '0'  # 미사용 시 완전 종료로 비용 절약
-      - '--concurrency'
-      - '80'
-      - '--timeout'
-      - '300'
-
-      # Spring Boot 기본 환경 변수
       - '--set-env-vars'
       - 'SPRING_PROFILES_ACTIVE=prod'
       - '--set-env-vars'
-      - 'PORT=8080'
-      - '--set-env-vars'
-      - 'SERVER_ADDRESS=0.0.0.0'
-      - '--set-env-vars'
-      - 'SERVER_SSL_ENABLED=false'
-
-      # 애플리케이션별 환경 변수
-      - '--set-env-vars'
-      - 'GCS_ID=$PROJECT_ID'  # 프로젝트 ID 자동 설정
+      - 'GCS_ID=YOUR-NEW-PROJECT-ID'
       - '--set-env-vars'
       - 'GCS_BUCKET=feedshop-uploads'
       - '--set-env-vars'
@@ -82,8 +44,6 @@ steps:
       - 'MAIL_HOST=smtp.gmail.com'
       - '--set-env-vars'
       - 'MAIL_PORT=587'
-
-      # Secret Manager의 시크릿들 (보안 정보)
       - '--set-secrets'
       - 'DB_PASSWORD=db-password:latest'
       - '--set-secrets'
@@ -110,17 +70,20 @@ steps:
       - 'KAKAO_CLIENT_ID=kakao-client-id:latest'
       - '--set-secrets'
       - 'KAKAO_CLIENT_SECRET=kakao-client-secret:latest'
+      - '--memory'
+      - '2Gi'
+      - '--cpu'
+      - '1'
+      - '--max-instances'
+      - '10'
 
-# 빌드 결과물 이미지
 images:
   - 'gcr.io/$PROJECT_ID/feedshop:$COMMIT_SHA'
-  - 'gcr.io/$PROJECT_ID/feedshop:latest'
 
-# 빌드 옵션
+# 빌드 시간 초과 설정 (기본값: 10분)
+timeout: 1800s
+
+# 빌드 머신 스펙 설정
 options:
-  machineType: 'E2_STANDARD_4'  # 적절한 빌드 성능
-  diskSizeGb: 100
-  logging: CLOUD_LOGGING_ONLY
-
-# 타임아웃 설정 (20분)
-timeout: '1200s'
+  machineType: 'E2_HIGHCPU_8'
+  substitution_option: 'ALLOW_LOOSE'
