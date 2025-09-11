@@ -1,18 +1,33 @@
+# FeedShop Backend - Google Cloud Build 설정
 steps:
   # 1단계: Gradle 빌드를 통해 JAR 파일 생성
   - name: 'gradle:8.10.2-jdk17'
     entrypoint: 'gradle'
-    args: ['clean', 'build', '-x', 'test']
+    args: ['clean', 'build', '-x', 'test', '--no-daemon', '--info']
     env:
       - 'SPRING_PROFILES_ACTIVE=prod'
+      - 'GRADLE_OPTS=-Xmx4g -Xms1g'
+    timeout: 1200s
 
-  # 2단계: Docker 이미지 빌드 (JAR 파일이 생성된 후)
+  # 2단계: Docker 이미지 빌드
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/feedshop:$COMMIT_SHA', '.']
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/feedshop-springboot:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/feedshop-springboot:latest'
+      - '.'
+    timeout: 600s
 
   # 3단계: Container Registry에 이미지 푸시
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/feedshop:$COMMIT_SHA']
+    args: ['push', 'gcr.io/$PROJECT_ID/feedshop-springboot:$COMMIT_SHA']
+    timeout: 300s
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/feedshop-springboot:latest']
+    timeout: 300s
 
   # 4단계: Cloud Run에 배포
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -20,70 +35,92 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'feedshop'
+      - 'feedshop-springboot'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/feedshop:$COMMIT_SHA'
+      - 'gcr.io/$PROJECT_ID/feedshop-springboot:$COMMIT_SHA'
       - '--region'
       - 'asia-northeast3'
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
-      - '--set-env-vars'
-      - 'SPRING_PROFILES_ACTIVE=prod'
-      - '--set-env-vars'
-      - 'GCS_ID=YOUR-NEW-PROJECT-ID'
-      - '--set-env-vars'
-      - 'GCS_BUCKET=feedshop-uploads'
-      - '--set-env-vars'
-      - 'DB_NAME=feedshop_db'
-      - '--set-env-vars'
-      - 'DB_USERNAME=cmall'
-      - '--set-env-vars'
-      - 'CDN_BASE_URL=https://cdn-feedshop.store'
-      - '--set-env-vars'
-      - 'MAIL_HOST=smtp.gmail.com'
-      - '--set-env-vars'
-      - 'MAIL_PORT=587'
-      - '--set-secrets'
-      - 'DB_PASSWORD=db-password:latest'
-      - '--set-secrets'
-      - 'MAIL_USERNAME=gmail-username:latest'
-      - '--set-secrets'
-      - 'MAIL_PASSWORD=gmail-password:latest'
-      - '--set-secrets'
-      - 'MAILGUN_API_KEY=mailgun-api-key:latest'
-      - '--set-secrets'
-      - 'MAILGUN_DOMAIN=mailgun-domain:latest'
-      - '--set-secrets'
-      - 'MAILGUN_EMAIL=mailgun-email:latest'
-      - '--set-secrets'
-      - 'RECAPTCHA_SECRET_KEY=recaptcha-secret:latest'
-      - '--set-secrets'
-      - 'JWT_SECRET=jwt-secret:latest'
-      - '--set-secrets'
-      - 'OPENAI_API_KEY=openai-api-key:latest'
-      - '--set-secrets'
-      - 'GOOGLE_CLIENT_ID=google-client-id:latest'
-      - '--set-secrets'
-      - 'GOOGLE_CLIENT_SECRET=google-client-secret:latest'
-      - '--set-secrets'
-      - 'KAKAO_CLIENT_ID=kakao-client-id:latest'
-      - '--set-secrets'
-      - 'KAKAO_CLIENT_SECRET=kakao-client-secret:latest'
+      - '--add-cloudsql-instances'
+      - '$PROJECT_ID:asia-northeast3:feedshop-db'
       - '--memory'
-      - '2Gi'
+      - '8Gi'
       - '--cpu'
-      - '1'
+      - '4'
+      - '--concurrency'
+      - '200'
       - '--max-instances'
       - '10'
+      - '--min-instances'
+      - '1'
+      - '--timeout'
+      - '900'
+      - '--cpu-boost'
+      - '--execution-environment'
+      - 'gen2'
+      - '--port'
+      - '8080'
+      - '--set-env-vars'
+      - 'SPRING_PROFILES_ACTIVE=prod,PORT=8080,SERVER_PORT=8080,SERVER_SSL_ENABLED=false,SERVER_ADDRESS=0.0.0.0,DB_NAME=feedshop_db,DB_USERNAME=cmall,SPRING_APPLICATION_NAME=feedshop'
+      - '--update-secrets'
+      - 'DB_PASSWORD=shopchat-db-password:latest,MAILGUN_API_KEY=mailgun_api_key:latest,MAILGUN_DOMAIN=mailgun_domain:latest,MAILGUN_EMAIL=mailgun_email:latest,GCS_ID=gcs_id:latest,GCS_BUCKET=gcs_prod_bucket:latest,JWT_SECRET=feedshop-jwt-secret-key:latest,RECAPTCHA_SECRET_KEY=recaptcha_secret_key:latest,GOOGLE_CLIENT_ID=google_client_id:latest,GOOGLE_CLIENT_SECRET=google_client_secret:latest,KAKAO_CLIENT_ID=kakao_client_id:latest,KAKAO_CLIENT_SECRET=kakao_client_secret:latest,OPENAI_API_KEY=openAI_api_key:latest'
+    timeout: 1200s
 
+  # 5단계: 배포 검증 및 헬스체크
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "=== 배포 완료, 헬스체크 시작 ==="
+        
+        # 서비스 URL 가져오기
+        SERVICE_URL=$(gcloud run services describe feedshop-springboot --region=asia-northeast3 --format="value(status.url)")
+        echo "서비스 URL: $SERVICE_URL"
+        
+        # 헬스체크 대기
+        echo "애플리케이션 시작 대기 중... (3분)"
+        sleep 180
+        
+        # 헬스체크 시도
+        for i in {1..10}; do
+          echo "헬스체크 시도 $i/10..."
+          if curl -f --max-time 60 --connect-timeout 30 "$SERVICE_URL/actuator/health" || curl -f --max-time 60 --connect-timeout 30 "$SERVICE_URL/"; then
+            echo "✅ 배포 성공! 서비스가 정상 작동 중입니다."
+            exit 0
+          else
+            echo "❌ 헬스체크 실패, 30초 후 재시도..."
+            sleep 30
+          fi
+        done
+        
+        echo "❌ 헬스체크 최종 실패"
+        echo "최근 로그 확인:"
+        gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=feedshop-springboot" --limit=20 --format="table(timestamp,severity,textPayload)" --freshness=5m
+        exit 1
+    timeout: 900s
+
+# 이미지 태깅
 images:
-  - 'gcr.io/$PROJECT_ID/feedshop:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/feedshop-springboot:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/feedshop-springboot:latest'
 
-# 빌드 시간 초과 설정 (기본값: 10분)
-timeout: 1800s
-
-# 빌드 머신 스펙 설정
+# 빌드 옵션 (로그 문제 해결)
 options:
   machineType: 'E2_HIGHCPU_8'
+  diskSizeGb: 100
   substitution_option: 'ALLOW_LOOSE'
+  # 로그 설정 - 이것이 핵심!
+  logging: CLOUD_LOGGING_ONLY
+  logStreamingOption: STREAM_ON
+
+# 빌드 타임아웃 설정
+timeout: 3600s
+
+# substitutions (환경 변수)
+substitutions:
+  _SERVICE_NAME: feedshop-springboot
+  _REGION: asia-northeast3
+  _DATABASE_INSTANCE: feedshop-db
