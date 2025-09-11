@@ -1,4 +1,4 @@
-# FeedShop Backend - Google Cloud Build 설정
+# FeedShop Backend - Google Cloud Build 설정 (수정됨)
 steps:
   # 1단계: Gradle 빌드를 통해 JAR 파일 생성
   - name: 'gradle:8.10.2-jdk17'
@@ -14,19 +14,19 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/feedshop-springboot:$COMMIT_SHA'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/feedshop-springboot:latest'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest'
       - '.'
     timeout: 600s
 
   # 3단계: Container Registry에 이미지 푸시
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/feedshop-springboot:$COMMIT_SHA']
+    args: ['push', 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA']
     timeout: 300s
 
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/feedshop-springboot:latest']
+    args: ['push', 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest']
     timeout: 300s
 
   # 4단계: Cloud Run에 배포
@@ -35,16 +35,16 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'feedshop-springboot'
+      - '${_SERVICE_NAME}'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/feedshop-springboot:$COMMIT_SHA'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA'
       - '--region'
-      - 'asia-northeast3'
+      - '${_REGION}'
       - '--platform'
       - 'managed'
       - '--allow-unauthenticated'
       - '--add-cloudsql-instances'
-      - '$PROJECT_ID:asia-northeast3:feedshop-db'
+      - '$PROJECT_ID:${_REGION}:${_DATABASE_INSTANCE}'
       - '--memory'
       - '8Gi'
       - '--cpu'
@@ -68,7 +68,7 @@ steps:
       - 'DB_PASSWORD=shopchat-db-password:latest,MAILGUN_API_KEY=mailgun_api_key:latest,MAILGUN_DOMAIN=mailgun_domain:latest,MAILGUN_EMAIL=mailgun_email:latest,GCS_ID=gcs_id:latest,GCS_BUCKET=gcs_prod_bucket:latest,JWT_SECRET=feedshop-jwt-secret-key:latest,RECAPTCHA_SECRET_KEY=recaptcha_secret_key:latest,GOOGLE_CLIENT_ID=google_client_id:latest,GOOGLE_CLIENT_SECRET=google_client_secret:latest,KAKAO_CLIENT_ID=kakao_client_id:latest,KAKAO_CLIENT_SECRET=kakao_client_secret:latest,OPENAI_API_KEY=openAI_api_key:latest'
     timeout: 1200s
 
-  # 5단계: 배포 검증 및 헬스체크
+  # 5단계: 배포 검증 및 헬스체크 (동적 URL 가져오기)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
@@ -76,9 +76,14 @@ steps:
       - |
         echo "=== 배포 완료, 헬스체크 시작 ==="
         
-        # 서비스 URL 가져오기
-        SERVICE_URL=$(gcloud run services describe feedshop-springboot --region=asia-northeast3 --format="value(status.url)")
-        echo "서비스 URL: $SERVICE_URL"
+        # 서비스 URL 동적으로 가져오기 (substitution 변수 사용 안 함)
+        SERVICE_URL=$(gcloud run services describe ${_SERVICE_NAME} --region=${_REGION} --format="value(status.url)")
+        echo "서비스 URL: $$SERVICE_URL"
+        
+        if [ -z "$$SERVICE_URL" ]; then
+          echo "❌ 서비스 URL을 가져올 수 없습니다."
+          exit 1
+        fi
         
         # 헬스체크 대기
         echo "애플리케이션 시작 대기 중... (3분)"
@@ -86,9 +91,12 @@ steps:
         
         # 헬스체크 시도
         for i in {1..10}; do
-          echo "헬스체크 시도 $i/10..."
-          if curl -f --max-time 60 --connect-timeout 30 "$SERVICE_URL/actuator/health" || curl -f --max-time 60 --connect-timeout 30 "$SERVICE_URL/"; then
-            echo "✅ 배포 성공! 서비스가 정상 작동 중입니다."
+          echo "헬스체크 시도 $$i/10..."
+          if curl -f --max-time 60 --connect-timeout 30 "$$SERVICE_URL/actuator/health"; then
+            echo "✅ 헬스체크 성공!"
+            exit 0
+          elif curl -f --max-time 60 --connect-timeout 30 "$$SERVICE_URL/"; then
+            echo "✅ 루트 엔드포인트 접근 성공!"
             exit 0
           else
             echo "❌ 헬스체크 실패, 30초 후 재시도..."
@@ -98,14 +106,14 @@ steps:
         
         echo "❌ 헬스체크 최종 실패"
         echo "최근 로그 확인:"
-        gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=feedshop-springboot" --limit=20 --format="table(timestamp,severity,textPayload)" --freshness=5m
+        gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=${_SERVICE_NAME}" --limit=20 --format="table(timestamp,severity,textPayload)" --freshness=5m
         exit 1
     timeout: 900s
 
 # 이미지 태깅
 images:
-  - 'gcr.io/$PROJECT_ID/feedshop-springboot:$COMMIT_SHA'
-  - 'gcr.io/$PROJECT_ID/feedshop-springboot:latest'
+  - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest'
 
 # 빌드 옵션 (로그 문제 해결)
 options:
@@ -119,7 +127,7 @@ options:
 # 빌드 타임아웃 설정
 timeout: 3600s
 
-# substitutions (환경 변수)
+# substitutions (사용자 정의 변수들 - 이것이 중요!)
 substitutions:
   _SERVICE_NAME: feedshop-springboot
   _REGION: asia-northeast3
