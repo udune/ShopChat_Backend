@@ -53,7 +53,7 @@ steps:
       - '--service-account'
       - '818414486575-compute@developer.gserviceaccount.com'
       - '--revision-suffix'
-      - 'slow-start'
+      - 'r$SHORT_SHA'
       # 환경 변수 (최소화)
       - '--set-env-vars'
       - 'SPRING_PROFILES_ACTIVE=prod,SERVER_ADDRESS=0.0.0.0,LOGGING_LEVEL_ROOT=INFO,SPRING_JPA_HIBERNATE_DDL_AUTO=validate,SPRING_MAIN_LAZY_INITIALIZATION=false'
