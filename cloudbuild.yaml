@@ -53,7 +53,7 @@ steps:
       - '--service-account'
       - '818414486575-compute@developer.gserviceaccount.com'
       # 핵심: startup probe 설정
-      - '--max-instances-per-revision'
+      - '--max-instances'
       - '1'
       - '--revision-suffix'
       - 'slow-start'
