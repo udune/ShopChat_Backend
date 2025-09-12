@@ -35,6 +35,7 @@ steps:
       - '$PROJECT_ID:${_REGION}:${_DATABASE_INSTANCE}'
       - '--memory'
       - '8Gi'
+      - '--replace'
       - '--cpu'
       - '4'
       - '--concurrency'
@@ -44,7 +45,7 @@ steps:
       - '--min-instances'
       - '1'               # 최소 1개 유지
       - '--timeout'
-      - '900'            # 15분 타임아웃
+      - '1200'            # 20분 타임아웃
       - '--cpu-boost'
       - '--execution-environment'
       - 'gen2'

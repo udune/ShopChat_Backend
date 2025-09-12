@@ -16,4 +16,4 @@ EXPOSE 8080
 ENV JAVA_OPTS="-Xmx6g -Xms2g -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+OptimizeStringConcat -Djava.security.egd=file:/dev/./urandom -Dspring.jmx.enabled=false -Dspring.main.banner-mode=off"
 
 # Spring Boot 시작 명령어 (로그 포함)
-ENTRYPOINT ["sh", "-c", "echo '=== FeedShop Starting ===' && echo 'Memory: ' && free -h && echo 'Java Version: ' && java -version && echo 'JAVA_OPTS: ' $JAVA_OPTS && echo 'PORT: ' $PORT && echo 'Starting application...' && exec java $JAVA_OPTS -Dserver.port=$PORT -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "echo '=== FeedShop Starting ===' && echo 'JAVA_OPTS: ' $JAVA_OPTS && echo 'PORT: ' $PORT && exec java $JAVA_OPTS -jar app.jar"]
