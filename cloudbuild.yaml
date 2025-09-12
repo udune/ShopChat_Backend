@@ -44,7 +44,7 @@ steps:
       - '--min-instances'
       - '1'               # 최소 1개 유지
       - '--timeout'
-      - '1200'            # 20분 타임아웃
+      - '1800'            # 30분 타임아웃으로 증가
       - '--cpu-boost'
       - '--execution-environment'
       - 'gen2'
@@ -52,9 +52,6 @@ steps:
       - '8080'
       - '--service-account'
       - '818414486575-compute@developer.gserviceaccount.com'
-      # 핵심: startup probe 설정
-      - '--max-instances'
-      - '1'
       - '--revision-suffix'
       - 'slow-start'
       # 환경 변수 (최소화)
