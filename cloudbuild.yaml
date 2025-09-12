@@ -35,7 +35,6 @@ steps:
       - '$PROJECT_ID:${_REGION}:${_DATABASE_INSTANCE}'
       - '--memory'
       - '8Gi'
-      - '--replace'
       - '--cpu'
       - '4'
       - '--concurrency'
