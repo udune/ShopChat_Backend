@@ -55,16 +55,8 @@ jobs:
           # JAR 복사 (이름을 app.jar로 고정)
           cp build/libs/*.jar deploy-package/app.jar
           
-          # Dockerfile 생성 (컨텍스트: deploy-package/)
-          cat > deploy-package/Dockerfile << 'EOF'
-          FROM eclipse-temurin:17-jre-alpine
-          RUN apk add --no-cache curl
-          WORKDIR /app
-          COPY app.jar /app/app.jar
-          EXPOSE 8080
-          ENV JAVA_OPTS=""
-          ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar /app/app.jar"]
-          EOF
+          # Dockerfile 복사
+          cp Dockerfile deploy-package/
 
           # docker-compose.yml 생성 (version 키 제거)
           cat > deploy-package/docker-compose.yml << 'EOF'
@@ -122,10 +114,11 @@ jobs:
           echo "Checking container status..."
           sleep 10
           sudo docker-compose ps
-
-          chmod +x deploy-package/deploy.sh
           
           echo "✅ Deployment completed!"
+          EOF
+          
+          chmod +x deploy-package/deploy.sh
 
       - name: Copy files to VM instance
         run: |
