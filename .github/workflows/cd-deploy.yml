@@ -78,6 +78,8 @@ jobs:
                 - MAILGUN_API_KEY=${{ secrets.MAILGUN_API_KEY }}
                 - MAILGUN_DOMAIN=${{ secrets.MAILGUN_DOMAIN }}
                 - MAILGUN_EMAIL=${{ secrets.MAILGUN_EMAIL }}
+                - MAILGUN_FROM_EMAIL=${{ secrets.MAILGUN_FROM_EMAIL }}
+                - MAILGUN_FROM_NAME=${{ secrets.MAILGUN_FROM_NAME }}
                 - GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
                 - GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
                 - KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
