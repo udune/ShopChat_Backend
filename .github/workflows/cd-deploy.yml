@@ -70,11 +70,10 @@ jobs:
                 - "8080:8080"
               environment:
                 - SPRING_PROFILES_ACTIVE=prod
-                - DB_HOST=${{ secrets.VM_DB_HOST }}
-                - DB_PORT=${{ secrets.VM_DB_PORT }}
-                - DB_NAME=${{ secrets.DB_NAME }}
-                - DB_USERNAME=${{ secrets.VM_DB_USERNAME }}
-                - DB_PASSWORD=${{ secrets.VM_DB_PASSWORD }}
+                - SPRING_DATASOURCE_URL=jdbc:mysql://${{ secrets.VM_DB_HOST }}:${{ secrets.VM_DB_PORT }}/${{ secrets.DB_NAME }}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+                - SPRING_DATASOURCE_USERNAME=${{ secrets.VM_DB_USERNAME }}
+                - SPRING_DATASOURCE_PASSWORD=${{ secrets.VM_DB_PASSWORD }}
+                - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
                 - JWT_SECRET=${{ secrets.JWT_SECRET }}
                 - MAILGUN_API_KEY=${{ secrets.MAILGUN_API_KEY }}
                 - MAILGUN_DOMAIN=${{ secrets.MAILGUN_DOMAIN }}
