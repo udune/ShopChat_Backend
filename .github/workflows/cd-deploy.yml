@@ -52,19 +52,27 @@ jobs:
           echo "Creating deployment package..."
           mkdir -p deploy-package
           
-          # JAR 파일 복사
+          # JAR 복사 (이름을 app.jar로 고정)
           cp build/libs/*.jar deploy-package/app.jar
           
-          # Dockerfile 복사
-          cp Dockerfile deploy-package/
-          
-          # docker-compose.yml 생성
+          # Dockerfile 생성 (컨텍스트: deploy-package/)
+          cat > deploy-package/Dockerfile << 'EOF'
+          FROM eclipse-temurin:17-jre-alpine
+          RUN apk add --no-cache curl
+          WORKDIR /app
+          COPY app.jar /app/app.jar
+          EXPOSE 8080
+          ENV JAVA_OPTS=""
+          ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar /app/app.jar"]
+          EOF
+
+          # docker-compose.yml 생성 (version 키 제거)
           cat > deploy-package/docker-compose.yml << 'EOF'
-          version: '3.8'
-          
           services:
             feedshop-backend:
-              build: .
+              build:
+                context: .
+                dockerfile: Dockerfile
               container_name: feedshop-backend
               ports:
                 - "8080:8080"
@@ -86,8 +94,6 @@ jobs:
                 - RECAPTCHA_SECRET_KEY=${{ secrets.RECAPTCHA_SECRET_KEY }}
                 - OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
                 - APP_VERIFICATION_URL=${{ secrets.APP_VERIFICATION_URL }}
-              networks:
-                - feedshop-network
               restart: unless-stopped
               healthcheck:
                 test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
@@ -95,7 +101,9 @@ jobs:
                 timeout: 10s
                 retries: 3
                 start_period: 60s
-          
+              networks:
+                - feedshop-network
+
           networks:
             feedshop-network:
               driver: bridge
@@ -104,50 +112,40 @@ jobs:
           # 배포 스크립트 생성
           cat > deploy-package/deploy.sh << 'EOF'
           #!/bin/bash
-          
           set -e
-          
+
           echo "=== FeedShop Backend Deployment Starting ==="
-          
-          # 현재 컨테이너 중지 및 제거
+
           echo "Stopping existing containers..."
-          sudo docker-compose down --remove-orphans || true
-          
-          # 이전 이미지 정리
+          docker-compose down --remove-orphans || true
+
           echo "Cleaning up old images..."
-          sudo docker image prune -f || true
-          
-          # 새 컨테이너 빌드 및 시작
+          docker image prune -f || true
+
           echo "Building and starting new containers..."
-          sudo docker-compose up -d --build
-          
-          # 컨테이너 상태 확인
+          docker-compose up -d --build
+
           echo "Checking container status..."
           sleep 10
-          sudo docker-compose ps
-          
-          # 헬스 체크
+          docker-compose ps
+
           echo "Performing health check..."
           for i in {1..30}; do
             if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
               echo "✅ Health check passed!"
-              break
+              exit 0
             else
               echo "⏳ Health check attempt $i/30..."
               sleep 10
             fi
           done
-          
-          if ! curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
-            echo "❌ Health check failed after 5 minutes"
-            echo "Container logs:"
-            docker-compose logs feedshop-backend
-            exit 1
-          fi
-          
-          echo "🎉 Deployment completed successfully!"
+
+          echo "❌ Health check failed after ~5 minutes"
+          echo "Container logs:"
+          docker-compose logs --tail=200 feedshop-backend
+          exit 1
           EOF
-          
+
           chmod +x deploy-package/deploy.sh
 
       - name: Copy files to VM instance
