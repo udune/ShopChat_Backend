@@ -4,7 +4,7 @@ FROM eclipse-temurin:17-jre-alpine
 RUN apk add --no-cache curl
 
 WORKDIR /app
-COPY build/libs/*.jar app.jar
+COPY app.jar /app/app.jar
 
 EXPOSE 8080
 
