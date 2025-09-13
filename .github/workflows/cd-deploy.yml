@@ -1,4 +1,4 @@
-name: Deploy to GCP Cloud Run
+name: Deploy to GCP VM Instance
 
 on:
   push:
@@ -7,9 +7,10 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  SERVICE_NAME: feedshop-springboot
-  REGION: asia-northeast3
-  IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID }}/feedshop-springboot
+  VM_INSTANCE_NAME: ${{ secrets.VM_INSTANCE_NAME }}
+  VM_ZONE: ${{ secrets.VM_ZONE }}
+  APP_NAME: feedshop-backend
+  DEPLOY_PATH: /home/deploy/feedshop-backend
 
 jobs:
   deploy:
@@ -45,91 +46,184 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure Docker for GCR
-        run: gcloud auth configure-docker
-        
-      - name: Build Docker Image
+      - name: Create deployment package
         run: |
-          docker build -t $IMAGE_NAME:$GITHUB_SHA \
-                       -t $IMAGE_NAME:latest \
-                       .
-                       
-      - name: Push Docker Image to GCR
-        run: |
-          docker push $IMAGE_NAME:$GITHUB_SHA
-          docker push $IMAGE_NAME:latest
-            
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy $SERVICE_NAME \
-          --image $IMAGE_NAME:$GITHUB_SHA \
-          --platform managed \
-          --region $REGION \
-          --allow-unauthenticated \
-          --add-cloudsql-instances ${{ secrets.GCP_PROJECT_ID }}:asia-northeast3:feedshop-db \
-          --memory 4Gi \
-          --cpu 2 \
-          --concurrency 200 \
-          --max-instances 10 \
-          --min-instances 0 \
-          --timeout=900 \
-          --startup-cpu-boost \
-          --execution-environment gen2 \
-          --port=8080 \
-          --set-env-vars="SPRING_PROFILES_ACTIVE=prod,DB_NAME=${{ secrets.DB_NAME }},DB_USERNAME=cmall,SPRING_APPLICATION_NAME=feedshop,PORT=8080,SERVER_SSL_ENABLED=false,SERVER_ADDRESS=0.0.0.0" \
-          --update-secrets="DB_PASSWORD=shopchat-db-password:latest,MAILGUN_API_KEY=mailgun_api_key:latest,MAILGUN_DOMAIN=mailgun_domain:latest,MAILGUN_EMAIL=mailgun_email:latest,GCS_ID=gcs_id:latest,GCS_BUCKET=gcs_prod_bucket:latest,JWT_SECRET=feedshop-jwt-secret-key:latest,RECAPTCHA_SECRET_KEY=recaptcha_secret_key:latest,GOOGLE_CLIENT_ID=google_client_id:latest,GOOGLE_CLIENT_SECRET=google_client_secret:latest,KAKAO_CLIENT_ID=kakao_client_id:latest,KAKAO_CLIENT_SECRET=kakao_client_secret:latest,OPENAI_API_KEY=openAI_api_key:latest"
-      
-      - name: Wait for deployment
-        run: |
-          echo "Waiting for deployment to complete..."
-          sleep 60
+          echo "Creating deployment package..."
+          mkdir -p deploy-package
           
-          # 서비스 상태 확인
-          gcloud run services describe $SERVICE_NAME --region=$REGION --format="value(status.conditions[0].status,status.conditions[0].message)"
+          # JAR 파일 복사
+          cp build/libs/*.jar deploy-package/app.jar
           
-      - name: Check deployment status and logs
-        if: failure()
-        run: |
-          echo "=== Deployment failed, checking logs ==="
+          # Dockerfile 복사
+          cp Dockerfile deploy-package/
           
-          # 최근 로그 확인
-          gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=$SERVICE_NAME" \
-            --limit=50 \
-            --format="table(timestamp,severity,textPayload)" \
-            --freshness=10m
+          # docker-compose.yml 생성
+          cat > deploy-package/docker-compose.yml << 'EOF'
+          version: '3.8'
           
-          echo "=== Service Status ==="
-          gcloud run services describe $SERVICE_NAME --region=$REGION --format="yaml(status)"
+          services:
+            feedshop-backend:
+              build: .
+              container_name: feedshop-backend
+              ports:
+                - "8080:8080"
+              environment:
+                - SPRING_PROFILES_ACTIVE=prod
+                - DB_HOST=${{ secrets.VM_DB_HOST }}
+                - DB_PORT=${{ secrets.VM_DB_PORT }}
+                - DB_NAME=${{ secrets.DB_NAME }}
+                - DB_USERNAME=${{ secrets.VM_DB_USERNAME }}
+                - DB_PASSWORD=${{ secrets.VM_DB_PASSWORD }}
+                - JWT_SECRET=${{ secrets.JWT_SECRET }}
+                - MAILGUN_API_KEY=${{ secrets.MAILGUN_API_KEY }}
+                - MAILGUN_DOMAIN=${{ secrets.MAILGUN_DOMAIN }}
+                - MAILGUN_EMAIL=${{ secrets.MAILGUN_EMAIL }}
+                - GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+                - GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+                - KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+                - KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+                - RECAPTCHA_SECRET_KEY=${{ secrets.RECAPTCHA_SECRET_KEY }}
+                - OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+                - APP_VERIFICATION_URL=${{ secrets.APP_VERIFICATION_URL }}
+              networks:
+                - feedshop-network
+              restart: unless-stopped
+              healthcheck:
+                test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+                start_period: 60s
           
-      - name: Get Service URL
-        run: |
-          SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --region=$REGION --format="value(status.url)")
-          echo "Service deployed at: $SERVICE_URL"
-          echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_ENV
+          networks:
+            feedshop-network:
+              driver: bridge
+          EOF
           
-      - name: Health Check
-        run: |
-          echo "Waiting for service to be ready..."
-          sleep 180  # Spring Boot + AI 초기화 시간 고려
+          # 배포 스크립트 생성
+          cat > deploy-package/deploy.sh << 'EOF'
+          #!/bin/bash
           
-          for i in {1..15}; do
-            echo "Health check attempt $i/15..."
-            if curl -f --max-time 120 --connect-timeout 60 "$SERVICE_URL/actuator/health" || curl -f --max-time 120 --connect-timeout 60 "$SERVICE_URL/"; then
-              echo "✅ Deployment successful and service is healthy!"
-              exit 0
+          set -e
+          
+          echo "=== FeedShop Backend Deployment Starting ==="
+          
+          # 현재 컨테이너 중지 및 제거
+          echo "Stopping existing containers..."
+          docker-compose down --remove-orphans || true
+          
+          # 이전 이미지 정리
+          echo "Cleaning up old images..."
+          docker image prune -f || true
+          
+          # 새 컨테이너 빌드 및 시작
+          echo "Building and starting new containers..."
+          docker-compose up -d --build
+          
+          # 컨테이너 상태 확인
+          echo "Checking container status..."
+          sleep 10
+          docker-compose ps
+          
+          # 헬스 체크
+          echo "Performing health check..."
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
+              echo "✅ Health check passed!"
+              break
             else
-              echo "❌ Health check failed, retrying in 45 seconds..."
-              sleep 45
+              echo "⏳ Health check attempt $i/30..."
+              sleep 10
             fi
           done
           
-          echo "❌ Health check failed after 15 attempts"
-          echo "Checking recent logs..."
-          gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=$SERVICE_NAME" \
-            --limit=30 \
-            --format="table(timestamp,severity,textPayload)" \
-            --freshness=5m
-          exit 1
+          if ! curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
+            echo "❌ Health check failed after 5 minutes"
+            echo "Container logs:"
+            docker-compose logs feedshop-backend
+            exit 1
+          fi
+          
+          echo "🎉 Deployment completed successfully!"
+          EOF
+          
+          chmod +x deploy-package/deploy.sh
+
+      - name: Copy files to VM instance
+        run: |
+          echo "Copying deployment package to VM..."
+          
+          # VM에 배포 디렉터리 생성
+          gcloud compute ssh $VM_INSTANCE_NAME \
+            --zone=$VM_ZONE \
+            --command="sudo mkdir -p $DEPLOY_PATH && sudo chown -R \$USER:\$USER $DEPLOY_PATH"
+          
+          # 파일 복사
+          gcloud compute scp --recurse deploy-package/* \
+            $VM_INSTANCE_NAME:$DEPLOY_PATH \
+            --zone=$VM_ZONE
+
+      - name: Deploy application on VM
+        run: |
+          echo "Deploying application on VM..."
+          
+          gcloud compute ssh $VM_INSTANCE_NAME \
+            --zone=$VM_ZONE \
+            --command="
+              cd $DEPLOY_PATH && 
+              echo '=== Starting deployment ===' &&
+              chmod +x deploy.sh &&
+              ./deploy.sh
+            "
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying deployment..."
+          
+          # VM의 외부 IP 가져오기
+          VM_EXTERNAL_IP=$(gcloud compute instances describe $VM_INSTANCE_NAME \
+            --zone=$VM_ZONE \
+            --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+          
+          echo "VM External IP: $VM_EXTERNAL_IP"
+          
+          # 방화벽 규칙 확인/생성
+          if ! gcloud compute firewall-rules describe allow-feedshop-8080 > /dev/null 2>&1; then
+            echo "Creating firewall rule for port 8080..."
+            gcloud compute firewall-rules create allow-feedshop-8080 \
+              --allow tcp:8080 \
+              --source-ranges 0.0.0.0/0 \
+              --description "Allow FeedShop backend on port 8080"
+          fi
+          
+          # 서비스 URL 설정
+          SERVICE_URL="http://$VM_EXTERNAL_IP:8080"
+          echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_ENV
+          
+          echo "🔗 Service URL: $SERVICE_URL"
+          echo "📊 Health Check: $SERVICE_URL/actuator/health"
+          echo "📖 API Docs: $SERVICE_URL/swagger-ui/index.html"
+
+      - name: Final health check
+        run: |
+          echo "Performing final health check..."
+          
+          # 30초 대기 (서비스 완전 시작 대기)
+          sleep 30
+          
+          # VM에서 직접 헬스 체크
+          gcloud compute ssh $VM_INSTANCE_NAME \
+            --zone=$VM_ZONE \
+            --command="
+              echo 'Local health check:' &&
+              curl -f http://localhost:8080/actuator/health || {
+                echo 'Local health check failed, checking logs:' &&
+                docker-compose -f $DEPLOY_PATH/docker-compose.yml logs --tail=50 feedshop-backend
+                exit 1
+              }
+            "
+          
+          echo "✅ Deployment verification completed!"
 
   notification:
     needs: deploy
@@ -140,9 +234,9 @@ jobs:
       - name: Notify Deployment Status
         run: |
           if [ "${{ needs.deploy.result }}" == "success" ]; then
-            echo "🚀 Deployment to Cloud Run completed successfully!"
-            echo "📊 Service: ${{ env.SERVICE_NAME }}"
-            echo "🌏 Region: ${{ env.REGION }}"
+            echo "🚀 Deployment to VM completed successfully!"
+            echo "📊 Instance: ${{ env.VM_INSTANCE_NAME }}"
+            echo "🌏 Zone: ${{ env.VM_ZONE }}"
             echo "🔗 URL: ${{ env.SERVICE_URL }}"
           else
             echo "❌ Deployment failed!"
