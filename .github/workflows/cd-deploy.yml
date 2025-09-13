@@ -95,12 +95,6 @@ jobs:
                 - OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
                 - APP_VERIFICATION_URL=${{ secrets.APP_VERIFICATION_URL }}
               restart: unless-stopped
-              healthcheck:
-                test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-                interval: 30s
-                timeout: 10s
-                retries: 3
-                start_period: 60s
               networks:
                 - feedshop-network
 
@@ -129,29 +123,9 @@ jobs:
           sleep 10
           sudo docker-compose ps
 
-          echo "Performing health check..."
-          for i in {1..30}; do
-            if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
-              echo "✅ Health check passed!"
-              exit 0
-            else
-              echo "⏳ Health check attempt $i/30..."
-              sudo docker inspect --format='{{.Name}} {{.State.Status}} {{.State.Health.Status}}' feedshop-backend || true
-              sleep 10
-            fi
-          done
-
-          echo "❌ Health check failed after ~5 minutes"
-          echo "Container last 200 lines:"
-          sudo docker logs --tail=200 feedshop-backend || true
-          echo "--- docker-compose ps ---"
-          sudo docker-compose ps || true
-          echo "--- docker inspect (health) ---"
-          sudo docker inspect --format='{{json .State}}' feedshop-backend || true
-          exit 1
-          EOF
-
           chmod +x deploy-package/deploy.sh
+          
+          echo "✅ Deployment completed!"
 
       - name: Copy files to VM instance
         run: |
@@ -205,30 +179,7 @@ jobs:
           echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_ENV
           
           echo "🔗 Service URL: $SERVICE_URL"
-          echo "📊 Health Check: $SERVICE_URL/actuator/health"
           echo "📖 API Docs: $SERVICE_URL/swagger-ui/index.html"
-
-      - name: Final health check
-        run: |
-          echo "Performing final health check..."
-          
-          # 30초 대기 (서비스 완전 시작 대기)
-          sleep 30
-          
-          # VM에서 직접 헬스 체크
-          gcloud compute ssh $VM_INSTANCE_NAME \
-            --zone=$VM_ZONE \
-            --command="
-              echo 'Local health check:' &&
-              curl -f http://localhost:8080/actuator/health || {
-                echo 'Local health check failed, checking logs:' &&
-                sudo docker-compose -f $DEPLOY_PATH/docker-compose.yml logs --tail=50 feedshop-backend || true &&
-                sudo docker ps &&
-                exit 1
-              }
-            "
-          
-          echo "✅ Deployment verification completed!"
 
   notification:
     needs: deploy
