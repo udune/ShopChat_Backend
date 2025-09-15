@@ -154,20 +154,20 @@ jobs:
           
           # 현재 컨테이너 중지 및 제거
           echo "Stopping existing containers..."
-          docker-compose down --remove-orphans || true
+          sudo docker-compose down --remove-orphans || true
           
           # 이전 이미지 정리
           echo "Cleaning up old images..."
-          docker image prune -f || true
+          sudo docker image prune -f || true
           
           # 새 컨테이너 빌드 및 시작
           echo "Building and starting new containers..."
-          docker-compose up -d --build
+          sudo docker-compose up -d --build
           
           # 컨테이너 상태 확인
           echo "Checking container status..."
           sleep 10
-          docker-compose ps
+          sudo docker-compose ps
           
           # 헬스 체크
           echo "Performing health check..."
@@ -184,7 +184,7 @@ jobs:
           if ! curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
             echo "❌ Health check failed after 5 minutes"
             echo "Container logs:"
-            docker-compose logs feedshop-backend
+            sudo docker-compose logs feedshop-backend
             exit 1
           fi
           
@@ -262,7 +262,7 @@ jobs:
               echo 'Local health check:' &&
               curl -f http://localhost:8080/actuator/health || {
                 echo 'Local health check failed, checking logs:' &&
-                docker-compose -f $DEPLOY_PATH/docker-compose.yml logs --tail=50 feedshop-backend
+                sudo docker-compose -f $DEPLOY_PATH/docker-compose.yml logs --tail=50 feedshop-backend
                 exit 1
               }
             "
