@@ -1,6 +1,5 @@
 name: Deploy to GCP VM Instance
 
-
 on:
   push:
     branches: ["main"]
@@ -52,63 +51,94 @@ jobs:
           echo "Creating deployment package..."
           mkdir -p deploy-package
           
-          # JAR 복사 (이름을 app.jar로 고정)
+          # JAR 파일 복사
           cp build/libs/*.jar deploy-package/app.jar
           
           # Dockerfile 복사
           cp Dockerfile deploy-package/
-
-          # docker-compose.yml 생성 (version 키 제거)
+          
+          # docker-compose.yml 생성 (모든 환경변수 포함)
           cat > deploy-package/docker-compose.yml << 'EOF'
+          version: '3.8'
+          
           services:
             feedshop-backend:
-              build:
-                context: .
-                dockerfile: Dockerfile
+              build: .
               container_name: feedshop-backend
               ports:
                 - "8080:8080"
               environment:
+                # 기본 Spring 설정
                 - SPRING_PROFILES_ACTIVE=prod
-                - SPRING_DATASOURCE_URL=jdbc:mysql://${{ secrets.VM_DB_HOST }}:${{ secrets.VM_DB_PORT }}/${{ secrets.DB_NAME }}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-                - SPRING_DATASOURCE_USERNAME=${{ secrets.VM_DB_USERNAME }}
-                - SPRING_DATASOURCE_PASSWORD=${{ secrets.VM_DB_PASSWORD }}
-                - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+          
+                # 데이터베이스 설정
+                - DB_HOST=${{ secrets.VM_DB_HOST }}
+                - DB_PORT=${{ secrets.VM_DB_PORT }}
+                - DB_NAME=${{ secrets.DB_NAME }}
+                - DB_USERNAME=${{ secrets.VM_DB_USERNAME }}
+                - DB_PASSWORD=${{ secrets.VM_DB_PASSWORD }}
+          
+                # JWT 및 보안 설정
                 - JWT_SECRET=${{ secrets.JWT_SECRET }}
+                - RECAPTCHA_SECRET_KEY=${{ secrets.RECAPTCHA_SECRET_KEY }}
+          
+                # 이메일 설정 (Mailgun)
                 - MAILGUN_API_KEY=${{ secrets.MAILGUN_API_KEY }}
                 - MAILGUN_DOMAIN=${{ secrets.MAILGUN_DOMAIN }}
                 - MAILGUN_EMAIL=${{ secrets.MAILGUN_EMAIL }}
-                - MAILGUN_FROM_EMAIL=${{ secrets.MAILGUN_FROM_EMAIL }}
-                - MAILGUN_FROM_NAME=${{ secrets.MAILGUN_FROM_NAME }}
+          
+                # OAuth2 클라이언트 ID/SECRET
                 - GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
                 - GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
                 - KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
                 - KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
-                - RECAPTCHA_SECRET_KEY=${{ secrets.RECAPTCHA_SECRET_KEY }}
+          
+                # OpenAI 설정
                 - OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
                 - SPRING_AI_OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-                - APP_VERIFICATION_URL=${{ secrets.APP_VERIFICATION_URL }}
-                - APP_CDN_BASE_URL=${{ secrets.APP_CDN_BASE_URL }}
-                - APP_PASSWORD_RESET_URL=${{ secrets.APP_PASSWORD_RESET_URL }}
+          
+                # GCP 설정
                 - GCS_ID=${{ secrets.GCS_ID }}
                 - GCS_BUCKET=${{ secrets.GCS_BUCKET }}
+                - SPRING_CLOUD_GCP_PROJECT_ID=${{ secrets.GCS_ID }}
+          
+                # 애플리케이션 URL 설정
+                - APP_CDN_BASE_URL=${{ secrets.APP_CDN_BASE_URL }}
+                - APP_PASSWORD_RESET_URL=${{ secrets.APP_PASSWORD_RESET_URL }}
+                - APP_VERIFICATION_URL=${{ secrets.APP_VERIFICATION_URL }}
                 - APP_OAUTH2_AUTHORIZED_REDIRECT_URI=${{ secrets.APP_OAUTH2_AUTHORIZED_REDIRECT_URI }}
-                - SPRING_CLOUD_GCP_PROJECT_ID=${{ secrets.SPRING_CLOUD_GCP_PROJECT_ID }}
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID=${{ secrets.SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID }}
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET=${{ secrets.SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET }}
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI=${{ secrets.SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI }}
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_CLIENT_ID=${{ secrets.SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_CLIENT_ID }}
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_CLIENT_SECRET=${{ secrets.SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_CLIENT_SECRET }}
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_REDIRECT_URI=${{ secrets.SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_REDIRECT_URI }}
+          
+                # Spring Security OAuth2 클라이언트 등록 - Google
+                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}
+                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_AUTHORIZATION_GRANT_TYPE=authorization_code
+                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_SCOPE=openid,profile,email
+          
+                # Spring Security OAuth2 클라이언트 등록 - Kakao
+                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}
                 - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_PROVIDER=kakao
+                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_AUTHORIZATION_GRANT_TYPE=authorization_code
+                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_SCOPE=profile_nickname,account_email
+          
+                # Spring Security OAuth2 Provider 설정 - Kakao
                 - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KAKAO_AUTHORIZATION_URI=https://kauth.kakao.com/oauth/authorize
                 - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KAKAO_TOKEN_URI=https://kauth.kakao.com/oauth/token
                 - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KAKAO_USER_INFO_URI=https://kapi.kakao.com/v2/user/me
                 - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KAKAO_USER_NAME_ATTRIBUTE=id
-              restart: unless-stopped
+          
               networks:
                 - feedshop-network
-
+              restart: unless-stopped
+              healthcheck:
+                test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+                start_period: 60s
+          
           networks:
             feedshop-network:
               driver: bridge
@@ -117,24 +147,48 @@ jobs:
           # 배포 스크립트 생성
           cat > deploy-package/deploy.sh << 'EOF'
           #!/bin/bash
+          
           set -e
-
+          
           echo "=== FeedShop Backend Deployment Starting ==="
-
+          
+          # 현재 컨테이너 중지 및 제거
           echo "Stopping existing containers..."
-          sudo docker-compose down --remove-orphans || true
-
+          docker-compose down --remove-orphans || true
+          
+          # 이전 이미지 정리
           echo "Cleaning up old images..."
-          sudo docker image prune -f || true
-
+          docker image prune -f || true
+          
+          # 새 컨테이너 빌드 및 시작
           echo "Building and starting new containers..."
-          sudo docker-compose up -d --build
-
+          docker-compose up -d --build
+          
+          # 컨테이너 상태 확인
           echo "Checking container status..."
           sleep 10
-          sudo docker-compose ps
+          docker-compose ps
           
-          echo "✅ Deployment completed!"
+          # 헬스 체크
+          echo "Performing health check..."
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
+              echo "✅ Health check passed!"
+              break
+            else
+              echo "⏳ Health check attempt $i/30..."
+              sleep 10
+            fi
+          done
+          
+          if ! curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
+            echo "❌ Health check failed after 5 minutes"
+            echo "Container logs:"
+            docker-compose logs feedshop-backend
+            exit 1
+          fi
+          
+          echo "🎉 Deployment completed successfully!"
           EOF
           
           chmod +x deploy-package/deploy.sh
@@ -178,11 +232,12 @@ jobs:
           echo "VM External IP: $VM_EXTERNAL_IP"
           
           # 방화벽 규칙 확인/생성
-          if gcloud compute firewall-rules describe allow-feedshop-8080 > /dev/null 2>&1; then
-            echo "✅ Firewall rule exists"
-          else
-            echo "⚠️ Firewall rule not found. Please create manually:"
-            echo "gcloud compute firewall-rules create allow-feedshop-8080 --allow tcp:8080 --source-ranges 0.0.0.0/0"
+          if ! gcloud compute firewall-rules describe allow-feedshop-8080 > /dev/null 2>&1; then
+            echo "Creating firewall rule for port 8080..."
+            gcloud compute firewall-rules create allow-feedshop-8080 \
+              --allow tcp:8080 \
+              --source-ranges 0.0.0.0/0 \
+              --description "Allow FeedShop backend on port 8080"
           fi
           
           # 서비스 URL 설정
@@ -190,7 +245,29 @@ jobs:
           echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_ENV
           
           echo "🔗 Service URL: $SERVICE_URL"
+          echo "📊 Health Check: $SERVICE_URL/actuator/health"
           echo "📖 API Docs: $SERVICE_URL/swagger-ui/index.html"
+
+      - name: Final health check
+        run: |
+          echo "Performing final health check..."
+          
+          # 30초 대기 (서비스 완전 시작 대기)
+          sleep 30
+          
+          # VM에서 직접 헬스 체크
+          gcloud compute ssh $VM_INSTANCE_NAME \
+            --zone=$VM_ZONE \
+            --command="
+              echo 'Local health check:' &&
+              curl -f http://localhost:8080/actuator/health || {
+                echo 'Local health check failed, checking logs:' &&
+                docker-compose -f $DEPLOY_PATH/docker-compose.yml logs --tail=50 feedshop-backend
+                exit 1
+              }
+            "
+          
+          echo "✅ Deployment verification completed!"
 
   notification:
     needs: deploy
