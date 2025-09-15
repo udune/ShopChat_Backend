@@ -57,78 +57,126 @@ jobs:
           # Dockerfile 복사
           cp Dockerfile deploy-package/
           
-          # docker-compose.yml 생성 (환경변수를 직접 치환)
-          cat > deploy-package/docker-compose.yml << EOF
-          version: '3.8'
+          # application.properties 생성 (prod 프로파일용)
+          cat > deploy-package/application.properties << EOF
+          # FeedShop Backend Production Configuration
+          spring.application.name=feedshop-spring-service
+          server.port=8080
+          spring.profiles.active=prod
           
+          # Database Configuration
+          spring.datasource.url=jdbc:mysql://${{ secrets.VM_DB_HOST }}:${{ secrets.VM_DB_PORT }}/${{ secrets.DB_NAME }}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+          spring.datasource.username=${{ secrets.VM_DB_USERNAME }}
+          spring.datasource.password=${{ secrets.VM_DB_PASSWORD }}
+          spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+          
+          # JPA/Hibernate Configuration
+          spring.jpa.show-sql=false
+          spring.jpa.hibernate.ddl-auto=update
+          spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+          spring.jpa.properties.hibernate.format_sql=false
+          
+          # HikariCP Configuration
+          spring.datasource.hikari.maximum-pool-size=10
+          spring.datasource.hikari.minimum-idle=2
+          spring.datasource.hikari.connection-timeout=30000
+          spring.datasource.hikari.idle-timeout=600000
+          spring.datasource.hikari.max-lifetime=1800000
+          
+          # JWT Configuration
+          jwt.secret=${{ secrets.JWT_SECRET }}
+          jwt.access-token-expiration-ms=3600000
+          jwt.refresh-token-expiration-ms=1209600000
+          
+          # Mailgun Configuration
+          mailgun.api.key=${{ secrets.MAILGUN_API_KEY }}
+          mailgun.domain=${{ secrets.MAILGUN_DOMAIN }}
+          mailgun.from.email=${{ secrets.MAILGUN_EMAIL }}
+          
+          # reCAPTCHA Configuration
+          recaptcha.secret-key=${{ secrets.RECAPTCHA_SECRET_KEY }}
+          recaptcha.score-threshold=0.5
+          
+          # OpenAI Configuration
+          spring.ai.openai.api-key=${{ secrets.OPENAI_API_KEY }}
+          openai.api.key=${{ secrets.OPENAI_API_KEY }}
+          
+          # GCP Configuration
+          gcp.project.id=${{ secrets.GCS_ID }}
+          gcp.storage.bucket=${{ secrets.GCS_BUCKET }}
+          spring.cloud.gcp.project-id=${{ secrets.GCS_ID }}
+          
+          # Application URLs
+          app.verification-url=${{ secrets.APP_VERIFICATION_URL }}
+          app.password-reset-url=${{ secrets.APP_PASSWORD_RESET_URL }}
+          app.cdn.base-url=${{ secrets.APP_CDN_BASE_URL }}
+          app.oauth2.authorized-redirect-uri=${{ secrets.APP_OAUTH2_AUTHORIZED_REDIRECT_URI }}
+          
+          # OAuth2 Client Registration - Google
+          spring.security.oauth2.client.registration.google.client-id=${{ secrets.GOOGLE_CLIENT_ID }}
+          spring.security.oauth2.client.registration.google.client-secret=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          spring.security.oauth2.client.registration.google.authorization-grant-type=authorization_code
+          spring.security.oauth2.client.registration.google.scope=openid,profile,email
+          spring.security.oauth2.client.registration.google.redirect-uri=${{ secrets.GOOGLE_REDIRECT_URI }}
+          
+          # OAuth2 Client Registration - Kakao
+          spring.security.oauth2.client.registration.kakao.client-id=${{ secrets.KAKAO_CLIENT_ID }}
+          spring.security.oauth2.client.registration.kakao.client-secret=${{ secrets.KAKAO_CLIENT_SECRET }}
+          spring.security.oauth2.client.registration.kakao.authorization-grant-type=authorization_code
+          spring.security.oauth2.client.registration.kakao.scope=profile_nickname,account_email
+          spring.security.oauth2.client.registration.kakao.redirect-uri=${{ secrets.KAKAO_REDIRECT_URI }}
+          spring.security.oauth2.client.registration.kakao.provider=kakao
+          
+          # OAuth2 Provider Configuration - Kakao
+          spring.security.oauth2.client.provider.kakao.authorization-uri=https://kauth.kakao.com/oauth/authorize
+          spring.security.oauth2.client.provider.kakao.token-uri=https://kauth.kakao.com/oauth/token
+          spring.security.oauth2.client.provider.kakao.user-info-uri=https://kapi.kakao.com/v2/user/me
+          spring.security.oauth2.client.provider.kakao.user-name-attribute=id
+          
+          # File Upload Configuration
+          spring.servlet.multipart.enabled=true
+          spring.servlet.multipart.max-file-size=10MB
+          spring.servlet.multipart.max-request-size=50MB
+          file.upload.base-path=./uploads
+          file.upload.cache-period=3600
+          
+          # Actuator Configuration
+          management.endpoints.web.exposure.include=health,info,metrics
+          management.endpoint.health.show-details=always
+          
+          # Timezone Configuration
+          spring.jackson.time-zone=Asia/Seoul
+          spring.jpa.properties.hibernate.jdbc.time_zone=Asia/Seoul
+          EOF
+          
+          # Dockerfile 수정 (application.properties 포함하도록)
+          cat > deploy-package/Dockerfile << 'EOF'
+          FROM eclipse-temurin:17-jre-alpine
+          
+          # curl 설치 (헬스체크용)
+          RUN apk add --no-cache curl
+          
+          WORKDIR /app
+          COPY app.jar app.jar
+          COPY application.properties application.properties
+          
+          EXPOSE 8080
+          
+          # JVM 옵션
+          ENV JAVA_OPTS="-Xmx4g -Xms1g -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+OptimizeStringConcat -Djava.security.egd=file:/dev/./urandom -Dspring.jmx.enabled=false -Dspring.main.banner-mode=off"
+          
+          # Spring Boot 설정 파일 경로 지정
+          ENTRYPOINT ["sh", "-c", "echo '=== FeedShop Starting ===' && echo 'JAVA_OPTS: ' $JAVA_OPTS && echo 'PORT: ' $PORT && exec java $JAVA_OPTS -Dspring.config.location=classpath:/application.properties,/app/application.properties -jar app.jar"]
+          EOF
+          
+          # docker-compose.yml 생성 (간단한 버전)
+          cat > deploy-package/docker-compose.yml << EOF
           services:
             feedshop-backend:
               build: .
               container_name: feedshop-backend
               ports:
                 - "8080:8080"
-              environment:
-                # 기본 Spring 설정
-                - SPRING_PROFILES_ACTIVE=prod
-          
-                # 데이터베이스 설정
-                - DB_HOST=${{ secrets.VM_DB_HOST }}
-                - DB_PORT=${{ secrets.VM_DB_PORT }}
-                - DB_NAME=${{ secrets.DB_NAME }}
-                - DB_USERNAME=${{ secrets.VM_DB_USERNAME }}
-                - DB_PASSWORD=${{ secrets.VM_DB_PASSWORD }}
-          
-                # JWT 및 보안 설정
-                - JWT_SECRET=${{ secrets.JWT_SECRET }}
-                - RECAPTCHA_SECRET_KEY=${{ secrets.RECAPTCHA_SECRET_KEY }}
-          
-                # 이메일 설정 (Mailgun)
-                - MAILGUN_API_KEY=${{ secrets.MAILGUN_API_KEY }}
-                - MAILGUN_DOMAIN=${{ secrets.MAILGUN_DOMAIN }}
-                - MAILGUN_EMAIL=${{ secrets.MAILGUN_EMAIL }}
-          
-                # OAuth2 클라이언트 ID/SECRET
-                - GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-                - GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
-                - KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
-                - KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
-          
-                # OpenAI 설정
-                - OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-                - SPRING_AI_OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-          
-                # GCP 설정
-                - GCS_ID=${{ secrets.GCS_ID }}
-                - GCS_BUCKET=${{ secrets.GCS_BUCKET }}
-                - SPRING_CLOUD_GCP_PROJECT_ID=${{ secrets.GCS_ID }}
-          
-                # 애플리케이션 URL 설정
-                - APP_CDN_BASE_URL=${{ secrets.APP_CDN_BASE_URL }}
-                - APP_PASSWORD_RESET_URL=${{ secrets.APP_PASSWORD_RESET_URL }}
-                - APP_VERIFICATION_URL=${{ secrets.APP_VERIFICATION_URL }}
-                - APP_OAUTH2_AUTHORIZED_REDIRECT_URI=${{ secrets.APP_OAUTH2_AUTHORIZED_REDIRECT_URI }}
-          
-                # Spring Security OAuth2 클라이언트 등록 - Google
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_AUTHORIZATION_GRANT_TYPE=authorization_code
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_SCOPE=openid,profile,email
-          
-                # Spring Security OAuth2 클라이언트 등록 - Kakao
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_PROVIDER=kakao
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_AUTHORIZATION_GRANT_TYPE=authorization_code
-                - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KAKAO_SCOPE=profile_nickname,account_email
-          
-                # Spring Security OAuth2 Provider 설정 - Kakao
-                - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KAKAO_AUTHORIZATION_URI=https://kauth.kakao.com/oauth/authorize
-                - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KAKAO_TOKEN_URI=https://kauth.kakao.com/oauth/token
-                - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KAKAO_USER_INFO_URI=https://kapi.kakao.com/v2/user/me
-                - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KAKAO_USER_NAME_ATTRIBUTE=id
-          
               networks:
                 - feedshop-network
               restart: unless-stopped
