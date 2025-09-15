@@ -92,6 +92,8 @@ jobs:
                 - APP_PASSWORD_RESET_URL=${{ secrets.APP_PASSWORD_RESET_URL }}
                 - GCS_ID=${{ secrets.GCS_ID }}
                 - GCS_BUCKET=${{ secrets.GCS_BUCKET }}
+                - APP_OAUTH2_AUTHORIZED_REDIRECT_URI=${{ secrets.APP_OAUTH2_AUTHORIZED_REDIRECT_URI }}
+                - SPRING_CLOUD_GCP_PROJECT_ID=${{ secrets.SPRING_CLOUD_GCP_PROJECT_ID }}
               restart: unless-stopped
               networks:
                 - feedshop-network
