@@ -89,6 +89,7 @@ jobs:
                 - SPRING_AI_OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
                 - APP_VERIFICATION_URL=${{ secrets.APP_VERIFICATION_URL }}
                 - APP_CDN_BASE_URL=${{ secrets.APP_CDN_BASE_URL }}
+                - APP_PASSWORD_RESET_URL=${{ secrets.APP_PASSWORD_RESET_URL }}
                 - GCS_ID=${{ secrets.GCS_ID }}
                 - GCS_BUCKET=${{ secrets.GCS_BUCKET }}
               restart: unless-stopped
