@@ -165,8 +165,8 @@ jobs:
           # JVM 옵션
           ENV JAVA_OPTS="-Xmx4g -Xms1g -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+OptimizeStringConcat -Djava.security.egd=file:/dev/./urandom -Dspring.jmx.enabled=false -Dspring.main.banner-mode=off"
           
-          # Spring Boot 설정 파일 경로 지정
-          ENTRYPOINT ["sh", "-c", "echo '=== FeedShop Starting ===' && echo 'JAVA_OPTS: ' $JAVA_OPTS && echo 'PORT: ' $PORT && exec java $JAVA_OPTS -Dspring.config.location=classpath:/application.properties,/app/application.properties -jar app.jar"]
+          # 간단하게 외부 설정 파일만 사용
+          ENTRYPOINT ["sh", "-c", "echo '=== FeedShop Starting ===' && echo 'JAVA_OPTS: ' $JAVA_OPTS && echo 'PORT: ' $PORT && exec java $JAVA_OPTS -Dspring.config.location=file:/app/application.properties -jar app.jar"]
           EOF
           
           # docker-compose.yml 생성 (간단한 버전)
@@ -214,29 +214,33 @@ jobs:
           
           # 컨테이너 상태 확인
           echo "Checking container status..."
-          sleep 10
+          sleep 5
           sudo docker-compose ps
           
-          # 헬스 체크
-          echo "Performing health check..."
-          for i in {1..30}; do
+          # 컨테이너 로그 확인 (초기 시작 로그)
+          echo "=== Container startup logs ==="
+          sudo docker-compose logs --tail=20 feedshop-backend
+          
+          # 빠른 헬스 체크 (10번만, 30초 간격)
+          echo "Performing health check (reduced attempts)..."
+          for i in {1..10}; do
             if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
-              echo "✅ Health check passed!"
-              break
+              echo "✅ Health check passed on attempt $i!"
+              echo "🎉 Deployment completed successfully!"
+              exit 0
             else
-              echo "⏳ Health check attempt $i/30..."
-              sleep 10
+              echo "⏳ Health check attempt $i/10... (waiting 30s)"
+              if [ $i -lt 10 ]; then
+                sleep 30
+              fi
             fi
           done
           
-          if ! curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
-            echo "❌ Health check failed after 5 minutes"
-            echo "Container logs:"
-            sudo docker-compose logs feedshop-backend
-            exit 1
-          fi
-          
-          echo "🎉 Deployment completed successfully!"
+          # 헬스체크 실패 시 자세한 로그 출력
+          echo "❌ Health check failed after 10 attempts (5 minutes)"
+          echo "=== Full container logs ==="
+          sudo docker-compose logs feedshop-backend
+          exit 1
           EOF
           
           chmod +x deploy-package/deploy.sh
