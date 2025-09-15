@@ -87,6 +87,9 @@ jobs:
                 - RECAPTCHA_SECRET_KEY=${{ secrets.RECAPTCHA_SECRET_KEY }}
                 - OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
                 - APP_VERIFICATION_URL=${{ secrets.APP_VERIFICATION_URL }}
+                - APP_CDN_BASE_URL=${{ secrets.APP_CDN_BASE_URL }}
+                - GCS_ID=${{ secrets.GCS_ID }}
+                - GCS_BUCKET=${{ secrets.GCS_BUCKET }}
               restart: unless-stopped
               networks:
                 - feedshop-network
