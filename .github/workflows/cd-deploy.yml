@@ -57,8 +57,8 @@ jobs:
           # Dockerfile 복사
           cp Dockerfile deploy-package/
           
-          # docker-compose.yml 생성 (모든 환경변수 포함)
-          cat > deploy-package/docker-compose.yml << 'EOF'
+          # docker-compose.yml 생성 (환경변수를 직접 치환)
+          cat > deploy-package/docker-compose.yml << EOF
           version: '3.8'
           
           services:
