@@ -26,7 +26,12 @@ public class SwaggerConfig {
         return new OpenAPI()
                 .components(components)
                 .info(apiInfo()) // ✅ API 정보 추가
-                .addSecurityItem(securityRequirement);
+                .addSecurityItem(securityRequirement)
+                .servers(java.util.List.of(
+                new io.swagger.v3.oas.models.servers.Server()
+                        .url("https://feedshop.o-r.kr")
+                        .description("Production server")
+        ));
     }
 
     private Info apiInfo() {
