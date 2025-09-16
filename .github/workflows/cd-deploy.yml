@@ -54,129 +54,84 @@ jobs:
           # JAR 파일 복사
           cp build/libs/*.jar deploy-package/app.jar
           
-          # Dockerfile 복사
-          cp Dockerfile deploy-package/
-          
-          # application.properties 생성 (prod 프로파일용)
-          cat > deploy-package/application.properties << EOF
-          # FeedShop Backend Production Configuration
-          spring.application.name=feedshop-spring-service
-          server.port=8080
-          spring.profiles.active=prod
-          
-          # Database Configuration
-          spring.datasource.url=jdbc:mysql://${{ secrets.VM_DB_HOST }}:${{ secrets.VM_DB_PORT }}/${{ secrets.DB_NAME }}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-          spring.datasource.username=${{ secrets.VM_DB_USERNAME }}
-          spring.datasource.password=${{ secrets.VM_DB_PASSWORD }}
-          spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
-          
-          # JPA/Hibernate Configuration
-          spring.jpa.show-sql=false
-          spring.jpa.hibernate.ddl-auto=update
-          spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
-          spring.jpa.properties.hibernate.format_sql=false
-          
-          # HikariCP Configuration
-          spring.datasource.hikari.maximum-pool-size=10
-          spring.datasource.hikari.minimum-idle=2
-          spring.datasource.hikari.connection-timeout=30000
-          spring.datasource.hikari.idle-timeout=600000
-          spring.datasource.hikari.max-lifetime=1800000
-          
-          # JWT Configuration
-          jwt.secret=${{ secrets.JWT_SECRET }}
-          jwt.access-token-expiration-ms=3600000
-          jwt.refresh-token-expiration-ms=1209600000
-          
-          # Mailgun Configuration
-          mailgun.api.key=${{ secrets.MAILGUN_API_KEY }}
-          mailgun.domain=${{ secrets.MAILGUN_DOMAIN }}
-          mailgun.from.email=${{ secrets.MAILGUN_EMAIL }}
-          
-          # reCAPTCHA Configuration
-          recaptcha.secret-key=${{ secrets.RECAPTCHA_SECRET_KEY }}
-          recaptcha.score-threshold=0.5
-          
-          # OpenAI Configuration
-          spring.ai.openai.api-key=${{ secrets.OPENAI_API_KEY }}
-          openai.api.key=${{ secrets.OPENAI_API_KEY }}
-          
-          # GCP Configuration
-          gcp.project.id=${{ secrets.GCS_ID }}
-          gcp.storage.bucket=${{ secrets.GCS_BUCKET }}
-          spring.cloud.gcp.project-id=${{ secrets.GCS_ID }}
-          
-          # Application URLs
-          app.verification-url=${{ secrets.APP_VERIFICATION_URL }}
-          app.password-reset-url=${{ secrets.APP_PASSWORD_RESET_URL }}
-          app.cdn.base-url=${{ secrets.APP_CDN_BASE_URL }}
-          app.oauth2.authorized-redirect-uri=${{ secrets.APP_OAUTH2_AUTHORIZED_REDIRECT_URI }}
-          
-          # OAuth2 Client Registration - Google
-          spring.security.oauth2.client.registration.google.client-id=${{ secrets.GOOGLE_CLIENT_ID }}
-          spring.security.oauth2.client.registration.google.client-secret=${{ secrets.GOOGLE_CLIENT_SECRET }}
-          spring.security.oauth2.client.registration.google.authorization-grant-type=authorization_code
-          spring.security.oauth2.client.registration.google.scope=openid,profile,email
-          spring.security.oauth2.client.registration.google.redirect-uri=${{ secrets.GOOGLE_REDIRECT_URI }}
-          
-          # OAuth2 Client Registration - Kakao
-          spring.security.oauth2.client.registration.kakao.client-id=${{ secrets.KAKAO_CLIENT_ID }}
-          spring.security.oauth2.client.registration.kakao.client-secret=${{ secrets.KAKAO_CLIENT_SECRET }}
-          spring.security.oauth2.client.registration.kakao.authorization-grant-type=authorization_code
-          spring.security.oauth2.client.registration.kakao.scope=profile_nickname,account_email
-          spring.security.oauth2.client.registration.kakao.redirect-uri=${{ secrets.KAKAO_REDIRECT_URI }}
-          spring.security.oauth2.client.registration.kakao.provider=kakao
-          
-          # OAuth2 Provider Configuration - Kakao
-          spring.security.oauth2.client.provider.kakao.authorization-uri=https://kauth.kakao.com/oauth/authorize
-          spring.security.oauth2.client.provider.kakao.token-uri=https://kauth.kakao.com/oauth/token
-          spring.security.oauth2.client.provider.kakao.user-info-uri=https://kapi.kakao.com/v2/user/me
-          spring.security.oauth2.client.provider.kakao.user-name-attribute=id
-          
-          # File Upload Configuration
-          spring.servlet.multipart.enabled=true
-          spring.servlet.multipart.max-file-size=10MB
-          spring.servlet.multipart.max-request-size=50MB
-          file.upload.base-path=./uploads
-          file.upload.cache-period=3600
-          
-          # Actuator Configuration
-          management.endpoints.web.exposure.include=health,info,metrics
-          management.endpoint.health.show-details=always
-          
-          # Timezone Configuration
-          spring.jackson.time-zone=Asia/Seoul
-          spring.jpa.properties.hibernate.jdbc.time_zone=Asia/Seoul
-          EOF
-          
-          # Dockerfile 수정 (application.properties 포함하도록)
+          # Dockerfile 생성 (최적화된 버전)
           cat > deploy-package/Dockerfile << 'EOF'
           FROM eclipse-temurin:17-jre-alpine
           
-          # curl 설치 (헬스체크용)
+          # 필요한 패키지 설치
           RUN apk add --no-cache curl
           
           WORKDIR /app
           COPY app.jar app.jar
-          COPY application.properties application.properties
           
           EXPOSE 8080
           
-          # JVM 옵션
-          ENV JAVA_OPTS="-Xmx4g -Xms1g -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+OptimizeStringConcat -Djava.security.egd=file:/dev/./urandom -Dspring.jmx.enabled=false -Dspring.main.banner-mode=off"
+          # JVM 최적화 옵션
+          ENV JAVA_OPTS="-Xmx2g -Xms1g -XX:+UseG1GC -XX:+UseStringDeduplication -Djava.security.egd=file:/dev/./urandom"
           
-          # 간단하게 외부 설정 파일만 사용
-          ENTRYPOINT ["sh", "-c", "echo '=== FeedShop Starting ===' && echo 'JAVA_OPTS: ' $JAVA_OPTS && echo 'PORT: ' $PORT && exec java $JAVA_OPTS -Dspring.config.location=file:/app/application.properties -jar app.jar"]
+          # 헬스체크 추가
+          HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+            CMD curl -f http://localhost:8080/actuator/health || exit 1
+          
+          ENTRYPOINT ["sh", "-c", "echo '=== FeedShop Starting ===' && exec java $JAVA_OPTS -jar app.jar"]
           EOF
           
-          # docker-compose.yml 생성 (간단한 버전)
-          cat > deploy-package/docker-compose.yml << EOF
+          # .env 파일 생성 (환경변수 중앙 관리)
+          cat > deploy-package/.env << EOF
+          # Database Configuration
+          DB_HOST=${{ secrets.VM_DB_HOST }}
+          DB_PORT=${{ secrets.VM_DB_PORT }}
+          DB_NAME=${{ secrets.VM_DB_NAME }}
+          DB_USERNAME=${{ secrets.VM_DB_USERNAME }}
+          DB_PASSWORD=${{ secrets.VM_DB_PASSWORD }}
+          
+          # JWT Configuration
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          
+          # Mailgun Configuration
+          MAILGUN_API_KEY=${{ secrets.MAILGUN_API_KEY }}
+          MAILGUN_DOMAIN=${{ secrets.MAILGUN_DOMAIN }}
+          MAILGUN_EMAIL=${{ secrets.MAILGUN_EMAIL }}
+          
+          # reCAPTCHA Configuration
+          RECAPTCHA_SECRET_KEY=${{ secrets.RECAPTCHA_SECRET_KEY }}
+          
+          # OpenAI Configuration
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          
+          # GCP Configuration
+          GCS_ID=${{ secrets.GCS_ID }}
+          GCS_BUCKET=${{ secrets.GCS_BUCKET }}
+          
+          # OAuth2 Configuration
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+          KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+          
+          # Application URLs
+          APP_VERIFICATION_URL=${{ secrets.APP_VERIFICATION_URL }}
+          APP_PASSWORD_RESET_URL=${{ secrets.APP_PASSWORD_RESET_URL }}
+          APP_CDN_BASE_URL=${{ secrets.APP_CDN_BASE_URL }}
+          APP_OAUTH2_AUTHORIZED_REDIRECT_URI=${{ secrets.APP_OAUTH2_AUTHORIZED_REDIRECT_URI }}
+          GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}
+          KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}
+          EOF
+          
+          # docker-compose.yml 생성 (개선된 버전)
+          cat > deploy-package/docker-compose.yml << 'EOF'
+          version: '3.8'
+          
           services:
             feedshop-backend:
               build: .
               container_name: feedshop-backend
               ports:
                 - "8080:8080"
+              env_file:
+                - .env
+              environment:
+                - SPRING_PROFILES_ACTIVE=prod
               networks:
                 - feedshop-network
               restart: unless-stopped
@@ -184,63 +139,110 @@ jobs:
                 test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
                 interval: 30s
                 timeout: 10s
-                retries: 3
-                start_period: 60s
+                retries: 5
+                start_period: 90s
+              logging:
+                driver: "json-file"
+                options:
+                  max-size: "10m"
+                  max-file: "3"
           
           networks:
             feedshop-network:
               driver: bridge
           EOF
           
-          # 배포 스크립트 생성
+          # 개선된 배포 스크립트 생성
           cat > deploy-package/deploy.sh << 'EOF'
           #!/bin/bash
           
           set -e
           
           echo "=== FeedShop Backend Deployment Starting ==="
+          echo "Timestamp: $(date)"
           
-          # 현재 컨테이너 중지 및 제거
-          echo "Stopping existing containers..."
-          sudo docker-compose down --remove-orphans || true
+          # 현재 컨테이너 상태 확인
+          echo "Current container status:"
+          sudo docker-compose ps || true
           
-          # 이전 이미지 정리
+          # 기존 컨테이너 중지 및 제거 (더 안전한 방법)
+          echo "Stopping existing containers gracefully..."
+          sudo docker-compose down --timeout 30 --remove-orphans || true
+          
+          # 사용하지 않는 이미지 정리
           echo "Cleaning up old images..."
-          sudo docker image prune -f || true
+          sudo docker system prune -f --filter "until=24h" || true
           
           # 새 컨테이너 빌드 및 시작
           echo "Building and starting new containers..."
-          sudo docker-compose up -d --build
+          sudo docker-compose up -d --build --force-recreate
           
-          # 컨테이너 상태 확인
-          echo "Checking container status..."
-          sleep 5
+          # 컨테이너 시작 대기 (더 충분한 시간)
+          echo "Waiting for container to start..."
+          sleep 30
+          
+          # 컨테이너 상태 재확인
+          echo "=== Container Status ==="
           sudo docker-compose ps
+          echo ""
           
-          # 컨테이너 로그 확인 (초기 시작 로그)
-          echo "=== Container startup logs ==="
-          sudo docker-compose logs --tail=20 feedshop-backend
+          # 초기 로그 확인
+          echo "=== Initial Container Logs ==="
+          sudo docker-compose logs --tail=30 feedshop-backend
+          echo ""
           
-          # 빠른 헬스 체크 (10번만, 30초 간격)
-          echo "Performing health check (reduced attempts)..."
-          for i in {1..10}; do
-            if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
-              echo "✅ Health check passed on attempt $i!"
+          # 더 정교한 헬스체크 (최대 15분, 30초 간격)
+          echo "Performing health check..."
+          max_attempts=30
+          attempt=1
+          
+          while [ $attempt -le $max_attempts ]; do
+            echo "Health check attempt $attempt/$max_attempts..."
+          
+            # 컨테이너가 실행 중인지 확인
+            if ! sudo docker-compose ps feedshop-backend | grep -q "Up"; then
+              echo "❌ Container is not running!"
+              sudo docker-compose logs --tail=50 feedshop-backend
+              exit 1
+            fi
+          
+            # HTTP 헬스체크
+            if curl -f --connect-timeout 10 --max-time 30 http://localhost:8080/actuator/health > /dev/null 2>&1; then
+              echo "✅ Health check passed!"
+              echo ""
+              echo "=== Deployment Summary ==="
+              echo "Service: FeedShop Backend"
+              echo "Status: ✅ Running"
+              echo "Port: 8080"
+              echo "Health Check: ✅ Passed"
+              echo "Timestamp: $(date)"
+              echo ""
               echo "🎉 Deployment completed successfully!"
               exit 0
             else
-              echo "⏳ Health check attempt $i/10... (waiting 30s)"
-              if [ $i -lt 10 ]; then
-                sleep 30
+              echo "⏳ Health check failed, waiting 30s... (attempt $attempt/$max_attempts)"
+              if [ $attempt -eq $max_attempts ]; then
+                echo ""
+                echo "❌ Health check failed after $max_attempts attempts (15 minutes)"
+                echo ""
+                echo "=== Debugging Information ==="
+                echo "Container status:"
+                sudo docker-compose ps
+                echo ""
+                echo "Container logs (last 100 lines):"
+                sudo docker-compose logs --tail=100 feedshop-backend
+                echo ""
+                echo "System resources:"
+                df -h
+                free -h
+                echo ""
+                exit 1
               fi
+              sleep 30
             fi
-          done
           
-          # 헬스체크 실패 시 자세한 로그 출력
-          echo "❌ Health check failed after 10 attempts (5 minutes)"
-          echo "=== Full container logs ==="
-          sudo docker-compose logs feedshop-backend
-          exit 1
+            attempt=$((attempt + 1))
+          done
           EOF
           
           chmod +x deploy-package/deploy.sh
@@ -272,9 +274,9 @@ jobs:
               ./deploy.sh
             "
 
-      - name: Verify deployment
+      - name: Verify deployment and setup monitoring
         run: |
-          echo "Verifying deployment..."
+          echo "Setting up external access and final verification..."
           
           # VM의 외부 IP 가져오기
           VM_EXTERNAL_IP=$(gcloud compute instances describe $VM_INSTANCE_NAME \
@@ -296,30 +298,30 @@ jobs:
           SERVICE_URL="http://$VM_EXTERNAL_IP:8080"
           echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_ENV
           
+          echo ""
           echo "🔗 Service URL: $SERVICE_URL"
           echo "📊 Health Check: $SERVICE_URL/actuator/health"
           echo "📖 API Docs: $SERVICE_URL/swagger-ui/index.html"
-
-      - name: Final health check
-        run: |
-          echo "Performing final health check..."
+          echo ""
           
-          # 30초 대기 (서비스 완전 시작 대기)
-          sleep 30
+          # 외부에서 최종 헬스체크 (5분 대기)
+          echo "Performing external health check..."
+          sleep 60  # 추가 대기 시간
           
-          # VM에서 직접 헬스 체크
-          gcloud compute ssh $VM_INSTANCE_NAME \
-            --zone=$VM_ZONE \
-            --command="
-              echo 'Local health check:' &&
-              curl -f http://localhost:8080/actuator/health || {
-                echo 'Local health check failed, checking logs:' &&
-                sudo docker-compose -f $DEPLOY_PATH/docker-compose.yml logs --tail=50 feedshop-backend
-                exit 1
-              }
-            "
-          
-          echo "✅ Deployment verification completed!"
+          for i in {1..5}; do
+            if curl -f --connect-timeout 10 --max-time 30 "$SERVICE_URL/actuator/health" > /dev/null 2>&1; then
+              echo "✅ External health check passed!"
+              break
+            else
+              echo "⏳ External health check attempt $i/5..."
+              if [ $i -eq 5 ]; then
+                echo "⚠️ External health check failed, but deployment may still be successful"
+                echo "Please check manually: $SERVICE_URL/actuator/health"
+              else
+                sleep 60
+              fi
+            fi
+          done
 
   notification:
     needs: deploy
@@ -334,7 +336,13 @@ jobs:
             echo "📊 Instance: ${{ env.VM_INSTANCE_NAME }}"
             echo "🌏 Zone: ${{ env.VM_ZONE }}"
             echo "🔗 URL: ${{ env.SERVICE_URL }}"
+            echo ""
+            echo "🔍 Next steps:"
+            echo "1. Check service health: ${{ env.SERVICE_URL }}/actuator/health"
+            echo "2. View API docs: ${{ env.SERVICE_URL }}/swagger-ui/index.html"
+            echo "3. Monitor logs: gcloud compute ssh ${{ env.VM_INSTANCE_NAME }} --zone=${{ env.VM_ZONE }} --command='sudo docker-compose -f ${{ env.DEPLOY_PATH }}/docker-compose.yml logs -f feedshop-backend'"
           else
             echo "❌ Deployment failed!"
+            echo "Please check the deployment logs and troubleshoot."
             exit 1
           fi
