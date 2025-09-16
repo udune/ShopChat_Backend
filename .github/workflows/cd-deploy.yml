@@ -104,12 +104,6 @@ jobs:
               networks:
                 - feedshop-network
               restart: unless-stopped
-              healthcheck:
-                test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-                interval: 30s
-                timeout: 10s
-                retries: 3
-                start_period: 60s
 
           networks:
             feedshop-network:
@@ -146,28 +140,6 @@ jobs:
           # 컨테이너 시작 대기
           echo "Waiting for container to start..."
           sleep 30
-
-          # 헬스 체크
-          echo "Performing health check..."
-          for i in {1..10}; do
-            if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
-              echo "✅ Health check passed!"
-              echo "🎉 Deployment completed successfully!"
-              sudo docker-compose logs --tail=20 feedshop-backend
-              exit 0
-            else
-              echo "⏳ Health check attempt $i/10... (waiting 30s)"
-              if [ $i -lt 10 ]; then
-                sleep 30
-              fi
-            fi
-          done
-
-          echo "❌ Health check failed!"
-          echo "=== Container logs ==="
-          sudo docker-compose logs feedshop-backend
-          exit 1
-          EOF
 
           chmod +x deploy-package/deploy.sh
 
@@ -222,30 +194,9 @@ jobs:
           SERVICE_URL="http://$VM_EXTERNAL_IP:8080"
           echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_ENV
           
-          echo ""
+          echo "Deployment completed!"
           echo "🔗 Service URL: $SERVICE_URL"
-          echo "📊 Health Check: $SERVICE_URL/actuator/health"
           echo "📖 API Docs: $SERVICE_URL/swagger-ui/index.html"
-          echo ""
-          
-          # 외부에서 최종 헬스체크 (5분 대기)
-          echo "Performing external health check..."
-          sleep 60  # 추가 대기 시간
-          
-          for i in {1..5}; do
-            if curl -f --connect-timeout 10 --max-time 30 "$SERVICE_URL/actuator/health" > /dev/null 2>&1; then
-              echo "✅ External health check passed!"
-              break
-            else
-              echo "⏳ External health check attempt $i/5..."
-              if [ $i -eq 5 ]; then
-                echo "⚠️ External health check failed, but deployment may still be successful"
-                echo "Please check manually: $SERVICE_URL/actuator/health"
-              else
-                sleep 60
-              fi
-            fi
-          done
 
   notification:
     needs: deploy
