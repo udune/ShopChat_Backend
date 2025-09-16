@@ -187,13 +187,11 @@ jobs:
           
           echo "VM External IP: $VM_EXTERNAL_IP"
           
-          # 방화벽 규칙 확인/생성
-          if ! gcloud compute firewall-rules describe allow-feedshop-8080 > /dev/null 2>&1; then
-            echo "Creating firewall rule for port 8080..."
-            gcloud compute firewall-rules create allow-feedshop-8080 \
-              --allow tcp:8080 \
-              --source-ranges 0.0.0.0/0 \
-              --description "Allow FeedShop backend on port 8080"
+          # 방화벽 규칙 확인
+          if gcloud compute firewall-rules describe allow-feedshop-8080 > /dev/null 2>&1; then
+            echo "Firewall rule for port 8080 already exists"
+          else
+            echo "Warning: Firewall rule for port 8080 not found. Please create manually."
           fi
           
           # 서비스 URL 설정
