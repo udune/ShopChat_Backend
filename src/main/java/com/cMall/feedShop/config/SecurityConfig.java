@@ -102,6 +102,7 @@ public class SecurityConfig {
         config.setAllowedOrigins(Arrays.asList(
                 "https://feedshop-frontend.vercel.app",
                 "https://www.feedshop.store",
+                "https://feedshop.o-r.kr",
                 "https://shop-chat-frontend.vercel.app"
         ));
 
