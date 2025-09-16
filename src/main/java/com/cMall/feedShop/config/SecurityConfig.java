@@ -101,7 +101,8 @@ public class SecurityConfig {
 
         config.setAllowedOrigins(Arrays.asList(
                 "https://feedshop-frontend.vercel.app",
-                "https://www.feedshop.store"
+                "https://www.feedshop.store",
+                "https://shop-chat-frontend.vercel.app"
         ));
 
         // 2. 반드시 필요한 HTTP 메서드만 허용
