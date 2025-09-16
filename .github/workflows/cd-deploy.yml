@@ -50,78 +50,49 @@ jobs:
         run: |
           echo "Creating deployment package..."
           mkdir -p deploy-package
-          
+
           # JAR 파일 복사
           cp build/libs/*.jar deploy-package/app.jar
-          
-          # Dockerfile 생성 (최적화된 버전)
-          cat > deploy-package/Dockerfile << 'EOF'
-          FROM eclipse-temurin:17-jre-alpine
-          
-          # 필요한 패키지 설치
-          RUN apk add --no-cache curl
-          
-          WORKDIR /app
-          COPY app.jar app.jar
-          
-          EXPOSE 8080
-          
-          # JVM 최적화 옵션
-          ENV JAVA_OPTS="-Xmx2g -Xms1g -XX:+UseG1GC -XX:+UseStringDeduplication -Djava.security.egd=file:/dev/./urandom"
-          
-          # 헬스체크 추가
-          HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-            CMD curl -f http://localhost:8080/actuator/health || exit 1
-          
-          ENTRYPOINT ["sh", "-c", "echo '=== FeedShop Starting ===' && exec java $JAVA_OPTS -jar app.jar"]
-          EOF
-          
-          # .env 파일 생성 (환경변수 중앙 관리)
+
+          # 환경 변수 파일 생성
           cat > deploy-package/.env << EOF
-          # Database Configuration
-          DB_HOST=${{ secrets.VM_DB_HOST }}
-          DB_PORT=${{ secrets.VM_DB_PORT }}
-          DB_NAME=${{ secrets.VM_DB_NAME }}
-          DB_USERNAME=${{ secrets.VM_DB_USERNAME }}
-          DB_PASSWORD=${{ secrets.VM_DB_PASSWORD }}
-          
-          # JWT Configuration
+          # Spring App
+          SPRING_APPLICATION_NAME=feedShop
+
+          # DB Connection
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=${{ secrets.DB_PORT }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_USERNAME=${{ secrets.DB_USERNAME }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+
+          # JWT
           JWT_SECRET=${{ secrets.JWT_SECRET }}
-          
-          # Mailgun Configuration
+
+          # Mailgun
           MAILGUN_API_KEY=${{ secrets.MAILGUN_API_KEY }}
           MAILGUN_DOMAIN=${{ secrets.MAILGUN_DOMAIN }}
           MAILGUN_EMAIL=${{ secrets.MAILGUN_EMAIL }}
-          
-          # reCAPTCHA Configuration
-          RECAPTCHA_SECRET_KEY=${{ secrets.RECAPTCHA_SECRET_KEY }}
-          
-          # OpenAI Configuration
-          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-          
-          # GCP Configuration
+
+          # GCS
           GCS_ID=${{ secrets.GCS_ID }}
           GCS_BUCKET=${{ secrets.GCS_BUCKET }}
-          
-          # OAuth2 Configuration
+
+          # OAuth
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
           KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
           KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
-          
-          # Application URLs
+
+          # Other
+          RECAPTCHA_SECRET_KEY=${{ secrets.RECAPTCHA_SECRET_KEY }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           APP_VERIFICATION_URL=${{ secrets.APP_VERIFICATION_URL }}
-          APP_PASSWORD_RESET_URL=${{ secrets.APP_PASSWORD_RESET_URL }}
           APP_CDN_BASE_URL=${{ secrets.APP_CDN_BASE_URL }}
-          APP_OAUTH2_AUTHORIZED_REDIRECT_URI=${{ secrets.APP_OAUTH2_AUTHORIZED_REDIRECT_URI }}
-          GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}
-          KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}
           EOF
-          
-          # docker-compose.yml 생성 (개선된 버전)
+
+          # docker-compose.yml 생성
           cat > deploy-package/docker-compose.yml << 'EOF'
-          version: '3.8'
-          
           services:
             feedshop-backend:
               build: .
@@ -130,8 +101,6 @@ jobs:
                 - "8080:8080"
               env_file:
                 - .env
-              environment:
-                - SPRING_PROFILES_ACTIVE=prod
               networks:
                 - feedshop-network
               restart: unless-stopped
@@ -139,112 +108,67 @@ jobs:
                 test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
                 interval: 30s
                 timeout: 10s
-                retries: 5
-                start_period: 90s
-              logging:
-                driver: "json-file"
-                options:
-                  max-size: "10m"
-                  max-file: "3"
-          
+                retries: 3
+                start_period: 60s
+
           networks:
             feedshop-network:
               driver: bridge
           EOF
-          
-          # 개선된 배포 스크립트 생성
+
+          # Dockerfile 복사
+          cp Dockerfile deploy-package/
+
+          # 배포 스크립트 생성
           cat > deploy-package/deploy.sh << 'EOF'
           #!/bin/bash
-          
           set -e
-          
+
           echo "=== FeedShop Backend Deployment Starting ==="
           echo "Timestamp: $(date)"
-          
+
           # 현재 컨테이너 상태 확인
           echo "Current container status:"
           sudo docker-compose ps || true
-          
-          # 기존 컨테이너 중지 및 제거 (더 안전한 방법)
+
+          # 기존 컨테이너 중지
           echo "Stopping existing containers gracefully..."
-          sudo docker-compose down --timeout 30 --remove-orphans || true
-          
-          # 사용하지 않는 이미지 정리
+          sudo docker-compose down --remove-orphans || true
+
+          # 이미지 정리
           echo "Cleaning up old images..."
-          sudo docker system prune -f --filter "until=24h" || true
-          
+          sudo docker system prune -f || true
+
           # 새 컨테이너 빌드 및 시작
           echo "Building and starting new containers..."
-          sudo docker-compose up -d --build --force-recreate
-          
-          # 컨테이너 시작 대기 (더 충분한 시간)
+          sudo docker-compose up -d --build
+
+          # 컨테이너 시작 대기
           echo "Waiting for container to start..."
           sleep 30
-          
-          # 컨테이너 상태 재확인
-          echo "=== Container Status ==="
-          sudo docker-compose ps
-          echo ""
-          
-          # 초기 로그 확인
-          echo "=== Initial Container Logs ==="
-          sudo docker-compose logs --tail=30 feedshop-backend
-          echo ""
-          
-          # 더 정교한 헬스체크 (최대 15분, 30초 간격)
+
+          # 헬스 체크
           echo "Performing health check..."
-          max_attempts=30
-          attempt=1
-          
-          while [ $attempt -le $max_attempts ]; do
-            echo "Health check attempt $attempt/$max_attempts..."
-          
-            # 컨테이너가 실행 중인지 확인
-            if ! sudo docker-compose ps feedshop-backend | grep -q "Up"; then
-              echo "❌ Container is not running!"
-              sudo docker-compose logs --tail=50 feedshop-backend
-              exit 1
-            fi
-          
-            # HTTP 헬스체크
-            if curl -f --connect-timeout 10 --max-time 30 http://localhost:8080/actuator/health > /dev/null 2>&1; then
+          for i in {1..10}; do
+            if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
               echo "✅ Health check passed!"
-              echo ""
-              echo "=== Deployment Summary ==="
-              echo "Service: FeedShop Backend"
-              echo "Status: ✅ Running"
-              echo "Port: 8080"
-              echo "Health Check: ✅ Passed"
-              echo "Timestamp: $(date)"
-              echo ""
               echo "🎉 Deployment completed successfully!"
+              sudo docker-compose logs --tail=20 feedshop-backend
               exit 0
             else
-              echo "⏳ Health check failed, waiting 30s... (attempt $attempt/$max_attempts)"
-              if [ $attempt -eq $max_attempts ]; then
-                echo ""
-                echo "❌ Health check failed after $max_attempts attempts (15 minutes)"
-                echo ""
-                echo "=== Debugging Information ==="
-                echo "Container status:"
-                sudo docker-compose ps
-                echo ""
-                echo "Container logs (last 100 lines):"
-                sudo docker-compose logs --tail=100 feedshop-backend
-                echo ""
-                echo "System resources:"
-                df -h
-                free -h
-                echo ""
-                exit 1
+              echo "⏳ Health check attempt $i/10... (waiting 30s)"
+              if [ $i -lt 10 ]; then
+                sleep 30
               fi
-              sleep 30
             fi
-          
-            attempt=$((attempt + 1))
           done
+
+          echo "❌ Health check failed!"
+          echo "=== Container logs ==="
+          sudo docker-compose logs feedshop-backend
+          exit 1
           EOF
-          
+
           chmod +x deploy-package/deploy.sh
 
       - name: Copy files to VM instance
