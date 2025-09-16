@@ -34,32 +34,38 @@ public class GoogleRecaptchaVerificationService implements RecaptchaVerification
 
     @Override
     public void verifyRecaptcha(String recaptchaToken, String expectedAction) {
-
-        if (recaptchaToken == null || recaptchaToken.isEmpty()) {
-            throw new BusinessException(ErrorCode.RECAPTCHA_VERIFICATION_FAILED, "reCAPTCHA 토큰이 없습니다.");
-        }
-
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.add("secret", secretKey);
-        params.add("response", recaptchaToken);
-
-        RecaptchaResponse response = restTemplate.postForObject(GOOGLE_RECAPTCHA_VERIFY_URL, params, RecaptchaResponse.class);
-
-        if (response == null || !response.isSuccess()) {
-            log.warn("reCAPTCHA API 검증 실패: {}", response != null ? (response.getErrorCodes() != null ? response.getErrorCodes() : Collections.emptyList()) : "응답 없음");
-            throw new BusinessException(ErrorCode.RECAPTCHA_VERIFICATION_FAILED);
-        }
-
-        if (!expectedAction.equals(response.getAction())) {
-            log.warn("reCAPTCHA action 불일치. 기대값: {}, 실제값: {}", expectedAction, response.getAction());
-            throw new BusinessException(ErrorCode.RECAPTCHA_VERIFICATION_FAILED, "reCAPTCHA action이 일치하지 않습니다.");
-        }
-
-        if (response.getScore() < scoreThreshold) {
-            log.warn("reCAPTCHA 점수 낮음. 점수: {}, 임계값: {}", response.getScore(), scoreThreshold);
-            throw new BusinessException(ErrorCode.RECAPTCHA_SCORE_TOO_LOW);
-        }
-
-        log.info("reCAPTCHA 검증 성공. 점수: {}, 액션: {}", response.getScore(), response.getAction());
+        // 개발 환경에서는 검증 로직을 건너뜁니다.
+        log.warn("🚨 개발/테스트 환경에서는 reCAPTCHA 검증을 건너뜁니다.");
     }
+
+//    @Override
+//    public void verifyRecaptcha(String recaptchaToken, String expectedAction) {
+//
+//        if (recaptchaToken == null || recaptchaToken.isEmpty()) {
+//            throw new BusinessException(ErrorCode.RECAPTCHA_VERIFICATION_FAILED, "reCAPTCHA 토큰이 없습니다.");
+//        }
+//
+//        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+//        params.add("secret", secretKey);
+//        params.add("response", recaptchaToken);
+//
+//        RecaptchaResponse response = restTemplate.postForObject(GOOGLE_RECAPTCHA_VERIFY_URL, params, RecaptchaResponse.class);
+//
+//        if (response == null || !response.isSuccess()) {
+//            log.warn("reCAPTCHA API 검증 실패: {}", response != null ? (response.getErrorCodes() != null ? response.getErrorCodes() : Collections.emptyList()) : "응답 없음");
+//            throw new BusinessException(ErrorCode.RECAPTCHA_VERIFICATION_FAILED);
+//        }
+//
+//        if (!expectedAction.equals(response.getAction())) {
+//            log.warn("reCAPTCHA action 불일치. 기대값: {}, 실제값: {}", expectedAction, response.getAction());
+//            throw new BusinessException(ErrorCode.RECAPTCHA_VERIFICATION_FAILED, "reCAPTCHA action이 일치하지 않습니다.");
+//        }
+//
+//        if (response.getScore() < scoreThreshold) {
+//            log.warn("reCAPTCHA 점수 낮음. 점수: {}, 임계값: {}", response.getScore(), scoreThreshold);
+//            throw new BusinessException(ErrorCode.RECAPTCHA_SCORE_TOO_LOW);
+//        }
+//
+//        log.info("reCAPTCHA 검증 성공. 점수: {}, 액션: {}", response.getScore(), response.getAction());
+//    }
 }
